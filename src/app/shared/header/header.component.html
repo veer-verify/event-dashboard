@@ -1,0 +1,196 @@
+<header class="header">
+  <!-- Logo Section -->
+  <a >
+    <img src="assets/dashboard-logo.png" alt="VERIFAI Logo" class="logo-img" />
+  </a>
+
+  <!-- Divider -->
+  <div class="header-section divider"></div>
+
+  <!-- Navigation Menu -->
+  <div class="header-section nav">
+    <nav>
+      <a
+        routerLink="/dashboard"
+        routerLinkActive="active"
+        #rlaDashboard="routerLinkActive"
+      >
+        <img
+          [src]="
+            rlaDashboard.isActive
+              ? 'assets/headericons/dashboard-icon-active.svg'
+              : 'assets/headericons/dashboard-icon.svg'
+          "
+          alt="Dashboard"
+          class="nav-icon"
+        />
+        DASHBOARD
+      </a>
+
+      <a
+        routerLink="/events"
+        routerLinkActive="active"
+        #rlaEvents="routerLinkActive"
+      >
+        <img
+          [src]="
+            rlaEvents.isActive
+              ? 'assets/headericons/events-icon-active.svg'
+              : 'assets/headericons/events-icon.svg'
+          "
+          alt="Events"
+          class="nav-icon"
+        />
+        EVENTS
+      </a>
+
+      <a
+        routerLink="/groups"
+        routerLinkActive="active"
+        #rlaGroups="routerLinkActive"
+      >
+        <img
+          [src]="
+            rlaGroups.isActive
+              ? 'assets/headericons/groups-icon-active.svg'
+              : 'assets/headericons/groups-icon.svg'
+          "
+          alt="Groups"
+          class="nav-icon"
+        />
+        QUEUES
+      </a>
+
+      <!-- <a
+        routerLink="/clients"
+        routerLinkActive="active"
+        #rlaClients="routerLinkActive"
+      >
+        <img
+          [src]="
+            rlaClients.isActive
+              ? 'assets/headericons/clients-icon-active.svg'
+              : 'assets/headericons/clients-icon.svg'
+          "
+          alt="Clients"
+          class="nav-icon"
+        />
+        CLIENTS
+      </a>
+
+      <a
+        routerLink="/sites"
+        routerLinkActive="active"
+        #rlaSites="routerLinkActive"
+      >
+        <img
+          [src]="
+            rlaSites.isActive
+              ? 'assets/headericons/sites-icon-active.svg'
+              : 'assets/headericons/sites-icon.svg'
+          "
+          alt="Sites"
+          class="nav-icon"
+        />
+        SITES
+      </a> -->
+    </nav>
+  </div>
+
+  <!-- Divider -->
+  <div class="header-section divider"></div>
+
+  <!-- User Section -->
+  <div class="header-section user">
+    <div class="div">
+      <button class="ticket-icon" (click)="toggleNotifications()">
+        <img src="assets/ticket-icon.svg" alt="header" class="nav-icon1" />
+        <span class="ticket-count" *ngIf="ticketCount > 0">
+          {{ ticketCount }}
+        </span>
+      </button>
+
+      <!-- 🔔 Notifications popup -->
+      <div class="ticket-popup" *ngIf="showNotifications">
+        <div class="ticket-popup-header">
+          <span class="ticket-popup-title">
+            Notifications ({{ ticketCount }})
+          </span>
+          <button class="clear-btn" (click)="clearNotifications()">
+            Clear
+          </button>
+          <!-- NEW CLOSE BUTTON -->
+      <button class="close-btn" (click)="closeNotifications()">
+        ✕
+      </button>
+        </div>
+
+        <div class="ticket-popup-body">
+          <div class="ticket-item" *ngFor="let n of notifications">
+            <div class="ticket-item-main">
+              <span class="badge" [ngClass]="n.severity">
+                {{ n.severity | uppercase }}
+              </span>
+
+              <div class="ticket-text">
+                <div class="ticket-summary">
+                  {{ n.summary }}
+                </div>
+                <div class="ticket-detail" *ngIf="n.detail">
+                  {{ n.detail }}
+                </div>
+              </div>
+            </div>
+
+            <div class="ticket-time">
+              {{ n.timestamp | date : "shortTime" }}
+            </div>
+          </div>
+
+          <div class="ticket-empty" *ngIf="ticketCount === 0">
+            No notifications in this session.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="div">
+      <button class="user-icon" (click)="toggleUserCard()">
+        <img src="assets/user.svg" alt="header" class="nav-icon1" />
+      </button>
+    </div>
+
+    <div class="user-info">
+      <p class="userPosition1">{{ userProfile.name }}</p>
+      <p class="userPosition">{{ userProfile.role }}</p>
+    </div>
+
+    <!-- User profile popup card -->
+    <div class="user-card" *ngIf="showUserCard">
+      <div class="user-card-avatar">
+        <img [src]="userData?.profileImage | image | async" alt="User" />
+      </div>
+
+      <div class="user-card-name">{{ userProfile.name }}</div>
+      <div class="user-card-role">
+        {{ userProfile.role }} | {{ userProfile.id }}
+      </div>
+
+      <div class="user-card-contact">
+        <div>{{ userProfile.email }}</div>
+        <div>{{ userProfile.phone }}</div>
+      </div>
+
+      <!-- <a class="user-card-terms" href="javascript:void(0)"
+        >Terms &amp; Conditions</a
+      > -->
+
+      <div class="user-card-footer">
+        <span class="user-card-version"
+          >Version : {{ userProfile.version }}</span
+        >
+        <button class="logout-btn" (click)="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+</header>

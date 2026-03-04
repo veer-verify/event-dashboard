@@ -1,0 +1,9 @@
+<app-header *ngIf="showHeader"></app-header>
+<p-toast
+  position="top-right"
+  [life]="5000"
+  [baseZIndex]="9999"
+  
+></p-toast>
+<p-confirmDialog></p-confirmDialog>
+<router-outlet></router-outlet>

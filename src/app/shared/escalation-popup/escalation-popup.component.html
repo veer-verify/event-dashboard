@@ -1,0 +1,247 @@
+<!-- ===================== ESCALATION DETAILS VIEW ===================== -->
+<div class="popup-container" *ngIf="!isAddCommentView">
+  <div class="section">
+    <!-- BASIC INFO -->
+    <div class="basic-info" *ngIf="selectedEvent">
+      <h2>BASIC INFO</h2>
+      <div class="info-table">
+        <div class="row" *ngFor="let info of basicInfoFields">
+          <div class="label">{{ info.label }}</div>
+          <div class="colon">:</div>
+          <div class="value">
+            <span
+              *ngIf="info.field === 'eventType'"
+              class="dot"
+              [ngStyle]="{
+                'background-color': getEventDotColor(selectedEvent[info.field])
+              }"
+            ></span>
+
+            <ng-container
+              *ngIf="
+                info.label.toLowerCase().includes('time');
+                else normalValue
+              "
+            >
+              {{
+                selectedEvent[info.field]
+                  ? formatDateTime(selectedEvent[info.field])
+                  : info.default || "--"
+              }}
+            </ng-container>
+
+            <ng-template #normalValue>
+              {{ selectedEvent[info.field] || info.default || "--" }}
+            </ng-template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALARM EVENTS (AG Grid) -->
+    <div class="alarm-events">
+      <h2>ALARM EVENTS ON</h2>
+      <ag-grid-angular
+        style="width: 100%; height: 250px"
+        theme="legacy"
+        class="ag-theme-alpine"
+        [rowData]="alarmRowData"
+        [columnDefs]="alarmColumnDefs"
+        [defaultColDef]="defaultColDef"
+        [enableCellTextSelection]="true"
+        [enableRangeSelection]="true"
+        [copyHeadersToClipboard]="true"
+        [pagination]="true"
+        [paginationPageSize]="3"
+        [paginationPageSizeSelector]="[3, 20, 50, 100]"
+        (gridReady)="onGridReady($event)"
+      ></ag-grid-angular>
+    </div>
+  </div>
+
+  <!-- DURATION -->
+  <div class="total-duration" *ngIf="selectedEvent">
+    <span *ngIf="selectedEvent.eventDuration">
+      TOTAL DURATION : {{ selectedEvent.eventDuration }}
+    </span>
+    <span>INDIA {{ "00:00:00" }}</span>
+    <span>US {{ "00:00:00" }}</span>
+  </div>
+
+  <div class="div">
+    <p class="borderline"></p>
+  </div>
+
+  <!-- ======================= ESCALATION REPORT ======================= -->
+  <div class="report-header">
+    <h2>ESCALATION REPORT</h2>
+
+    <div class="timezone">
+      <label>
+        <input
+          type="radio"
+          name="tz"
+          value="CT"
+          [(ngModel)]="selectedTZ"
+          (change)="onTzChange(selectedTZ)"
+        />
+        CT
+      </label>
+
+      <label>
+        <input
+          type="radio"
+          name="tz"
+          value="MT"
+          [(ngModel)]="selectedTZ"
+          (change)="onTzChange(selectedTZ)"
+          checked
+        />
+        Customer TZ (MT)
+      </label>
+
+      <label>
+        <input
+          type="radio"
+          name="tz"
+          value="IST"
+          [(ngModel)]="selectedTZ"
+          (change)="onTzChange(selectedTZ)"
+        />
+        IST
+      </label>
+    </div>
+  </div>
+
+  <div class="div">
+    <p class="borderline"></p>
+  </div>
+
+  <!-- Escalation AG Grid -->
+  <ag-grid-angular
+    style="width: 100%"
+    theme="legacy"
+    class="ag-theme-alpine"
+    [rowData]="escalationRowData"
+    [columnDefs]="escalationColumnDefs"
+    [defaultColDef]="{ resizable: true }"
+    [pagination]="true"
+    [enableCellTextSelection]="true"
+    [enableRangeSelection]="true"
+    [copyHeadersToClipboard]="true"
+    [paginationPageSize]="5"
+    [paginationPageSizeSelector]="[5, 20, 50, 100]"
+    domLayout="autoHeight"
+    (gridReady)="onGridReady($event)"
+  >
+  </ag-grid-angular>
+
+  <!-- ======================= COMMENTS ======================= -->
+  <!-- ======================= COMMENTS ======================= -->
+  <div class="report-header">
+    <h2>COMMENTS</h2>
+    <div class="timezone">
+      <!-- instead of addComments(), call a small handler that notifies parent -->
+      <p-button class="today-btn" (onClick)="handleAddClick()">
+        + ADD
+      </p-button>
+    </div>
+  </div>
+
+  <div class="div">
+    <p class="borderline"></p>
+  </div>
+
+  <ag-grid-angular
+    #commentGrid
+    style="width: 100%"
+    theme="legacy"
+    class="ag-theme-alpine"
+    [rowData]="commentRowData"
+    [columnDefs]="commentColumnDefs"
+    [defaultColDef]="{ resizable: true }"
+    [pagination]="true"
+    [paginationPageSize]="3"
+    [enableCellTextSelection]="true"
+    [enableRangeSelection]="true"
+    [copyHeadersToClipboard]="true"
+    [paginationPageSizeSelector]="[3, 20, 50, 100]"
+    domLayout="autoHeight"
+    (gridReady)="onCommentGridReady($event)"
+  >
+  </ag-grid-angular>
+</div>
+
+<!-- ===================== ADD COMMENT VIEW ===================== -->
+<div class="add-comment-container" *ngIf="isAddCommentView">
+  <div class="add-comment-header">
+    <div class="add-comment-header-left">
+      <button
+        type="button"
+        class="icon-circle-btn"
+        (click)="onCancelAddComment()"
+        aria-label="Back"
+      >
+        ←
+      </button>
+      <span class="add-comment-title">ADD COMMENT</span>
+    </div>
+
+    <button
+      type="button"
+      class="icon-circle-btn"
+      (click)="onCancelAddComment()"
+      aria-label="Close"
+    >
+      ✕
+    </button>
+  </div>
+
+  <div class="add-comment-body">
+    <!-- Tag -->
+    <div class="form-group">
+      <label class="form-label">Tag</label>
+      <select
+        class="select-input"
+        [(ngModel)]="addCommentForm.tag"
+        name="commentTag"
+      >
+        <option [ngValue]="null">Select</option>
+        <option *ngFor="let t of commentTags" [ngValue]="t.value">
+          {{ t.label }}
+        </option>
+      </select>
+    </div>
+
+    <!-- Comment text -->
+    <div class="form-group">
+      <label class="form-label">Comment</label>
+      <textarea
+        class="textarea-input"
+        rows="6"
+        placeholder="Text Here"
+        [(ngModel)]="addCommentForm.notes"
+        name="commentNotes"
+      ></textarea>
+    </div>
+
+    <!-- Buttons -->
+    <div class="add-comment-actions">
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="onCancelAddComment()"
+      >
+        CANCEL
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="onSubmitAddComment()"
+      >
+        ADD
+      </button>
+    </div>
+  </div>
+</div>
