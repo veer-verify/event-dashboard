@@ -1,40 +1,35 @@
-
 @font-face {
-  font-family: 'Neometric Regular';
-  src: url('src/assets/fonts/neometric-2-webfont/Neometric-Regular.woff')
-       format('woff');
+  font-family: "Neometric Regular";
+  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Regular.woff")
+    format("woff");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
-
 @font-face {
-  font-family: 'Neometric Medium';
-  src: url('src/assets/fonts/neometric-2-webfont/Neometric-Medium-(Regular).woff')
-       format('woff');
+  font-family: "Neometric Medium";
+  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Medium-(Regular).woff")
+    format("woff");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
-
 @font-face {
-  font-family: 'Nasalization';
-  src: url('src/assets/fonts/neometric-2-webfont/NASALIZA.woff')
-       format('woff');
+  font-family: "Nasalization";
+  src: url("src/assets/fonts/neometric-2-webfont/NASALIZA.woff") format("woff");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-    font-family: 'NasalizationLight';
-    font-style: normal;
-    /* font-weight: 400; */
-    src: url('src/assets/fonts/Nasalization Rg.otf') format('opentype'),
+  font-family: "NasalizationLight";
+  font-style: normal;
+  /* font-weight: 400; */
+  src: url("src/assets/fonts/Nasalization Rg.otf") format("opentype");
 }
-
 
 /* === HEADER === */
 .header {
@@ -47,31 +42,30 @@
   height: 75px;
 }
 
-.username{
-  font-family: 'Neometric Regular';
+.username {
+  font-family: "Neometric Regular";
   font-size: 14px;
   /* color: #333;   */
   margin: 0px;
-   
-      text-transform: none !important;
+
+  text-transform: none !important;
   font-variant-caps: normal !important;
 }
 
-.userPosition1{
-      font-family: 'NasalizationLight';
+.userPosition1 {
+  font-family: "NasalizationLight";
   font-size: 14px;
   /* color: #333;   */
   margin: 0px;
 }
 
-
-.userPosition{
-font-family: 'Neometric Regular';
-    font-size: 9px;
-    margin: 0px;
-    opacity: 35%;
-    font-style: italic;
-     text-transform: none !important;
+.userPosition {
+  font-family: "Neometric Regular";
+  font-size: 9px;
+  margin: 0px;
+  opacity: 35%;
+  font-style: italic;
+  text-transform: none !important;
   font-variant-caps: normal !important;
 }
 
@@ -80,8 +74,12 @@ font-family: 'Neometric Regular';
   align-items: center;
 }
 
+.header-section nav a {
+  text-transform: uppercase;
+}
+
 a.active svg path {
-  fill: #ED3237; /* Turns the SVG red when active */
+  fill: #ed3237; /* Turns the SVG red when active */
 }
 
 a svg path {
@@ -126,21 +124,20 @@ a svg path {
 }
 
 nav a {
- 
   display: inline-flex;
-  font-weight: 500; 
-    align-items: flex-start;
+  font-weight: 500;
+  align-items: flex-start;
   margin: 0 10px;
   text-decoration: none;
   color: #000000;
-    opacity: 25%;
-    font-family: 'Neometric Medium' !important;
+  opacity: 25%;
+  font-family: "Neometric Medium" !important;
   font-size: 12px !important;
 }
 
 nav a.active {
   color: #000000;
-   opacity: 100%;
+  opacity: 100%;
 }
 
 /* nav a:hover {
@@ -158,15 +155,15 @@ nav a.active {
   margin-right: 10px;
 }
 
-.ticket-icon{
- cursor: pointer;
-    width: 40px;
-    height: 40px;
-    background-color: white;
-    display: inline-block;
-    border-radius: 50%;
-    margin-right: 6px;
-    border: 2px solid red;
+.ticket-icon {
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  background-color: white;
+  display: inline-block;
+  border-radius: 50%;
+  margin-right: 6px;
+  border: 2px solid red;
 }
 .ticket-icon {
   position: relative;
@@ -183,29 +180,28 @@ nav a.active {
 }
 
 .ticket-count {
-    position: absolute;
-    top: -11px;
-    right: -11px;
-    background: red;
-    color: white;
-    font-size: 10px;
-    font-weight: bold;
-    border-radius: 50%;
-    min-width: 30px;
-    text-align: center;
-    line-height: 20px;
+  position: absolute;
+  top: -11px;
+  right: -11px;
+  background: red;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 50%;
+  min-width: 30px;
+  text-align: center;
+  line-height: 20px;
 }
 
-
 .user-icon {
- cursor: pointer;
-    width: 40px;
-    height: 40px;
-    background-color: white;
-    display: inline-block;
-    border-radius: 50%;
-    margin-right: 6px;
-    border: 2px solid red;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  background-color: white;
+  display: inline-block;
+  border-radius: 50%;
+  margin-right: 6px;
+  border: 2px solid red;
 }
 
 .nav-icon {
@@ -220,7 +216,6 @@ nav a.active {
   /* margin-right: 6px; */
 }
 
-
 /* ================= USER CARD POPUP ================= */
 
 .header-section.user {
@@ -230,7 +225,7 @@ nav a.active {
 /* card container */
 .user-card {
   position: absolute;
-  top: 60px;          /* slightly below header */
+  top: 60px; /* slightly below header */
   right: 0;
   width: 260px;
   background: #ffffff;
@@ -239,7 +234,7 @@ nav a.active {
   padding: 20px 18px;
   z-index: 1000;
   text-align: center;
-  font-family: 'Neometric Regular';
+  font-family: "Neometric Regular";
 }
 
 /* top avatar */
@@ -261,7 +256,7 @@ nav a.active {
 
 /* name in red */
 .user-card-name {
-  font-family: 'NasalizationLight';
+  font-family: "NasalizationLight";
   color: #ed3237;
   font-size: 16px;
   margin-bottom: 4px;
@@ -269,7 +264,7 @@ nav a.active {
 
 /* role + id */
 .user-card-role {
-  font-family: 'Neometric Medium';
+  font-family: "Neometric Medium";
   font-size: 12px;
   color: #000;
   margin-bottom: 8px;
@@ -313,7 +308,7 @@ nav a.active {
   padding: 6px 14px;
   font-size: 11px;
   cursor: pointer;
-  font-family: 'Neometric Medium';
+  font-family: "Neometric Medium";
 }
 
 /* existing: .header-section.user { position: relative; } is already there */
@@ -321,7 +316,7 @@ nav a.active {
 /* Notifications card */
 .ticket-popup {
   position: absolute;
-  top: 60px;   /* drop below header */
+  top: 60px; /* drop below header */
   right: 60px; /* tweak as needed */
   width: 320px;
   max-height: 360px;
@@ -331,7 +326,7 @@ nav a.active {
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  font-family: 'Neometric Regular';
+  font-family: "Neometric Regular";
 }
 
 .ticket-popup-header {
