@@ -87,7 +87,7 @@ export class CalendarComponent implements OnInit {
   today: Date = new Date();
   currentMonth: Date = new Date();
 
-  startDate: Date = new Date();
+  startDate: Date = new Date(new Date().setHours(0,0,0,0));
   endDate: Date = new Date();
   startTime: string = '00:00:00';
   endTime: string = '';
@@ -143,6 +143,7 @@ export class CalendarComponent implements OnInit {
   private emitOnceOnInit(): void {
     const key = this.buildKey();
     this.lastEmittedKey = key;
+
     this.dateRangeSelected.emit({
       startDate: this.startDate,
       startTime: this.startTime,
