@@ -148,7 +148,7 @@ export class InventoryIssuedTabComponent implements OnInit, OnChanges {
             span.style.color = '#000000';
           } else if (lowerStatus === 'returned' || lowerStatus === 'defect') {
             span.style.color = '#F44336';
-          } else if (lowerStatus === 'pre-ordered' || lowerStatus === 'registered') {
+          } else if (lowerStatus === 'pre-ordered') {
             span.style.color = '#FF9800';
           } else if (lowerStatus === 'scrap') {
             span.style.color = '#333333';
@@ -209,8 +209,13 @@ export class InventoryIssuedTabComponent implements OnInit, OnChanges {
       const start = new Date(payload.startDate);
       const end = new Date(payload.endDate);
 
-      this.fromDate = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())).toISOString();
-      this.toDate = new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate())).toISOString();
+      const fmtDate = (d: Date) => {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      };
+
+      this.fromDate = fmtDate(start);
+      this.toDate = fmtDate(end);
     } else {
       this.fromDate = undefined;
       this.toDate = undefined;
@@ -221,7 +226,7 @@ export class InventoryIssuedTabComponent implements OnInit, OnChanges {
 
   onSearchChange() {
     this.currentPage = 1;
-    this.applyLocalFilters();
+    this.loadIssuedList();
   }
 
   applyLocalFilters() {

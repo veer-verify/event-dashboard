@@ -16,7 +16,8 @@ import {
   providedIn: 'root'
 })
 export class InventoryService {
-  private baseUrl = environment.apiBaseUrl + '/inventory';
+  private baseUrl = environment.apiBaseUrl;
+  // private baseUrl = environment.apiBaseUrl + '/inventory';
 
   constructor(private http: HttpClient) { }
 
@@ -46,7 +47,7 @@ export class InventoryService {
     );
   }
 
-  getPurchaseList(paramsObj: { startDate?: string, endDate?: string, pageNo: number, pageSize: number }): Observable<any> {
+  getPurchaseList(paramsObj: { startDate?: string, endDate?: string, storeId?: string | number, pageNo: number, pageSize: number }): Observable<any> {
     let params = new HttpParams()
       .set('pageNo', paramsObj.pageNo.toString())
       .set('pageSize', paramsObj.pageSize.toString());
@@ -56,6 +57,9 @@ export class InventoryService {
     }
     if (paramsObj.endDate) {
       params = params.set('endDate', paramsObj.endDate);
+    }
+    if (paramsObj.storeId && paramsObj.storeId !== 'all') {
+      params = params.set('storeId', paramsObj.storeId.toString());
     }
 
     return this.http.get<any>(`${this.baseUrl}/getPurchaseList_1_0`, { params }).pipe(

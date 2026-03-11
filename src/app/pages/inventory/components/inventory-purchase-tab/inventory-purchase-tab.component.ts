@@ -176,6 +176,10 @@ export class InventoryPurchaseTabComponent implements OnInit, OnChanges {
     if (changes['reloadTrigger'] && !changes['reloadTrigger'].firstChange) {
       this.fetchPurchaseData();
     }
+    if (changes['selectedStore'] && !changes['selectedStore'].firstChange) {
+      this.currentPage = 1;
+      this.fetchPurchaseData();
+    }
   }
 
   onGridReady(params: GridReadyEvent) {
@@ -189,9 +193,28 @@ export class InventoryPurchaseTabComponent implements OnInit, OnChanges {
     if (payload?.startDate && payload?.endDate) {
       const start = new Date(payload.startDate);
       const end = new Date(payload.endDate);
+      const today = new Date();
 
-      this.startDate = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())).toISOString();
-      this.endDate = new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate())).toISOString();
+      const fmt = (d: Date) => {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      };
+
+      // Start of the selected start date (midnight local time)
+      const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0);
+      this.startDate = fmt(startMidnight);
+
+      // If end date is today → use current time; otherwise end-of-day
+      const isEndToday = end.getFullYear() === today.getFullYear() &&
+        end.getMonth() === today.getMonth() &&
+        end.getDate() === today.getDate();
+
+      if (isEndToday) {
+        this.endDate = fmt(today);
+      } else {
+        const endOfDay = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59);
+        this.endDate = fmt(endOfDay);
+      }
     } else {
       this.startDate = undefined;
       this.endDate = undefined;
@@ -291,14 +314,20 @@ export class InventoryPurchaseTabComponent implements OnInit, OnChanges {
     this.filterData();
   }
 
+  @Input() selectedStore: any;
+
   fetchPurchaseData() {
     this.setLoading(true);
-    const params = {
+    const params: any = {
       pageNo: this.currentPage,
       pageSize: this.pageSize,
       startDate: this.startDate,
       endDate: this.endDate
     };
+
+    if (this.selectedStore && this.selectedStore.code && this.selectedStore.code !== 'all') {
+      params.storeId = this.selectedStore.code;
+    }
 
     this.inventoryService.getPurchaseList(params).subscribe({
       next: (res) => {

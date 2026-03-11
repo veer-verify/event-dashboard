@@ -96,7 +96,17 @@ export class ItemsModalComponent implements OnInit {
 
   currentUser = this.authService.getStoredUser();
   userId = this.currentUser?.UserId || 0;
-  urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+  urlValidator = (control: import('@angular/forms').AbstractControl) => {
+    const val = control.value;
+    if (!val || !val.trim()) return null; // empty is fine
+    try {
+      const testUrl = val.startsWith('http://') || val.startsWith('https://') ? val : `https://${val}`;
+      new URL(testUrl);
+      return null;
+    } catch {
+      return { invalidUrl: true };
+    }
+  };
 
   ngOnInit() {
     this.initializeForm();
@@ -321,7 +331,10 @@ export class ItemsModalComponent implements OnInit {
         make: ["", Validators.required],
         model: ["", Validators.required],
         usedFor: [[]],
-        purchaseItemLink: ["", [Validators.pattern(this.urlRegex)]]
+        purchaseItemLink: ['', [this.urlValidator]],
+        remarks: [""],
+        serialNumberMandatory: ["T", Validators.required],
+        barcodeMandatory: ["T", Validators.required]
       });
     } else if (this.mode === "create") {
       this.itemForm = this.fb.group({
@@ -337,7 +350,7 @@ export class ItemsModalComponent implements OnInit {
         usedFor: [[]],
         serialNumberMandatory: ["T", Validators.required],
         barcodeMandatory: ["T", Validators.required],
-        purchaseItemLink: ["", [Validators.pattern(this.urlRegex)]]
+        purchaseItemLink: ['', [this.urlValidator]]
       });
     } else {
       this.itemForm = this.fb.group({
@@ -523,7 +536,14 @@ export class ItemsModalComponent implements OnInit {
     }
   }
   isValidUrl(url: string): boolean {
-    return this.urlRegex.test(url);
+    if (!url || !url.trim()) return true;
+    try {
+      const testUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
+      new URL(testUrl);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   addPurchaseLink() {
@@ -655,16 +675,21 @@ export class ItemsModalComponent implements OnInit {
       };
 
       this.itemsService.updateItem(updatePayload.itemId, updatePayload).subscribe({
-        next: (res) => {
-          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Item updated successfully!' });
-          setTimeout(() => {
-            this.save.emit(res);
-            this.close.emit();
-          }, 1000);
+        next: (res: any) => {
+          if (res?.status === 'Success' || res?.status === 'success') {
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Item updated successfully!' });
+            setTimeout(() => {
+              this.save.emit(res);
+              this.close.emit();
+            }, 1000);
+          } else {
+            this.isLoading = false;
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: res?.message || 'Update failed' });
+          }
         },
-        error: () => {
+        error: (err) => {
           this.isLoading = false;
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Update failed' });
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Update failed' });
         }
       });
       return;
@@ -700,8 +725,9 @@ export class ItemsModalComponent implements OnInit {
         make: formValue.make?.trim() || "",
         model: formValue.model?.trim() || "",
         usedForIds: usedForIds,
-        serialNumberFlag: "T",
-        barcodeFlag: "T",
+        remarks: formValue.remarks?.trim() || "",
+        serialNumberFlag: formValue.serialNumberMandatory || "T",
+        barcodeFlag: formValue.barcodeMandatory || "T",
         purchaseItemLinks: formValue.purchaseItemLink ? [formValue.purchaseItemLink] : [],
         createdBy: this.userId || 0,
         createdTime: currentDateTime
@@ -733,18 +759,17 @@ export class ItemsModalComponent implements OnInit {
 
     this.itemsService.createItem(requestBody, this.selectedFile || undefined).subscribe({
       next: (res: any) => {
-        if (res.status === 'failed') {
+        if (res.status === 'Success' || res.status === 'success') {
+          this.isLoading = false;
+          this.messageService.add({ severity: 'success', summary: 'Success', detail: res.message || `${requestBody.itemName} added successfully!` });
+          setTimeout(() => {
+            this.save.emit(res);
+            this.close.emit();
+          }, 1000);
+        } else {
           this.isLoading = false;
           this.messageService.add({ severity: 'error', summary: 'Error', detail: res.message || 'Creation failed' });
-          return;
         }
-
-        this.isLoading = false;
-        this.messageService.add({ severity: 'success', summary: 'Success', detail: res.message || `${requestBody.itemName} added successfully!` });
-        setTimeout(() => {
-          this.save.emit(res);
-          this.close.emit();
-        }, 1000);
       },
       error: (err) => {
         this.isLoading = false;

@@ -1,8 +1,8 @@
-<div class="custom-modal-overlay" (click)="onOverlayClick($event)">
+<div class="custom-modal-overlay">
     <div class="custom-modal-container">
         <div class="modal-custom-header">
             <div class="header-left-content">
-                <button class="back-arrow" (click)="close.emit()">
+                <button class="back-arrow" (click)="showPreview ? cancelPreview() : close.emit()">
                     <img src="assets/arrow-circle-left-groups.svg" alt="←" class="modal-close-icon" />
                 </button>
                 <span class="text-header-md">
@@ -61,9 +61,12 @@
                             </div>
 
                             <div class="field-column">
-                                <label class="field-label">Barcode</label>
+                                <label class="field-label">Barcode*</label>
                                 <input type="text" class="field-input-text" formControlName="barCode"
-                                    placeholder="Enter" />
+                                    placeholder="Enter" [class.error-border]="hasFieldError('barCode')" />
+                                <span class="error-message" *ngIf="getFieldError('barCode')">
+                                    {{ getFieldError("barCode") }}
+                                </span>
                             </div>
                         </div>
 
@@ -92,7 +95,8 @@
                             <h3 class="hardware-section-title text-header-sm">SELECT USED HARDWARE IN THE PRODUCT</h3>
                             <div class="divider hardware-modal-divider"></div>
 
-                            <div class="hardware-static-list">
+                            <div class="hardware-static-list"
+                                *ngIf="productForm.get('productName')?.value && productForm.get('currentLocationId')?.value">
                                 <div class="form-row-hardware hardware-flex-row" *ngFor="let hw of selectedHardware">
                                     <div class="field-column hardware-name-col">
                                         <label class="field-label hardware-label-styled">{{ hw.itemName }} - {{ hw.make
@@ -103,12 +107,16 @@
                                         <p-multiSelect appendTo="body" [overlayOptions]="customOverlayOptions"
                                             [options]="getOptionsForHardware(hw.id)" [(ngModel)]="hw.selectedStockIds"
                                             [ngModelOptions]="{standalone: true}" optionLabel="label"
-                                            optionValue="value" placeholder="Select units"
-                                            [styleClass]="submitted && (!hw.selectedStockIds || hw.selectedStockIds.length !== hw.quantity) ? 'w-full error-border' : 'w-full'"
+                                            optionValue="value" placeholder="Select stock units"
+                                            [styleClass]="submitted && hw.allocatedQty !== hw.quantity ? 'w-full error-border' : 'w-full'"
                                             [filter]="true" filterBy="label" [showClear]="true"
-                                            [selectionLimit]="hw.quantity"
+                                            [selectionLimit]="hw.allocatedQty === hw.quantity ? hw.selectedStockIds?.length : hw.quantity"
                                             (onChange)="onHardwareStockSelect($event, hw)">
                                         </p-multiSelect>
+                                        <div *ngIf="hw.selectedStockIds?.length > 0"
+                                            style="color: #d32f2f; margin-top: 4px; font-size: 11px; font-weight: 500;">
+                                            Allocated {{ hw.allocatedQty || 0 }} / {{ hw.quantity }} units.
+                                        </div>
                                     </div>
 
                                     <div class="field-column hardware-value-col">
@@ -121,6 +129,22 @@
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                            <!-- Grand Total Section -->
+                            <div *ngIf="selectedHardware.length > 0 && (productForm.get('productName')?.value && productForm.get('currentLocationId')?.value)"
+                                style="margin-top: 15px; padding: 15px; border-top: 2px dashed #eee; display: flex; justify-content: flex-end; align-items: center; gap: 15px;">
+                                <span
+                                    style="font-weight: 600; color: #555; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;">Grand
+                                    Total Value:</span>
+                                <span style="font-size: 20px; font-weight: 700; color: #d32f2f;">$ {{ grandTotal
+                                    }}</span>
+                            </div>
+
+                            <!-- Placeholder Message -->
+                            <div *ngIf="!(productForm.get('productName')?.value && productForm.get('currentLocationId')?.value)"
+                                style="text-align: center; padding: 20px; color: #888; background: #fafafa; border: 1px dashed #ccc; border-radius: 4px; margin-bottom: 20px;">
+                                Please select a <b>Product Name</b> and <b>Current Location / Store</b> to view and
+                                select hardware.
                             </div>
                         </div>
 
@@ -298,7 +322,7 @@
                                 *ngIf="selectedHardware.length > 0">
                                 <div class="hardware-list-item"
                                     *ngFor="let hardware of selectedHardware; let i = index">
-                                    <div class="item-name">{{ hardware.name }}</div>
+                                    <div class="item-name">{{ hardware.label }}</div>
                                     <div class="item-right-group">
                                         <div class="quantity-wrapper qty-wrapper-transparent">
                                             <span class="qty-val qty-val-flex">{{ hardware.quantity }}</span>
@@ -424,7 +448,7 @@
                                 </div>
                                 <div class="view-field">
                                     <label class="field-label">Use for</label>
-                                    <span class="field-value">{{ allDetails?.productDetails?.status || "-" }}</span>
+                                    <span class="field-value">{{ allDetails?.productDetails?.usedFor || "-" }}</span>
                                 </div>
 
                                 <div class="view-field"></div>
@@ -481,11 +505,11 @@
                                             <span class="cost-badge-value">$ {{ allDetails?.manufacturingCost || 0
                                                 }}</span>
                                         </div>
-                                        <button type="button" class="btn-edit-red" (click)="enableEdit()">
+                                        <!-- <button type="button" class="btn-edit-red" (click)="enableEdit()">
                                             <img src="assets/icons/edit.svg" alt="edit"
                                                 style="width: 14px; filter: invert(34%) sepia(85%) saturate(2311%) hue-rotate(338deg) brightness(88%) contrast(97%);" />
                                             EDIT
-                                        </button>
+                                        </button> -->
                                     </div>
                                 </div>
                             </div>
@@ -530,7 +554,7 @@
                                                 <td class="col-link"
                                                     style="display: flex; gap: 8px; align-items: center; justify-content: flex-start; height: 100%; border-bottom: none;">
                                                     <button type="button" class="btn-link-icon-rect" title="Open Link"
-                                                        (click)="openPurchaseLink(hw.purchaseLink)">
+                                                        (click)="openPurchaseLink(hw.purchaseLinks)">
                                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                                                             stroke="white" stroke-width="2" stroke-linecap="round"
                                                             stroke-linejoin="round">
@@ -543,7 +567,7 @@
                                                         </svg>
                                                     </button>
                                                     <button type="button" class="btn-copy-link" title="Copy Link"
-                                                        (click)="copyPurchaseLink(hw.purchaseLink)">
+                                                        (click)="copyPurchaseLink(hw.purchaseLinks)">
                                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
                                                             stroke="#666" stroke-width="2" stroke-linecap="round"
                                                             stroke-linejoin="round">
@@ -634,7 +658,8 @@
                         </div>
                         <div class="preview-field">
                             <span class="preview-label">USE FOR</span>
-                            <span class="preview-value">{{ getDropdownName('usedFor', productForm.get('usedFor')?.value)
+                            <span class="preview-value">{{ getDropdownName('productStatus',
+                                productForm.get('usedFor')?.value)
                                 || "-" }}</span>
                         </div>
                     </div>
@@ -655,7 +680,8 @@
                             <tbody>
                                 <tr *ngFor="let hardware of selectedHardware; let i = index">
                                     <td class="col-index">{{ i + 1 }}</td>
-                                    <td class="col-name">{{ hardware.itemName }}</td>
+                                    <td class="col-name">{{ hardware.itemName }} - {{ hardware.make }} - {{
+                                        hardware.model }}</td>
                                     <td class="col-qty">{{ hardware.quantity }}</td>
                                     <td class="col-units">{{ hardware.units }}</td>
                                 </tr>

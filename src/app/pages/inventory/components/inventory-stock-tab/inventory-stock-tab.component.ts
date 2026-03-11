@@ -126,6 +126,7 @@ export class InventoryStockTabComponent implements OnInit, OnChanges {
       { field: 'unitsName', headerName: 'UNITS', flex: 0.7, minWidth: 70 },
       { field: 'opening', headerName: 'OPENING', flex: 0.8, minWidth: 80 },
       { field: 'purchase', headerName: 'PURCHASE', flex: 0.8, minWidth: 80 },
+      { field: 'used', headerName: 'Used', flex: 0.8, minWidth: 80 },
       { field: 'issued', headerName: 'ISSUED', flex: 0.8, minWidth: 80 },
       { field: 'returned', headerName: 'RETURNED', flex: 0.8, minWidth: 90 },
       {
@@ -207,10 +208,28 @@ export class InventoryStockTabComponent implements OnInit, OnChanges {
     if (payload?.startDate && payload?.endDate) {
       const start = new Date(payload.startDate);
       const end = new Date(payload.endDate);
+      const today = new Date();
 
-      // Construct UTC midnight dates: YYYY-MM-DDT00:00:00.000Z
-      this.startDate = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())).toISOString();
-      this.endDate = new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate())).toISOString();
+      const fmt = (d: Date) => {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      };
+
+      // Start of the selected start date (midnight local time)
+      const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0);
+      this.startDate = fmt(startMidnight);
+
+      // If end date is today → use current time; otherwise end-of-day
+      const isEndToday = end.getFullYear() === today.getFullYear() &&
+        end.getMonth() === today.getMonth() &&
+        end.getDate() === today.getDate();
+
+      if (isEndToday) {
+        this.endDate = fmt(today);
+      } else {
+        const endOfDay = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59);
+        this.endDate = fmt(endOfDay);
+      }
     } else {
       this.startDate = undefined;
       this.endDate = undefined;
@@ -221,7 +240,7 @@ export class InventoryStockTabComponent implements OnInit, OnChanges {
 
   onSearchChange() {
     this.currentPage = 1;
-    this.applyLocalFilters();
+    this.loadStockData();
   }
 
   applyLocalFilters() {

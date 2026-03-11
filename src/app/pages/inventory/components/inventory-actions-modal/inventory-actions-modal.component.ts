@@ -1,8 +1,10 @@
 import { Component, EventEmitter, Input, Output, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { DropdownModule } from 'primeng/dropdown';
 import { CalendarModule } from 'primeng/calendar';
+import { InputSwitchModule } from 'primeng/inputswitch';
 import { ItemsService } from '../../../../core/services/items.service';
 import { InventoryService } from '../../../../core/services/inventory.service';
 import { MetadataService } from '../../../../core/services/metadata.service';
@@ -30,18 +32,23 @@ export interface ViewPurchaseItem extends PurchaseItem {
   code?: string;
   totalPrice?: number | string;
   isModified?: boolean;
+  serialNumberFlag?: string;
+  barcodeFlag?: string;
+  serial_number_flag?: string;
+  barcode_flag?: string;
+  requiresSerial?: boolean;
+  requiresBarcode?: boolean;
 }
 
 @Component({
   selector: 'app-inventory-actions-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, DropdownModule, CalendarModule, FileUploadComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, DropdownModule, CalendarModule, InputSwitchModule, FileUploadComponent],
   templateUrl: './inventory-actions-modal.component.html',
   styleUrls: ['./inventory-actions-modal.component.css']
 })
 export class InventoryActionsModalComponent implements OnInit, OnChanges {
   baseUrl: string = environment.apiBaseUrl;
-  urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
 
   getFileUrl(filePath: string): string {
     if (!filePath) return 'assets/mock_cam_check.jpg';
@@ -77,6 +84,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   addPurchaseForm!: FormGroup;
   isDeliveredSubmit: boolean = false;
   hasMissingSerials: boolean = false;
+  hasMissingBarcodes: boolean = false;
 
   get isPreorderUpdate(): boolean {
     return this.mode === 'update-purchase' &&
@@ -101,6 +109,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     gst: null,
     total: null,
     link: '',
+    serialNumberFlag: 'T',
+    barcodeFlag: 'T',
     serialDetails: [{ serialNo: '', barcodeNo: '' }]
   };
 
@@ -109,6 +119,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   isBulkEditingStatus: boolean = false;
   isPreorderSubmitAttempted: boolean = false;
   isReturnSubmitAttempted: boolean = false;
+  newItemSubmitAttempted: boolean = false;
   statusOptions: any[] = [
     { label: 'Pre-order', value: 'PREORDER' },
     { label: 'Delivered', value: 'DELIVERED' },
@@ -155,6 +166,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   // DROPDOWN LISTS
   sendFromOptions: any[] = [];
   siteOptions: any[] = [];
+  returnFromOptions: any[] = [];
   categoryOptions: any[] = [];
   billingStatuses: { label: string; value: any }[] = [];
   shippingPlatforms: { label: string; value: any }[] = [];
@@ -259,7 +271,6 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
     // Initialize mock data for Stock Send
     if (this.mode === 'stock-send') {
-      // Start with empty lists
       this.addedStockItems = [];
       this.addedStockProducts = [];
     }
@@ -273,9 +284,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     if (this.mode === 'view-purchase') {
       this.initViewItems();
     }
-    if (this.mode === 'view-return') {
-      this.fetchReturnDetails();
-    }
+
   }
 
   private fetchReturnDetails() {
@@ -301,20 +310,23 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     this.addPurchaseForm = this.fb.group({
       purchaseForCountry: ['India', Validators.required],
       purchaseForStore: [null, Validators.required],
-      invoiceNo: ['', Validators.required],
-      invoiceDate: [null, Validators.required],
+      invoiceNo: [''],
+      invoiceDate: [null],
       vendorName: [''],
       purchaseVia: [null, Validators.required],
       platform: [null, Validators.required],
+      isPreorder: [false],
       purchaseItems: this.fb.array([])
     });
 
-    this.addPurchaseForm.get('purchaseForCountry')?.valueChanges.subscribe(country => {
+    this.addPurchaseForm.get('purchaseForCountry')?.valueChanges.pipe(distinctUntilChanged()).subscribe(country => {
       this.loadPurchaseSources(country);
     });
 
     if (this.mode === 'add-purchase' || this.mode === 'update-purchase' || this.mode === 'view-purchase') {
-      this.loadPurchaseSources(this.addPurchaseForm.get('purchaseForCountry')?.value);
+      // Manual call removed here as patchForms or initial value will trigger the subscription if needed, 
+      // but wait, patchForms emits events. Let's keep it safe. 
+      // Actually, patchForms is called in ngOnInit after initForms.
     }
 
     this.stockSendForm = this.fb.group({
@@ -404,14 +416,13 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
     // Load dropdown sources efficiently using backend filters
     if (this.mode === 'stock-return') {
-      this.sendFromOptions = [];
+      this.returnFromOptions = [];
 
-      // Stores for 'Return To' and included in 'Return From'
+      // Stores for 'Return To' only
       this.inventoryService.getPurchaseSources(undefined, 'Store').subscribe({
         next: (res: any) => {
           if (res?.status === 'Success' && res?.data) {
             const options = res.data.map((s: any) => ({ label: s.sourceName, value: s.sourceId }));
-            this.sendFromOptions = [...this.sendFromOptions, ...options];
             this.returnToOptions = options;
 
             if (this.returnToOptions.length > 0) {
@@ -424,12 +435,10 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         error: (err: any) => console.error('Failed to load store sources', err)
       });
 
-      // Sites included in 'Return From'
       this.inventoryService.getPurchaseSources(undefined, 'Site').subscribe({
         next: (res: any) => {
           if (res?.status === 'Success' && res?.data) {
-            const options = res.data.map((s: any) => ({ label: s.sourceName, value: s.sourceId }));
-            this.sendFromOptions = [...this.sendFromOptions, ...options];
+            this.returnFromOptions = res.data.map((s: any) => ({ label: s.sourceName, value: s.sourceId }));
           }
         },
         error: (err: any) => console.error('Failed to load site sources', err)
@@ -465,7 +474,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         if (res && res.status === 'Success' && res.data) {
           const sources = res.data;
 
-          const storeSites = sources.filter((s: any) => s.sourceType === 'Store' || s.sourceType === 'Site');
+          // const storeSites = sources.filter((s: any) => s.sourceType === 'Store' || s.sourceType === 'Site');
+          const storeSites = sources.filter((s: any) => s.sourceType === 'Store');
           const vendors = sources.filter((s: any) => s.sourceType === 'Vendor');
           const onlines = sources.filter((s: any) => String(s.sourceType).toLowerCase().includes('online'));
 
@@ -505,7 +515,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           invoiceDate: (this.data.invoiceDate || this.data?.purchase?.invoiceDate) ? new Date(this.data.invoiceDate || this.data?.purchase?.invoiceDate) : null,
           vendorName: this.data.vendorName || '',
           purchaseVia: (this.data.purchaseVia === 'Select' || !this.data.purchaseVia) ? null : this.data.purchaseVia,
-          platform: this.data.platform || this.data?.purchase?.purchaseFrom || null
+          platform: this.data.platform || this.data?.purchase?.purchaseFrom || null,
+          isPreorder: this.isPreorderUpdate
         });
 
         const itemsArray = this.addPurchaseForm.get('purchaseItems') as FormArray;
@@ -531,7 +542,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           const newGroup = this.fb.group({
             purchaseItemId: [item.purchaseItemId || item.id],
             itemName: [{ value: item.itemId || item.id, disabled: this.isPreorderUpdate || this.isDeliveredUpdate }, Validators.required],
-            itemNameDisplay: [item.itemName || ''],
+            itemNameDisplay: [item.make && item.model ? `${item.itemName} - ${item.make} - ${item.model}` : item.itemName || ''],
             qty: [{ value: count, disabled: this.isPreorderUpdate || this.isDeliveredUpdate }, [Validators.required, Validators.min(1)]],
             cost: [{ value: item.unitPrice || item.rate || 0, disabled: this.isPreorderUpdate || this.isDeliveredUpdate }, Validators.required],
             gst: [{ value: item.gstPercent || item.gst || 0, disabled: this.isPreorderUpdate || this.isDeliveredUpdate }, Validators.required],
@@ -549,7 +560,6 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         if (this.isPreorderUpdate || this.isDeliveredUpdate) {
           this.addPurchaseForm.get('purchaseForCountry')?.disable();
           this.addPurchaseForm.get('purchaseForStore')?.disable();
-          this.addPurchaseForm.get('invoiceDate')?.disable();
           this.addPurchaseForm.get('vendorName')?.disable();
           this.addPurchaseForm.get('purchaseVia')?.disable();
           this.addPurchaseForm.get('platform')?.disable();
@@ -557,12 +567,21 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
         if (this.isDeliveredUpdate) {
           this.addPurchaseForm.get('invoiceNo')?.disable();
+          this.addPurchaseForm.get('invoiceDate')?.disable();
+        }
+
+        if (this.isPreorderUpdate) {
+          // Invoice No. is optional and editable when updating pre-order; Invoice Date stays locked
+          this.addPurchaseForm.get('invoiceNo')?.enable();
+          this.addPurchaseForm.get('invoiceDate')?.disable();
+          this.addPurchaseForm.get('invoiceNo')?.clearValidators();
+          this.addPurchaseForm.get('invoiceNo')?.updateValueAndValidity();
+          this.addPurchaseForm.get('invoiceDate')?.clearValidators();
+          this.addPurchaseForm.get('invoiceDate')?.updateValueAndValidity();
         }
       }
     }
   }
-
-
 
   get purchaseItemsControls() {
     return (this.addPurchaseForm.get('purchaseItems') as FormArray).controls;
@@ -609,8 +628,12 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     const selectedItemObj = this.itemsList.find((i: any) => (i.id || i.itemId) === selectedId);
     if (selectedItemObj) {
       this.newItem.link = (selectedItemObj as any).purchaseItemLink || '';
+      this.newItem.serialNumberFlag = (selectedItemObj as any).serialNumberFlag || 'T';
+      this.newItem.barcodeFlag = (selectedItemObj as any).barcodeFlag || 'T';
     } else {
       this.newItem.link = '';
+      this.newItem.serialNumberFlag = 'T';
+      this.newItem.barcodeFlag = 'T';
     }
   }
 
@@ -674,12 +697,15 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   }
 
   addItemToInvoice() {
+    this.newItemSubmitAttempted = true;
     if (this.validateNewItem()) {
       const selectedItemObj = this.itemsList.find((i: any) => (i.id || i.itemId) === this.newItem.itemName);
       let displayItemName = '';
 
       if (selectedItemObj) {
-        displayItemName = selectedItemObj.itemName;
+        displayItemName = selectedItemObj.make && selectedItemObj.model
+          ? `${selectedItemObj.itemName} - ${selectedItemObj.make} - ${selectedItemObj.model}`
+          : selectedItemObj.itemName;
       } else {
         displayItemName = this.newItem.itemName;
       }
@@ -704,6 +730,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         gst: [this.newItem.gst, Validators.required],
         total: [this.newItem.total],
         link: [this.newItem.link],
+        serialNumberFlag: [this.newItem.serialNumberFlag || 'T'],
+        barcodeFlag: [this.newItem.barcodeFlag || 'T'],
         serialDetails: this.fb.array(serialDetailsControls),
         expanded: [false]
       });
@@ -713,6 +741,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       itemsArray.push(newGroup);
       this.calculateFormTotal();
 
+      this.newItemSubmitAttempted = false;
       this.newItem = {
         itemName: null,
         qty: null,
@@ -720,13 +749,22 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         gst: null,
         total: null,
         link: '',
+        serialNumberFlag: 'T',
+        barcodeFlag: 'T',
         serialDetails: [{ serialNo: '', barcodeNo: '' }]
       };
     }
   }
 
   isValidUrl(url: string): boolean {
-    return this.urlRegex.test(url);
+    if (!url || !url.trim()) return true; // Empty is allowed
+    try {
+      const testUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
+      new URL(testUrl);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   preventNegative(event: KeyboardEvent) {
@@ -744,29 +782,63 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       this.messageService.add({ severity: 'error', summary: 'Validation Error', detail: 'Please enter a valid quantity.' });
       return false;
     }
+    if (this.newItem.cost === null || this.newItem.cost === undefined || this.newItem.cost === '' || this.newItem.cost < 0) {
+      this.messageService.add({ severity: 'error', summary: 'Validation Error', detail: 'Please enter the cost per unit.' });
+      return false;
+    }
+    if (this.newItem.gst === null || this.newItem.gst === undefined || this.newItem.gst === '') {
+      this.messageService.add({ severity: 'error', summary: 'Validation Error', detail: 'Please enter the GST percentage (use 0 if not applicable).' });
+      return false;
+    }
     if (this.newItem.link && !this.isValidUrl(this.newItem.link)) {
       this.messageService.add({ severity: 'error', summary: 'Invalid URL', detail: 'Please enter a valid link.' });
       return false;
     }
 
-    // Duplicate Check
-    const currentSerials = this.newItem.serialDetails.map((sd: any) => sd.serialNo?.trim()).filter((s: string) => s);
-    const currentBarcodes = this.newItem.serialDetails.map((sd: any) => sd.barcodeNo?.trim()).filter((b: string) => b);
+    // Duplicate Check (only if flags require serial/barcode)
+    const requireSerial = this.newItem.serialNumberFlag !== 'F';
+    const requireBarcode = this.newItem.barcodeFlag !== 'F';
+
+    const currentSerials = requireSerial
+      ? this.newItem.serialDetails.map((sd: any) => sd.serialNo?.trim()).filter((s: string) => s)
+      : [];
+    const currentBarcodes = requireBarcode
+      ? this.newItem.serialDetails.map((sd: any) => sd.barcodeNo?.trim()).filter((b: string) => b)
+      : [];
+
+    const expectedQty = parseInt(this.newItem.qty, 10) || 1;
+    const isPreorder = this.addPurchaseForm.get('isPreorder')?.value;
+
+    if (!isPreorder) {
+      if (requireSerial && currentSerials.length < expectedQty) {
+        return false;
+      }
+
+      if (requireBarcode && currentBarcodes.length < expectedQty) {
+        return false;
+      }
+    }
 
     // Internal duplicates in current entry
-    if (new Set(currentSerials).size !== currentSerials.length || new Set(currentBarcodes).size !== currentBarcodes.length) {
+    if ((requireSerial && new Set(currentSerials).size !== currentSerials.length) ||
+      (requireBarcode && new Set(currentBarcodes).size !== currentBarcodes.length)) {
       this.messageService.add({ severity: 'error', summary: 'Duplicate Entry', detail: 'same numbers entered' });
       return false;
     }
 
     // Check against existing items in the invoice
     const itemsArray = this.addPurchaseForm?.get('purchaseItems') as FormArray;
-    if (itemsArray) {
+    if (itemsArray && (requireSerial || requireBarcode)) {
       for (const group of itemsArray.controls) {
-        const existingSerials = (group.get('serialDetails') as FormArray).value.map((sd: any) => sd.serialNo?.trim()).filter((s: string) => s);
-        const existingBarcodes = (group.get('serialDetails') as FormArray).value.map((sd: any) => sd.barcodeNo?.trim()).filter((b: string) => b);
+        const existingSerials = requireSerial
+          ? (group.get('serialDetails') as FormArray).value.map((sd: any) => sd.serialNo?.trim()).filter((s: string) => s)
+          : [];
+        const existingBarcodes = requireBarcode
+          ? (group.get('serialDetails') as FormArray).value.map((sd: any) => sd.barcodeNo?.trim()).filter((b: string) => b)
+          : [];
 
-        if (currentSerials.some((s: string) => existingSerials.includes(s)) || currentBarcodes.some((b: string) => existingBarcodes.includes(b))) {
+        if ((requireSerial && currentSerials.some((s: string) => existingSerials.includes(s))) ||
+          (requireBarcode && currentBarcodes.some((b: string) => existingBarcodes.includes(b)))) {
           this.messageService.add({ severity: 'error', summary: 'Duplicate Entry', detail: 'same numbers entered' });
           return false;
         }
@@ -870,7 +942,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       deliveredDateStr = this.viewStockSendData.deliveredDate || '';
     }
 
-    const payload = {
+    const updatePayload = {
       status: this.viewStockSendData.status,
       deliveredDate: deliveredDateStr,
       modifiedBy: this.userId
@@ -883,33 +955,31 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       return;
     }
 
-    this.inventoryService.updateIssueStatus_1_0(issueId, payload).subscribe({
-      next: (res) => {
-        this.messageService?.add({ severity: 'success', summary: 'Success', detail: res.message || 'Issue status updated successfully' });
-        this.isEditingIssueStatus = false;
-        setTimeout(() => {
-          this.submit.emit(res);
-          this.close.emit();
-        }, 1000);
-      },
-      error: (err) => {
-        this.messageService?.add({ severity: 'error', summary: 'Error', detail: err.error?.message || 'Failed to update issue status' });
-      }
+    // Emit to parent to handle API call and refresh
+    this.submit.emit({
+      isUpdateIssueStatus: true,
+      issueId: issueId,
+      payload: updatePayload
     });
   }
 
   // VIEW PURCHASE METHODS
   initViewItems() {
+    // console.log(this.data);
     let rawItems: any[] = [];
     if (this.data?.items) {
       rawItems = this.data.items;
     } else if (this.data?.itemsDetails) {
+      console.log(this.data?.itemsDetails);
       rawItems = this.data.itemsDetails;
     }
 
     this.viewPurchaseItems = [];
     for (const item of rawItems) {
+      // console.log(rawItems);
       if (item.serialDetails && item.serialDetails.length > 0) {
+        const sFlag: string = (item.serialNumberFlag || '');
+        const bFlag: string = (item.barcodeFlag || '');
         for (const sd of item.serialDetails) {
           this.viewPurchaseItems.push({
             ...item,
@@ -917,28 +987,62 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
             count: 1,
             serialNo: sd.serialNumber || '-',
             barcodeNo: sd.barcode || '-',
+            serialNumberFlag: sFlag,
+            barcodeFlag: bFlag,
+            requiresSerial: sFlag !== 'F',
+            requiresBarcode: bFlag !== 'F',
             status: sd.status !== undefined && sd.status !== null ? String(sd.status).toUpperCase() : String(item.status || 'DELIVERED').toUpperCase(),
             returnReason: sd.returnReason || item.returnReason || ''
           });
         }
       } else {
+        // No serial/barcode data — push grouped row or expand individuals for preorders
         let count = 1;
         if (item.qty) {
           count = parseInt(item.qty, 10);
-          if (isNaN(count) || count < 1) count = 1;
         } else if (item.count) {
           count = parseInt(item.count, 10);
-          if (isNaN(count) || count < 1) count = 1;
         }
+        if (isNaN(count) || count < 1) count = 1;
 
-        for (let i = 0; i < count; i++) {
+        const serialFlag: string = (item.serialNumberFlag || '');
+        const barcodeFlag: string = (item.barcodeFlag || '');
+
+        const requiresSerial = (serialFlag !== 'F');
+        const requiresBarcode = (barcodeFlag !== 'F');
+
+        const isPreorder = this.isPreorderInvoice;
+
+        if (isPreorder && (requiresSerial || requiresBarcode)) {
+          // Expand into individual rows — one per unit
+          for (let i = 0; i < count; i++) {
+            this.viewPurchaseItems.push({
+              ...item,
+              purchaseItemId: item.id || item.purchaseItemId || item.itemId,
+              count: 1,
+              serialNo: '',
+              barcodeNo: '',
+              serialNumberFlag: serialFlag,
+              barcodeFlag: barcodeFlag,
+              requiresSerial: requiresSerial,
+              requiresBarcode: requiresBarcode,
+              status: String(item.status || 'PREORDER').toUpperCase(),
+              returnReason: item.returnReason || ''
+            });
+          }
+        } else {
+          // Group row — items with both flags 'F', or non-preorder items
           this.viewPurchaseItems.push({
             ...item,
             purchaseItemId: item.id || item.purchaseItemId || item.itemId,
-            count: 1,
-            serialNo: '-',
-            barcodeNo: '-',
-            status: String(item.status || 'DELIVERED').toUpperCase(),
+            count: count,
+            serialNo: null,
+            barcodeNo: null,
+            serialNumberFlag: serialFlag,
+            barcodeFlag: barcodeFlag,
+            requiresSerial: false,
+            requiresBarcode: false,
+            status: String(item.status || (isPreorder ? 'PREORDER' : 'DELIVERED')).toUpperCase(),
             returnReason: item.returnReason || ''
           });
         }
@@ -958,10 +1062,16 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     this.isBulkEditingStatus = true;
     this.isPreorderSubmitAttempted = false;
     this.isReturnSubmitAttempted = false;
+
+    // Invoice Number editing for preorder updates
+    if (this.isPreorderInvoice) {
+      this.data.newInvoiceNumber = this.data?.purchase?.invoiceNumber || this.data?.invoiceNumber || '';
+    }
+
     for (const item of this.viewPurchaseItems) {
       item.newStatus = String(item.status).toUpperCase();
-      item.newSerialNumber = item.serialNo !== '-' ? item.serialNo : '';
-      item.newBarcode = item.barcodeNo !== '-' ? item.barcodeNo : '';
+      item.newSerialNumber = item.serialNo !== '-' && item.serialNo !== null ? item.serialNo : '';
+      item.newBarcode = item.barcodeNo !== '-' && item.barcodeNo !== null ? item.barcodeNo : '';
       item.returnReason = item.returnReason || undefined;
     }
   }
@@ -972,11 +1082,29 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
     let hasErrors = false;
     if (this.isPreorderInvoice) {
-      const missingSerials = this.viewPurchaseItems.some(i => !i.newSerialNumber || i.newSerialNumber.trim() === '');
-      if (missingSerials) hasErrors = true;
+      // Validate Invoice No.
+      if (!this.data.newInvoiceNumber || !this.data.newInvoiceNumber.trim()) {
+        hasErrors = true;
+      }
+
+      const missingSerials = this.viewPurchaseItems.some(i => {
+        return i.requiresSerial && (!i.newSerialNumber || i.newSerialNumber.trim() === '');
+      });
+      if (missingSerials) {
+        hasErrors = true;
+      }
+
+      const missingBarcodes = this.viewPurchaseItems.some(i => {
+        return i.requiresBarcode && (!i.newBarcode || i.newBarcode.trim() === '');
+      });
+      if (missingBarcodes) {
+        hasErrors = true;
+      }
     } else {
       const missingReasons = this.viewPurchaseItems.some(i => i.newStatus === 'RETURNED' && (!i.returnReason || i.returnReason.trim() === ''));
-      if (missingReasons) hasErrors = true;
+      if (missingReasons) {
+        hasErrors = true;
+      }
     }
 
     if (hasErrors) return;
@@ -989,11 +1117,11 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       let reasonChanged = false;
 
       if (this.isPreorderInvoice) {
-        const oldSerial = item.serialNo !== '-' ? item.serialNo : '';
+        const oldSerial = (item.serialNo !== '-' && item.serialNo !== null) ? item.serialNo : '';
         const newSerial = item.newSerialNumber || '';
         serialChanged = oldSerial !== newSerial;
 
-        const oldBarcode = item.barcodeNo !== '-' ? item.barcodeNo : '';
+        const oldBarcode = (item.barcodeNo !== '-' && item.barcodeNo !== null) ? item.barcodeNo : '';
         const newBarcode = item.newBarcode || '';
         barcodeChanged = oldBarcode !== newBarcode;
       } else {
@@ -1007,16 +1135,17 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       return isModified;
     });
 
-    if (modifiedItems.length === 0 && this.isPreorderInvoice) {
-      this.isBulkEditingStatus = false;
-      return;
-    } else if (modifiedItems.length === 0 && !this.isPreorderInvoice) {
+    const invoiceNumberChanged = this.isPreorderInvoice &&
+      this.data.newInvoiceNumber !== (this.data?.purchase?.invoiceNumber || this.data?.invoiceNumber);
+
+    if (!invoiceNumberChanged && modifiedItems.length === 0) {
       this.isBulkEditingStatus = false;
       return;
     }
 
     const now = new Date();
-    const modifiedTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    const pad = (n: number) => n < 10 ? '0' + n : n;
+    const modifiedTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
     const purchaseId = this.data?.purchase?.id || this.data?.purchaseId || this.data?.id;
 
@@ -1026,8 +1155,13 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       modifiedTime: modifiedTime
     };
 
+    if (invoiceNumberChanged) {
+      payload.invoiceNumber = this.data.newInvoiceNumber;
+    }
+
     const payloadItems: any[] = [];
 
+    // For preorder, we typically want to process all items to ensure they move to DELIVERED
     const itemsToProcess = this.isPreorderInvoice ? this.viewPurchaseItems : modifiedItems;
 
     itemsToProcess.forEach(item => {
@@ -1061,8 +1195,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           existing.barcodes.push(item.newBarcode);
         }
       } else {
-        const serialToPass = item.serialNo !== '-' ? item.serialNo : null;
-        const barcodeToPass = item.barcodeNo !== '-' ? item.barcodeNo : null;
+        const serialToPass = (item.serialNo !== '-' && item.serialNo !== null) ? item.serialNo : null;
+        const barcodeToPass = (item.barcodeNo !== '-' && item.barcodeNo !== null) ? item.barcodeNo : null;
         if (serialToPass && !existing.serialNumbers.includes(serialToPass)) existing.serialNumbers.push(serialToPass);
         if (barcodeToPass && !existing.barcodes.includes(barcodeToPass)) existing.barcodes.push(barcodeToPass);
       }
@@ -1373,7 +1507,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   getModalTitle(): string {
     switch (this.mode) {
       case 'view-purchase':
-        return `${this.data?.invoiceNumber || ''} - ${this.formatDate(this.data?.invoiceDate) || ''}`;
+        return `${this.data?.invoiceNumber || 'PREORDER'} - ${this.formatDate(this.data?.invoiceDate) || ''}`;
       case 'add-purchase':
         return 'ADD PURCHASE INVOICE';
       case 'update-purchase':
@@ -1426,6 +1560,15 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       case 'update-purchase':
         this.isDeliveredSubmit = true;
         this.addPurchaseForm.markAllAsTouched();
+
+        // For delivered saves, Invoice No. and Invoice Date are required
+        if (!this.isPreorderUpdate) {
+          this.addPurchaseForm.get('invoiceNo')?.setValidators(Validators.required);
+          this.addPurchaseForm.get('invoiceDate')?.setValidators(Validators.required);
+          this.addPurchaseForm.get('invoiceNo')?.updateValueAndValidity();
+          this.addPurchaseForm.get('invoiceDate')?.updateValueAndValidity();
+        }
+
         const pdFormValue = this.addPurchaseForm.getRawValue();
 
         // Custom Validation for Delivered
@@ -1436,19 +1579,35 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
         // Validate Serials and Barcodes for Delivered
         this.hasMissingSerials = false;
+        let hasMissingBarcodes = false;
+
         for (const item of pdFormValue.purchaseItems) {
+          const reqSerial = item.serialNumberFlag !== 'F';
+          const reqBarcode = item.barcodeFlag !== 'F';
+
+          if (!reqSerial && !reqBarcode) continue;
+
           if (!item.serialDetails || item.serialDetails.length === 0) {
-            this.hasMissingSerials = true;
+            if (reqSerial) this.hasMissingSerials = true;
+            if (reqBarcode) hasMissingBarcodes = true;
             break;
           }
+
           for (const sd of item.serialDetails) {
-            if (!sd.serialNo || sd.serialNo.trim() === '') {
+            if (reqSerial && (!sd.serialNo || sd.serialNo.trim() === '')) {
               this.hasMissingSerials = true;
+            }
+            if (reqBarcode && (!sd.barcodeNo || sd.barcodeNo.trim() === '')) {
+              this.hasMissingBarcodes = true;
             }
           }
         }
 
         if (this.hasMissingSerials) {
+          return;
+        }
+
+        if (this.hasMissingBarcodes) {
           return;
         }
 
@@ -1477,8 +1636,12 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
         // Format createdTime as YYYY-MM-DD
         const now = new Date();
+
         const pad = (n: number) => n < 10 ? '0' + n : n;
-        const createdTimeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+        const createdTimeStr =
+          `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ` +
+          `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
         // Validate at least one item or product is selected
         if (sendFormValue.stockSendItems.length === 0 && sendFormValue.stockSendProducts.length === 0) {
@@ -1494,7 +1657,6 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           barcode: item.barcode,
           billingTypeId: item.billingStatus || 1
         }));
-        // Map items securely from previously selected data
         const requestPayload = {
           issueDate: formatYYYYMMDD(new Date()), // Assuming today's date for issueDate
           issuedFromId: Number(sendFormValue.sendFrom) || 0,
@@ -1575,6 +1737,12 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     this.submitted = true;
     this.isDeliveredSubmit = false;
 
+    // Invoice No. is NOT required for pre-order saves, but Invoice Date IS
+    this.addPurchaseForm.get('invoiceNo')?.clearValidators();
+    this.addPurchaseForm.get('invoiceNo')?.updateValueAndValidity();
+    this.addPurchaseForm.get('invoiceDate')?.setValidators(Validators.required);
+    this.addPurchaseForm.get('invoiceDate')?.updateValueAndValidity();
+
     this.addPurchaseForm.markAllAsTouched();
     const formValue = this.addPurchaseForm.getRawValue();
 
@@ -1646,7 +1814,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         invoiceType: statusString === 'preorder' ? 'PREORDER' : 'DELIVERED',
         items: itemsPayload,
         createdBy: this.userId,
-        createdTime: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`
+        createdTime: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')} ${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}:${String(new Date().getSeconds()).padStart(2, '0')}`
       };
 
       if (formValue.invoiceDate) {
@@ -1700,8 +1868,6 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       if (formValue.invoiceNo) {
         updatePayload.invoiceNumber = formValue.invoiceNo;
       }
-
-      console.log('Emitting update-purchase JSON payload:', updatePayload);
       this.submit.emit({ isUpdatePurchase: true, payload: updatePayload });
     }
   }
@@ -1765,7 +1931,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     if (!status) return { background: '#999999', color: '#ffffff' };
     const s = status.toLowerCase();
     if (s === 'returned' || s === 'delivered' || s === 'success') return { background: '#53BF8B', color: '#ffffff' };
-    if (s === 'in transit' || s === 'issued') return { background: '#FF9800', color: '#ffffff' };
+    if (s === 'in transit' || s === 'issued') return { background: '#000000', color: '#ffffff' };
     if (s === 'scraped' || s === 'scrap' || s === 'defective') return { background: '#F44336', color: '#ffffff' };
     return { background: '#999999', color: '#ffffff' };
   }

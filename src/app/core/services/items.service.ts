@@ -13,7 +13,8 @@ import { InventoryItemsResponse, InventoryItemDetailsResponse } from "../models/
 
 @Injectable({ providedIn: "root" })
 export class ItemsService {
-  private baseUrl = environment.apiBaseUrl + '/inventory';
+  private baseUrl = environment.apiBaseUrl;
+  // private baseUrl = environment.apiBaseUrl + '/inventory';
 
   constructor(private http: HttpClient) { }
 
@@ -134,8 +135,11 @@ export class ItemsService {
     );
   }
 
-  getAvailableItems(itemId: number): Observable<any> {
-    const params = new HttpParams().set('itemId', itemId.toString());
+  getAvailableItems(itemId: number, storeId?: number): Observable<any> {
+    let params = new HttpParams().set('itemId', itemId.toString());
+    if (storeId) {
+      params = params.set('storeId', storeId.toString());
+    }
     return this.http.get<any>(`${this.baseUrl}/getAvailableItems_1_0`, { params }).pipe(
       retry(1),
       catchError((error) => throwError(() => error))

@@ -167,7 +167,6 @@ export class InventoryReturnTabComponent implements OnInit, OnChanges {
   }
 
   ngOnInit() {
-    this.fetchReturnList();
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -280,8 +279,13 @@ export class InventoryReturnTabComponent implements OnInit, OnChanges {
       const start = new Date(payload.startDate);
       const end = new Date(payload.endDate);
 
-      this.startDate = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())).toISOString();
-      this.endDate = new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate())).toISOString();
+      const fmtDate = (d: Date) => {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      };
+
+      this.startDate = fmtDate(start);
+      this.endDate = fmtDate(end);
     } else {
       this.startDate = undefined;
       this.endDate = undefined;

@@ -1,4 +1,4 @@
-<div class="custom-modal-overlay" (click)="onOverlayClick($event)">
+<div class="custom-modal-overlay">
   <div class="custom-modal-container">
 
     <!-- Header -->
@@ -17,6 +17,18 @@
 
         <div *ngIf="mode === 'add-purchase' || mode === 'update-purchase'"
           class="add-purchase-wrapper modal-section-wrapper" [formGroup]="addPurchaseForm">
+
+          <!-- TOP HEADER ROW: Pre-order Switch & Action Buttons -->
+          <div class="preorder-switch-container">
+            <div class="switch-group">
+              <span class="switch-label">IS THIS A PRE-ORDER?</span>
+              <p-inputSwitch formControlName="isPreorder"></p-inputSwitch>
+            </div>
+            <div class="add-purchase-actions">
+              <button class="btn-create-item" (click)="openCreateItem.emit()">CREATE NEW ITEM</button>
+              <button class="btn-create-item" (click)="openAddItemModel.emit()">ADD NEW MODEL</button>
+            </div>
+          </div>
 
           <!-- TOP ROW: Country, Store, Action Buttons -->
           <div class="add-purchase-top-row">
@@ -37,27 +49,21 @@
               <div *ngIf="submitted && addPurchaseForm.get('purchaseForStore')?.invalid" class="text-red text-xs mt-1">
                 Store is required</div>
             </div>
-            <!-- Item Creation Actions -->
-            <div class="add-purchase-actions">
-              <button class="btn-create-item" (click)="openCreateItem.emit()">CREATE NEW ITEM</button>
-              <button class="btn-create-item" (click)="openAddItemModel.emit()">ADD NEW MODEL</button>
-            </div>
           </div>
 
-          <div class="form-row-radio m-0" style="align-items: center;"
+          <div class="radio-group-container"
             [ngClass]="{'radio-invalid-border': submitted && addPurchaseForm.get('purchaseVia')?.invalid}">
-            <div class="form-row-radio" style="margin: 0;">
-              <label class="radio-label">
-                <input type="radio" formControlName="purchaseVia" value="Online">
-                <span>Online</span>
-              </label>
-              <label class="radio-label">
-                <input type="radio" formControlName="purchaseVia" value="Vendor">
-                <span>Vendor</span>
-              </label>
+            <label class="radio-label">
+              <input type="radio" formControlName="purchaseVia" value="Online">
+              <span>Online</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" formControlName="purchaseVia" value="Vendor">
+              <span>Vendor</span>
+            </label>
+            <div *ngIf="submitted && addPurchaseForm.get('purchaseVia')?.invalid" class="text-red text-xs ml-15">
+              Type is required
             </div>
-            <div *ngIf="submitted && addPurchaseForm.get('purchaseVia')?.invalid" class="text-red text-xs m-0">Platform
-              type is required</div>
           </div>
 
           <div class="form-row-3col">
@@ -103,10 +109,12 @@
             <div class="items-section-header">ITEMS ({{ purchaseItemsControls.length || 0 }}) <span
                 *ngIf="submitted && purchaseItemsControls.length === 0" class="text-red text-xs ml-10">At least 1 item
                 is required</span><span *ngIf="submitted && isDeliveredSubmit && hasMissingSerials"
-                class="text-red text-xs ml-10">All items require a Serial No.</span></div>
+                class="text-red text-xs ml-10">All items require a Serial No.</span><span
+                *ngIf="submitted && isDeliveredSubmit && hasMissingBarcodes" class="text-red text-xs ml-10">All items
+                require a Barcode No.</span></div>
 
-            <!-- Entry Form Row 1 -->
-            <div class="purchase-item-entry-grid">
+            <!-- Entry Form Row 1 (Pricing + Add button) -->
+            <div class="purchase-item-entry-grid item-entry-with-btn">
               <div class="field-column">
                 <label class="field-label">Item Name</label>
                 <p-dropdown [options]="purchaseItemsDropdownOptions" [(ngModel)]="newItem.itemName"
@@ -149,42 +157,68 @@
                   <input type="text" [value]="newItem.total || ''" readonly class="input-readonly">
                 </div>
               </div>
-            </div>
-
-            <!-- Entry Form Row 2 (Dynamic Serial Details) -->
-            <div *ngFor="let sd of newItem.serialDetails; let i = index" class="purchase-item-link-grid"
-              [class.mt-10]="i > 0">
-              <div class="field-column">
-                <ng-container *ngIf="i === 0">
-                  <label class="field-label">Purchase Item Link</label>
-                  <div class="input-group-styled">
-                    <input type="text" placeholder="https://..." [(ngModel)]="newItem.link"
-                      [ngModelOptions]="{standalone: true}"
-                      [class.error-border]="newItem.link && !isValidUrl(newItem.link)">
-                    <img src="assets/icons/pencil.svg" alt="Edit" class="icon-edit-sm">
-                  </div>
-                  <span class="error-sm" *ngIf="newItem.link && !isValidUrl(newItem.link)">Invalid URL format</span>
-                </ng-container>
-              </div>
-              <div class="field-column relative-position">
-                <label class="field-label" *ngIf="i === 0">Serial No.</label>
-                <span class="text-xs text-grey" style="position: absolute; left: -25px; bottom: 12px; opacity: 0.6;"
-                  *ngIf="newItem.serialDetails.length > 1">#{{i + 1}}</span>
-                <input type="text" class="field-input-text" placeholder="Enter" [(ngModel)]="sd.serialNo"
-                  [ngModelOptions]="{standalone: true}" [readonly]="isDeliveredUpdate"
-                  [class.read-only]="isDeliveredUpdate" [class.bg-grey-100]="isDeliveredUpdate">
-              </div>
-              <div class="field-column">
-                <label class="field-label" *ngIf="i === 0">Barcode No.</label>
-                <input type="text" class="field-input-text" placeholder="Enter" [(ngModel)]="sd.barcodeNo"
-                  [ngModelOptions]="{standalone: true}" [readonly]="isDeliveredUpdate"
-                  [class.read-only]="isDeliveredUpdate" [class.bg-grey-100]="isDeliveredUpdate">
-              </div>
-              <div class="field-column add-circle-btn-wrapper" *ngIf="i === 0">
+              <!-- Add Button inline -->
+              <div class="field-column add-circle-btn-wrapper-inline">
+                <label class="field-label">&nbsp;</label>
                 <button class="btn-add-circle" (click)="addItemToInvoice()"
                   [disabled]="!newItem.itemName || !newItem.qty || newItem.qty < 1 || (newItem.link && !isValidUrl(newItem.link)) || isDeliveredUpdate">
                   <i class="pi pi-plus"></i>
                 </button>
+              </div>
+            </div>
+
+            <!-- Entry Form Row 2 (Link + Serial/Barcode details) -->
+            <div class="item-entry-details-row">
+              <!-- Link field (always shown, once) -->
+              <div class="field-column link-field-col">
+                <label class="field-label">Purchase Item Link</label>
+                <div class="input-group-styled">
+                  <input type="text" placeholder="https://..." [(ngModel)]="newItem.link"
+                    [ngModelOptions]="{standalone: true}"
+                    [class.error-border]="newItem.link && !isValidUrl(newItem.link)">
+                  <img src="assets/icons/pencil.svg" alt="Edit" class="icon-edit-sm">
+                </div>
+                <span class="error-sm" *ngIf="newItem.link && !isValidUrl(newItem.link)">Invalid URL format</span>
+              </div>
+
+              <!-- Serial / Barcode mini-table (only if either flag is T and NOT pre-order) -->
+              <div class="serial-barcode-panel" *ngIf="(newItem.serialNumberFlag !== 'F' || newItem.barcodeFlag !== 'F') && !addPurchaseForm.get('isPreorder')?.value">
+                <div class="serial-panel-header">
+                  <span class="serial-panel-title">
+                    <i class="pi pi-list" style="margin-right:5px;"></i>
+                    Serial / Barcode Details
+                    <span class="serial-count-badge">{{ newItem.serialDetails?.length || 0 }}</span>
+                  </span>
+                  <span class="serial-panel-sub">One row per unit quantity</span>
+                </div>
+                <div class="serial-table">
+                  <!-- Header -->
+                  <div class="serial-table-head">
+                    <span class="serial-col-num">#</span>
+                    <span class="serial-col-field" *ngIf="newItem.serialNumberFlag !== 'F'">Serial No.</span>
+                    <span class="serial-col-field" *ngIf="newItem.barcodeFlag !== 'F'">Barcode No.</span>
+                  </div>
+                  <!-- Rows -->
+                  <div *ngFor="let sd of newItem.serialDetails; let i = index" class="serial-table-row">
+                    <span class="serial-col-num serial-row-index">{{ i + 1 }}</span>
+                    <div class="serial-col-field" style="display: flex; flex-direction: column;"
+                      *ngIf="newItem.serialNumberFlag !== 'F'">
+                      <input type="text" class="serial-inline-input" placeholder="Enter serial…"
+                        [(ngModel)]="sd.serialNo" [ngModelOptions]="{standalone: true}" [readonly]="isDeliveredUpdate"
+                        [ngClass]="{'input-invalid': newItemSubmitAttempted && !sd.serialNo && !addPurchaseForm.get('isPreorder')?.value}">
+                      <div *ngIf="newItemSubmitAttempted && !sd.serialNo && !addPurchaseForm.get('isPreorder')?.value" class="text-red text-xs mt-1">Serial required
+                      </div>
+                    </div>
+                    <div class="serial-col-field" style="display: flex; flex-direction: column;"
+                      *ngIf="newItem.barcodeFlag !== 'F'">
+                      <input type="text" class="serial-inline-input" placeholder="Enter barcode…"
+                        [(ngModel)]="sd.barcodeNo" [ngModelOptions]="{standalone: true}" [readonly]="isDeliveredUpdate"
+                        [ngClass]="{'input-invalid': newItemSubmitAttempted && !sd.barcodeNo && !addPurchaseForm.get('isPreorder')?.value}">
+                      <div *ngIf="newItemSubmitAttempted && !sd.barcodeNo && !addPurchaseForm.get('isPreorder')?.value" class="text-red text-xs mt-1">Barcode
+                        required</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -195,19 +229,32 @@
             <div class="added-items-list mt-20" formArrayName="purchaseItems">
               <div *ngFor="let itemCtrl of purchaseItemsControls; let i = index" class="added-item-row-grid"
                 [formGroupName]="i">
-                <div class="expand-icon icon-expand-toggle" (click)="toggleExpanded(i)">
+                <!-- Expand toggle: only show if this item has serial/barcode flags AND NOT pre-order -->
+                <div class="expand-icon icon-expand-toggle"
+                  *ngIf="(itemCtrl.get('serialNumberFlag')?.value !== 'F' || itemCtrl.get('barcodeFlag')?.value !== 'F') && !addPurchaseForm.get('isPreorder')?.value"
+                  (click)="toggleExpanded(i)">
                   {{ itemCtrl.get('expanded')?.value ? '–' : '+' }}
                 </div>
+                <!-- Spacer to preserve grid alignment when no expand toggle or pre-order -->
+                <div
+                  *ngIf="(itemCtrl.get('serialNumberFlag')?.value === 'F' && itemCtrl.get('barcodeFlag')?.value === 'F') || addPurchaseForm.get('isPreorder')?.value">
+                </div>
+
                 <div class="list-text">
                   <b>{{ itemCtrl.get('itemNameDisplay')?.value || '&nbsp;' }}</b>
                   <div *ngIf="itemCtrl.get('expanded')?.value" class="expanded-details-container mt-10"
                     formArrayName="serialDetails">
                     <div *ngFor="let sdCtrl of getSerialDetailsControls(i); let j = index" class="text-xs mb-2"
                       style="color: #999; font-weight: 500; letter-spacing: 0.2px;" [formGroupName]="j">
-                      S.No. {{ sdCtrl.get('serialNo')?.value || '-' }} <span *ngIf="sdCtrl.get('barcodeNo')?.value"
+                      <ng-container *ngIf="itemCtrl.get('serialNumberFlag')?.value !== 'F'">
+                        S.No. {{ sdCtrl.get('serialNo')?.value || '-' }}
+                      </ng-container>
+                      <span
+                        *ngIf="itemCtrl.get('serialNumberFlag')?.value !== 'F' && itemCtrl.get('barcodeFlag')?.value !== 'F' && sdCtrl.get('barcodeNo')?.value"
                         style="margin: 0 5px;">|</span>
-                      <span *ngIf="sdCtrl.get('barcodeNo')?.value">Barcode No. {{ sdCtrl.get('barcodeNo')?.value
-                        }}</span>
+                      <span *ngIf="itemCtrl.get('barcodeFlag')?.value !== 'F' && sdCtrl.get('barcodeNo')?.value">
+                        Barcode No. {{ sdCtrl.get('barcodeNo')?.value }}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -243,9 +290,11 @@
             <button class="btn-edit-outline text-red-bold" (click)="close.emit()" [disabled]="isLoading"
               style="border-color: #ED3237; font-size: 11px; padding: 10px 40px;">CANCEL</button>
             <button class="btn-secondary" (click)="handleSavePreOrder()" [disabled]="isLoading"
+              *ngIf="addPurchaseForm.get('isPreorder')?.value"
               style="background: white; border: 1px solid #ED3237; color: #ED3237; font-weight: bold; font-size: 11px; padding: 10px 40px; border-radius: 4px;">{{
               isLoading ? 'SAVING...' : 'SAVE (PRE-ORDER)' }}</button>
             <button class="btn-primary" (click)="handleSave()" [disabled]="isLoading"
+              *ngIf="!addPurchaseForm.get('isPreorder')?.value"
               style="font-size: 11px; padding: 10px 40px;">{{ getSubmitButtonLabel() }}</button>
           </div>
 
@@ -256,8 +305,16 @@
             <div class="masters-view-grid">
               <div class="view-field">
                 <label class="field-label">Invoice No.</label>
-                <span class="field-value">{{ data?.purchase?.invoiceNumber ||
-                  data?.invoiceNumber || '---' }}</span>
+                <ng-container *ngIf="isBulkEditingStatus && isPreorderInvoice; else invoiceReadOnly">
+                  <input type="text" class="field-input-text" [(ngModel)]="data.newInvoiceNumber"
+                    [ngModelOptions]="{standalone: true}" placeholder="Enter Invoice No."
+                    [class.input-invalid]="isPreorderSubmitAttempted && (!data.newInvoiceNumber || !data.newInvoiceNumber.trim())">
+                  <div *ngIf="isPreorderSubmitAttempted && (!data.newInvoiceNumber || !data.newInvoiceNumber.trim())"
+                    class="text-red text-xs mt-1">Invoice Number is required</div>
+                </ng-container>
+                <ng-template #invoiceReadOnly>
+                  <span class="field-value">{{ data?.purchase?.invoiceNumber || data?.invoiceNumber || '---' }}</span>
+                </ng-template>
               </div>
 
               <div class="view-field">
@@ -348,21 +405,47 @@
                     </div>
 
                     <div class="col-serial">
-                      <div *ngIf="!isBulkEditingStatus || !isPreorderInvoice">{{ item.serialNo || '-' }}</div>
-                      <div *ngIf="isBulkEditingStatus && isPreorderInvoice">
-                        <input type="text" class="field-input-text full-width" [(ngModel)]="item.newSerialNumber"
-                          [ngModelOptions]="{standalone: true}" placeholder="Serial No.">
-                        <div *ngIf="isPreorderSubmitAttempted && !item.newSerialNumber" class="text-red text-xs mt-5">
-                          Serial required</div>
-                      </div>
+                      <!-- VIEW MODE -->
+                      <ng-container *ngIf="!isBulkEditingStatus || !isPreorderInvoice">
+                        <span *ngIf="item.serialNo && item.serialNo !== '-'">{{ item.serialNo }}</span>
+                        <span *ngIf="!item.serialNo || item.serialNo === '-'"
+                          style="color:#ccc; font-style:italic; font-size:11px;">—</span>
+                      </ng-container>
+                      <!-- EDIT MODE -->
+                      <ng-container *ngIf="isBulkEditingStatus && isPreorderInvoice">
+                        <ng-container *ngIf="item.requiresSerial">
+                          <input type="text" class="field-input-text full-width" [(ngModel)]="item.newSerialNumber"
+                            [ngModelOptions]="{standalone: true}" placeholder="Serial No."
+                            [class.input-invalid]="isPreorderSubmitAttempted && item.requiresSerial && !item.newSerialNumber">
+                          <div *ngIf="isPreorderSubmitAttempted && item.requiresSerial && !item.newSerialNumber"
+                            class="text-red text-xs mt-5">
+                            Serial required</div>
+                        </ng-container>
+                        <span *ngIf="!item.requiresSerial"
+                          style="color:#ccc; font-style:italic; font-size:11px;">—</span>
+                      </ng-container>
                     </div>
 
                     <div class="col-barcode">
-                      <div *ngIf="!isBulkEditingStatus || !isPreorderInvoice">{{ item.barcodeNo || '-' }}</div>
-                      <div *ngIf="isBulkEditingStatus && isPreorderInvoice">
-                        <input type="text" class="field-input-text full-width" [(ngModel)]="item.newBarcode"
-                          [ngModelOptions]="{standalone: true}" placeholder="Barcode No.">
-                      </div>
+                      <!-- VIEW MODE -->
+                      <ng-container *ngIf="!isBulkEditingStatus || !isPreorderInvoice">
+                        <span *ngIf="item.barcodeNo && item.barcodeNo !== '-'">{{ item.barcodeNo }}</span>
+                        <span *ngIf="!item.barcodeNo || item.barcodeNo === '-'"
+                          style="color:#ccc; font-style:italic; font-size:11px;">—</span>
+                      </ng-container>
+                      <!-- EDIT MODE -->
+                      <ng-container *ngIf="isBulkEditingStatus && isPreorderInvoice">
+                        <ng-container *ngIf="item.requiresBarcode">
+                          <input type="text" class="field-input-text full-width" [(ngModel)]="item.newBarcode"
+                            [ngModelOptions]="{standalone: true}" placeholder="Barcode No."
+                            [class.input-invalid]="isPreorderSubmitAttempted && item.requiresBarcode && !item.newBarcode">
+                          <div *ngIf="isPreorderSubmitAttempted && item.requiresBarcode && !item.newBarcode"
+                            class="text-red text-xs mt-5">
+                            Barcode required</div>
+                        </ng-container>
+                        <span *ngIf="!item.requiresBarcode"
+                          style="color:#ccc; font-style:italic; font-size:11px;">—</span>
+                      </ng-container>
                     </div>
 
                     <div class="col-count"><b>{{ item.count }}</b> No{{ item.count > 1 ? "'s" : "" }}</div>
@@ -425,7 +508,7 @@
             <div class="reference-images-section">
               <div class="section-header-row">
                 <div class="items-section-header mb-0">REFERENCE IMAGES</div>
-                <button class="btn-add-sm">+ ADD</button>
+                <!-- <button class="btn-add-sm">+ ADD</button> -->
               </div>
               <div class="images-grid" *ngIf="(data?.files?.length || data?.files?.length) > 0">
                 <ng-container *ngFor="let file of (data?.files || data?.files)">
@@ -638,7 +721,7 @@
             <div class="add-purchase-top-row">
               <div class="field-column">
                 <label class="field-label">Return From</label>
-                <p-dropdown [options]="sendFromOptions" formControlName="returnFrom" optionLabel="label"
+                <p-dropdown [options]="returnFromOptions" formControlName="returnFrom" optionLabel="label"
                   optionValue="value" [style]="{'width':'100%'}" placeholder="Select" appendTo="body" [filter]="true"
                   filterPlaceholder="Search..." [overlayOptions]="customOverlayOptions"></p-dropdown>
               </div>
@@ -901,8 +984,8 @@
                   </button>
                 </div>
                 <div *ngIf="isEditingIssueStatus" style="margin-top: 4px;">
-                  <p-dropdown [options]="['ISSUED', 'DELIVERED', 'RETURNED']" [(ngModel)]="viewStockSendData.status"
-                    appendTo="body" styleClass="w-full" [overlayOptions]="customOverlayOptions"></p-dropdown>
+                  <p-dropdown [options]="['ISSUED', 'DELIVERED']" [(ngModel)]="viewStockSendData.status" appendTo="body"
+                    styleClass="w-full" [overlayOptions]="customOverlayOptions"></p-dropdown>
                 </div>
               </div>
             </div>
@@ -1032,9 +1115,8 @@
                   </button>
                 </div>
                 <div *ngIf="isEditingReturnStatus" style="margin-top: 4px;">
-                  <p-dropdown [options]="['RETURNED', 'IN_TRANSIT', 'DELIVERED']"
-                    [(ngModel)]="viewReturnData!.header.status" appendTo="body" styleClass="w-full"
-                    [overlayOptions]="customOverlayOptions"></p-dropdown>
+                  <p-dropdown [options]="['RETURNED', 'IN_TRANSIT']" [(ngModel)]="viewReturnData!.header.status"
+                    appendTo="body" styleClass="w-full" [overlayOptions]="customOverlayOptions"></p-dropdown>
                 </div>
               </div>
             </div>

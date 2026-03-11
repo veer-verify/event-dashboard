@@ -193,6 +193,8 @@ export interface ItemForIssue {
   serialNumber: string;
   barcode: string;
   units: string;
+  serialNumberFlag: string;
+  barcodeFlag: string;
 }
 
 export interface ItemsForIssueResponse {

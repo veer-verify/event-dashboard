@@ -134,7 +134,7 @@ export class ProductsMastersTabComponent implements OnInit, OnChanges {
         if (response?.data && Array.isArray(response.data)) {
           this.mastersData = response.data.map((p: any) => ({
             ...p,
-            productId: p.productId || p.id
+            productId: p.id
           }));
           this.populateFilterOptions();
           this.applyMastersSearchAndFilters();

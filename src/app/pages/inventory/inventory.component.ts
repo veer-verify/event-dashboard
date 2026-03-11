@@ -106,7 +106,7 @@ export class InventoryComponent {
           this.isLoading = false;
           this.messageService.clear();
           if (res && res.status === 'Success') {
-            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Item status updated successfully.' });
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: res?.message || 'Item status updated successfully.' });
             this.closeActionModal();
             this.reloadTrigger++;
           } else {
@@ -116,7 +116,7 @@ export class InventoryComponent {
         error: (err: any) => {
           this.isLoading = false;
           this.messageService.clear();
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update item status.' });
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.message || 'Failed to update item status.' });
         }
       });
       return;
@@ -129,7 +129,7 @@ export class InventoryComponent {
           this.isLoading = false;
           this.messageService.clear();
           if (res && res.status === 'Success') {
-            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Return details updated successfully.' });
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: res?.message || 'Return details updated successfully.' });
             this.closeActionModal();
             this.reloadTrigger++;
           } else {
@@ -140,7 +140,7 @@ export class InventoryComponent {
           this.isLoading = false;
           this.messageService.clear();
           console.error('Error updating return details', err);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update return details.' });
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.message || 'Failed to update return details.' });
         }
       });
       return;
@@ -153,7 +153,7 @@ export class InventoryComponent {
           this.isLoading = false;
           this.messageService.clear();
           if (res && res.status === 'Success') {
-            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Purchase invoice updated successfully.' });
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: res?.message || 'Purchase invoice updated successfully.' });
             this.closeActionModal();
             this.reloadTrigger++;
           } else {
@@ -164,7 +164,7 @@ export class InventoryComponent {
           this.isLoading = false;
           this.messageService.clear();
           console.error('Error updating purchase invoice', err);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update purchase invoice.' });
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.message || 'Failed to update purchase invoice.' });
         }
       });
       return;
@@ -177,12 +177,11 @@ export class InventoryComponent {
           this.isLoading = false;
           this.messageService.clear();
           if (res && res.status === 'Success') {
-            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Purchase invoice created successfully' });
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: res?.message || 'Purchase invoice created successfully' });
             this.closeActionModal();
             this.reloadTrigger++;
           } else {
             const errorMsg = res?.message || "Failed to create purchase invoice";
-            console.error("Failed to create purchase invoice", res);
             this.messageService.add({ severity: 'error', summary: 'Error', detail: errorMsg });
           }
         },
@@ -190,7 +189,7 @@ export class InventoryComponent {
           this.isLoading = false;
           this.messageService.clear();
           console.error("Error creating purchase invoice", err);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create purchase invoice.' });
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.message || 'Failed to create purchase invoice.' });
         }
       });
       return;
@@ -203,20 +202,41 @@ export class InventoryComponent {
           this.isLoading = false;
           this.messageService.clear();
           if (res && res.status === 'Success') {
-            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Stock send submitted successfully' });
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: res?.message || 'Issue submitted successfully' });
             this.closeActionModal();
             this.reloadTrigger++;
           } else {
-            const errorMsg = res?.message || "Failed to submit stock send";
-            console.error("Failed to submit stock send", res);
+            const errorMsg = res?.message || "Failed to submit issue";
             this.messageService.add({ severity: 'error', summary: 'Error', detail: errorMsg });
           }
         },
         error: (err: any) => {
           this.isLoading = false;
           this.messageService.clear();
-          console.error("Error submitting stock send", err);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to submit stock send.' });
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.message || 'Failed to submit issue.' });
+        }
+      });
+      return;
+    }
+
+    if (payload && payload.isUpdateIssueStatus) {
+      this.isLoading = true;
+      this.inventoryService.updateIssueStatus_1_0(payload.issueId, payload.payload).subscribe({
+        next: (res: any) => {
+          this.isLoading = false;
+          this.messageService.clear();
+          if (res && res.status === 'Success') {
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: res?.message || 'Issue status updated successfully.' });
+            this.closeActionModal();
+            this.reloadTrigger++;
+          } else {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: res?.message || 'Failed to update issue status.' });
+          }
+        },
+        error: (err: any) => {
+          this.isLoading = false;
+          this.messageService.clear();
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.message || 'Failed to update issue status.' });
         }
       });
       return;
@@ -229,20 +249,17 @@ export class InventoryComponent {
           this.isLoading = false;
           this.messageService.clear();
           if (res && res.status === 'Success') {
-            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Stock return submitted successfully' });
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: res?.message || 'Stock return submitted successfully' });
             this.closeActionModal();
             this.reloadTrigger++;
           } else {
-            const errorMsg = res?.message || "Failed to submit stock return";
-            console.error("Failed to submit stock return", res);
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: errorMsg });
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: res?.message || 'Failed to submit stock return.' });
           }
         },
         error: (err: any) => {
           this.isLoading = false;
           this.messageService.clear();
-          console.error("Error submitting stock return", err);
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to submit stock return.' });
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.message || 'Failed to submit stock return.' });
         }
       });
       return;

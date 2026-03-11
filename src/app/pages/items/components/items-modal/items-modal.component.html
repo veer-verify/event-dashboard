@@ -1,4 +1,4 @@
-<div class="custom-modal-overlay" (click)="onOverlayClick($event)">
+<div class="custom-modal-overlay">
   <div class="custom-modal-container">
     <div class="modal-custom-header">
       <div class="header-left-content">
@@ -476,8 +476,47 @@
 
             <div class="form-row">
               <div class="form-col-2 full-width-col">
+                <label class="field-label">Remarks</label>
+                <input type="text" class="field-input-text" formControlName="remarks" placeholder="Enter" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-col-2 full-width-col">
                 <label class="field-label">Purchase Item Link</label>
                 <input type="text" class="field-input-text" formControlName="purchaseItemLink" placeholder="Enter" />
+              </div>
+            </div>
+
+            <div class="form-row" style="gap: 20px;">
+              <!-- SERIAL NUMBER MANDATORY -->
+              <div class="field-column" style="flex: 1;">
+                <label class="field-label">Serial Number Mandatory</label>
+                <div class="radio-options" style="margin-top: 0; height: 42px; align-items: center; gap: 20px;">
+                  <label class="radio-label">
+                    <input type="radio" value="T" formControlName="serialNumberMandatory" />
+                    <span>YES</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" value="F" formControlName="serialNumberMandatory" />
+                    <span>NO</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- BARCODE MANDATORY -->
+              <div class="field-column" style="flex: 1;">
+                <label class="field-label">Barcode Mandatory</label>
+                <div class="radio-options" style="margin-top: 0; height: 42px; align-items: center; gap: 20px;">
+                  <label class="radio-label">
+                    <input type="radio" value="T" formControlName="barcodeMandatory" />
+                    <span>YES</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" value="F" formControlName="barcodeMandatory" />
+                    <span>NO</span>
+                  </label>
+                </div>
               </div>
             </div>
           </div>

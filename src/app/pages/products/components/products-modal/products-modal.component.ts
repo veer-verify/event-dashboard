@@ -118,26 +118,31 @@ export class ProductsModalComponent implements OnInit {
 
   ngOnInit() {
     this.initializeForm();
-    this.loadDropdowns();
+
 
     if (this.mode === "addProduct") {
       this.loadStores();
       this.getProductsName();
     }
 
+    if (this.mode === "create") {
+      this.loadDropdowns();
+      this.loadHardwareItems();
+    }
+
     this.setupProductCodeListener();
-    this.loadHardwareItems(); // Load live items
+
 
     if (this.mode === "view") {
       if (this.product?.productId) {
         this.fetchProductDetails(this.product.productId);
       }
-    } else if (this.mode === "listitem") {
-      if (this.product?.productId || this.product?.id) { // id or productId might be passed
+    }
+    else if (this.mode === "listitem") {
+      if (this.product?.productId || this.product?.id) {
         this.fetchAllProductDetails(this.product.productId || this.product.id);
       }
     }
-
     this.isEditing = this.mode === "create" || this.mode === "addProduct";
 
     if (!this.product) {
@@ -147,6 +152,12 @@ export class ProductsModalComponent implements OnInit {
     if (this.mode === "create") {
       this.resetFormFields();
     }
+  }
+
+  get grandTotal(): number {
+    if (!this.selectedHardware) return 0;
+    const total = this.selectedHardware.reduce((sum: number, hw: any) => sum + (hw.unitPrice || 0), 0);
+    return Number(total.toFixed(2));
   }
 
   get isAddProductMode(): boolean {
@@ -159,13 +170,15 @@ export class ProductsModalComponent implements OnInit {
       next: (res: any) => {
         if (res && res.data && Array.isArray(res.data)) {
           this.availableHardware = res.data.map((item: any) => ({
-            id: item.id || item.itemId,
+            id: item.id,
             label: `${item.itemName} - ${item.make || ''} - ${item.model || ''}`,
             name: item.itemName,
             itemCode: item.itemCode,
             units: item.units,
             unitId: item.unitId,
-            value: item.id || item.itemId
+            value: item.id,
+            make: item.make,
+            model: item.model
           }));
         } else {
           console.warn("=== API: No items data found or incorrect structure ===", res);
@@ -272,16 +285,40 @@ export class ProductsModalComponent implements OnInit {
 
   fetchAvailableItemsForHardware() {
     this.availableItemsMap = new Map();
+    const storeId = this.productForm.get('currentLocationId')?.value;
+
     this.selectedHardware.forEach(hw => {
-      this.itemsService.getAvailableItems(hw.id).subscribe({
+      hw.selectedStockIds = []; // clear previous selections
+      hw.unitPrice = null;      // clear total price
+
+      if (!storeId) return;
+
+      this.itemsService.getAvailableItems(hw.id, storeId).subscribe({
         next: (res: any) => {
           if (res?.data && Array.isArray(res.data)) {
-            const options = res.data.map((item: any) => ({
-              label: `${item.serialNumber} - ${item.barcode}`,
-              value: item.id,
-              unitPrice: item.total_value,
-              unitId: item.unitId
-            }));
+            const options = res.data.map((item: any) => {
+              let labelParts = [];
+              if (item.serialNumber && item.serialNumber !== 'null' && item.serialNumber !== '-') {
+                labelParts.push(`S.No: ${item.serialNumber}`);
+              }
+              if (item.barcode && item.barcode !== 'null' && item.barcode !== '-') {
+                labelParts.push(`Barcode: ${item.barcode}`);
+              }
+              let baseLabel = labelParts.length > 0 ? labelParts.join(' - ') : `Unit ID: ${item.id}`;
+              
+              // Include quantity available in label if > 1 or no serial
+              if (!item.serialNumber || item.serialNumber === 'null' || item.serialNumber === '-') {
+                baseLabel += ` (Available: ${item.quantity})`;
+              }
+
+              return {
+                label: baseLabel,
+                value: item.id,
+                unitPrice: item.total_value,
+                unitId: item.unitId,
+                availableQty: item.quantity || 1
+              };
+            });
             this.availableItemsMap = new Map(this.availableItemsMap).set(hw.id, options);
           }
         },
@@ -296,16 +333,42 @@ export class ProductsModalComponent implements OnInit {
 
   onHardwareStockSelect(event: any, hw: any) {
     const selectedIds: any[] = event.value || [];
+    hw.allocations = [];
+    hw.allocatedQty = 0;
+
     if (!selectedIds.length) {
       hw.unitPrice = null;
       return;
     }
+
     const opts = this.getOptionsForHardware(hw.id);
-    const total = selectedIds.reduce((sum: number, id: any) => {
+    let requiredQty = hw.quantity || 0;
+    let totalAllocated = 0;
+    let totalPrice = 0;
+
+    for (const id of selectedIds) {
       const found = opts.find((o: any) => o.value === id);
-      return sum + (found?.unitPrice ?? 0);
-    }, 0);
-    hw.unitPrice = total;
+      if (!found) continue;
+
+      const remainingNeeded = requiredQty - totalAllocated;
+      if (remainingNeeded <= 0) {
+        break; // We have fulfilled the quantity
+      }
+
+      const takeQty = Math.min(found.availableQty, remainingNeeded);
+      totalAllocated += takeQty;
+      totalPrice += (takeQty * (found.unitPrice ?? 0));
+
+      hw.allocations.push({
+        purchaseItemId: id,
+        unitId: found.unitId,
+        cost: found.unitPrice ?? 0,
+        quantity: takeQty
+      });
+    }
+
+    hw.allocatedQty = totalAllocated;
+    hw.unitPrice = Number(totalPrice.toFixed(2));
   }
 
   setupProductCodeListener() {
@@ -315,12 +378,13 @@ export class ProductsModalComponent implements OnInit {
       "domainCodeId",
       "partCodeId",
       "madeCodeId",
+      "currentLocationId"
     ];
 
     triggerFields.forEach((field) => {
       this.productForm.get(field)?.valueChanges.subscribe((currentValue) => {
-        if (this.mode === "addProduct" && field === "productName") {
-          if (currentValue) {
+        if (this.mode === "addProduct") {
+          if (field === "productName" && currentValue) {
             const selectedProduct = this.productsList.find(
               (p) => p.productId === currentValue,
             );
@@ -360,6 +424,8 @@ export class ProductsModalComponent implements OnInit {
               });
 
             }
+          } else if (field === "currentLocationId" && currentValue) {
+            this.fetchAvailableItemsForHardware();
           }
         } else if (this.mode === "create") {
           this.fetchSuggestedCode();
@@ -424,7 +490,7 @@ export class ProductsModalComponent implements OnInit {
         productName: ["", Validators.required],
         productCode: [""],
         serialNumber: ["", Validators.required],
-        barCode: [""],
+        barCode: ["", Validators.required],
         currentLocationId: [null, Validators.required],
         remarks: [""]
       });
@@ -495,7 +561,7 @@ export class ProductsModalComponent implements OnInit {
   }
 
   processMetadata(metadata: any[], key: string): any[] {
-    return metadata.map((item) => {
+    let processed = metadata.map((item) => {
       let idValue;
       if (key === 'units' || key === 'productStatus') {
         idValue = item.keyId;
@@ -508,10 +574,17 @@ export class ProductsModalComponent implements OnInit {
         name: item.value || "---",
       };
     });
+
+    if (key === 'productStatus') {
+      const excludeList = ['Scrap', 'New', 'Used'];
+      processed = processed.filter(item => !excludeList.includes(item.name));
+    }
+
+    return processed;
   }
 
   loadStores() {
-    this.inventoryService.getPurchaseSources().subscribe({
+    this.inventoryService.getPurchaseSources(undefined, 'Store').subscribe({
       next: (response: any) => {
         if (response?.data && Array.isArray(response.data)) {
           this.storesDropdown = response.data.map((s: any) => ({
@@ -530,11 +603,11 @@ export class ProductsModalComponent implements OnInit {
         if (response?.data && Array.isArray(response.data)) {
           this.productsList = response.data.map((p: any) => ({
             ...p,
-            productId: p.productId || p.id
+            productId: p.id
           }));
 
           this.distinctProductsDropdownList = this.productsList.map(p => ({
-            label: p.productName,
+            label: p.productName + ' - ' + p.make + ' - ' + p.model,
             value: p.productId
           }));
         }
@@ -691,6 +764,17 @@ export class ProductsModalComponent implements OnInit {
 
   async confirmSave() {
     this.submitted = true;
+
+    if (this.productForm.invalid) {
+      Object.keys(this.productForm.controls).forEach(key => {
+        const control = this.productForm.get(key);
+        if (control && control.invalid) {
+          console.error(`Invalid field: ${key}`, control.errors);
+        }
+      });
+      return;
+    }
+
     this.isLoading = true;
     const formValue = this.productForm.value;
 
@@ -708,16 +792,21 @@ export class ProductsModalComponent implements OnInit {
       };
 
       this.productsService.updateProduct(this.product.productId, updatePayload).subscribe({
-        next: (res) => {
-          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Remarks updated successfully!' });
-          setTimeout(() => {
-            this.save.emit(res);
-            this.close.emit();
-          }, 1000);
+        next: (res: any) => {
+          if (res?.status === 'Success' || res?.status === 'success') {
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Remarks updated successfully!' });
+            setTimeout(() => {
+              this.save.emit(res);
+              this.close.emit();
+            }, 1000);
+          } else {
+            this.isLoading = false;
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: res?.message || 'Update failed' });
+          }
         },
-        error: () => {
+        error: (err) => {
           this.isLoading = false;
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Update failed' });
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Update failed' });
         }
       });
       return;
@@ -755,34 +844,76 @@ export class ProductsModalComponent implements OnInit {
         const selectedIds: number[] = hw.selectedStockIds || [];
 
         // --- Validation: Ensure selected options match the required quantity ---
-        if (selectedIds.length !== hw.quantity) {
+        if (hw.allocatedQty !== hw.quantity) {
           this.isLoading = false;
           this.messageService.add({
             severity: 'error',
             summary: 'Validation Error',
-            detail: `Please select exactly ${hw.quantity} unit(s) for ${hw.itemName}.`
+            detail: `Please select enough stock to provide exactly ${hw.quantity} unit(s) for ${hw.itemName}. Currently allocated: ${hw.allocatedQty || 0}.`
           });
           return;
         }
 
-        const opts = this.getOptionsForHardware(hw.id);
-        for (const stockId of selectedIds) {
-          const opt = opts.find((o: any) => o.value === stockId);
-          let matchedUnitId = opt?.unitId ? Number(opt.unitId) : 0;
-          if (!matchedUnitId && hw.units && this.dropdownArrays.units?.length) {
-            const foundUnit = this.dropdownArrays.units.find((u: any) => u.name === hw.units);
-            if (foundUnit) {
-              matchedUnitId = Number(foundUnit.id);
+        if (hw.allocations && hw.allocations.length > 0) {
+          // Check if this itemId is already in itemsUsed
+          let existingGroup = itemsUsed.find(i => i.itemId === hw.id);
+          if (!existingGroup) {
+            existingGroup = {
+              itemId: hw.id,
+              itemUnitId: 0, // Will be set below
+              cost: 0,
+              quantity: 0,
+              purchaseItemIds: []
+            };
+            itemsUsed.push(existingGroup);
+          }
+
+          for (const alloc of hw.allocations) {
+            let matchedUnitId = alloc.unitId ? Number(alloc.unitId) : 0;
+            if (!matchedUnitId && hw.units && this.dropdownArrays.units?.length) {
+              const foundUnit = this.dropdownArrays.units.find((u: any) => u.name === hw.units);
+              if (foundUnit) {
+                matchedUnitId = Number(foundUnit.id);
+              }
+            }
+            
+            existingGroup.itemUnitId = matchedUnitId;
+            existingGroup.cost = alloc.cost; // Assuming cost is per unit price?
+            
+            // If we have a serial number or barcode, we treat it as serialized and use purchaseItemIds
+            const opts = this.getOptionsForHardware(hw.id);
+            const opt = opts.find((o: any) => o.value === alloc.purchaseItemId);
+            const isSerialized = opt?.label?.includes('S.No') || opt?.label?.includes('Barcode');
+
+            if (isSerialized) {
+              existingGroup.purchaseItemIds.push(alloc.purchaseItemId);
+              existingGroup.quantity += alloc.quantity;
+            } else {
+              // Non-serialized item, we send quantity and keep purchaseItemIds empty or as requested
+              existingGroup.quantity += alloc.quantity;
+              // User request specifically showed "itemId" and "quantity" for non-serialized
+              // and "itemId" and "purchaseItemIds" for serialized.
             }
           }
-          itemsUsed.push({
-            itemId: hw.id,
-            purchaseItemId: stockId,
-            itemUnitId: matchedUnitId,
-            cost: opt?.unitPrice ?? 0
-          });
         }
       }
+
+      // Final cleanup of itemsUsed to match user requested structure exactly
+      const finalItemsUsed = itemsUsed.map(group => {
+        const result: any = {
+          itemId: group.itemId,
+          itemUnitId: group.itemUnitId,
+          cost: group.cost
+        };
+        
+        if (group.purchaseItemIds && group.purchaseItemIds.length > 0) {
+          result.purchaseItemIds = group.purchaseItemIds;
+        } else {
+          result.quantity = group.quantity;
+        }
+        
+        return result;
+      });
 
       const addProductPayload = {
         productId: selectedProduct.productId,
@@ -790,24 +921,24 @@ export class ProductsModalComponent implements OnInit {
         barCode: formValue.barCode?.trim() || "",
         currentLocationId: formValue.currentLocationId ? Number(formValue.currentLocationId) : 0,
         remarks: formValue.remarks?.trim() || "",
-        itemsUsed: itemsUsed,
+        itemsUsed: finalItemsUsed,
         createdBy: this.userId ? Number(this.userId) : 0,
         createdTime: formatDate(new Date())
       };
 
       this.productsService.addNewProduct(addProductPayload).subscribe({
         next: (res: any) => {
-          if (res.status === 'failed' || res.statusCode === 500) {
+          if (res.status === 'Success' || res.status === 'success') {
+            this.isLoading = false;
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: res.message || 'Product added successfully!' });
+            setTimeout(() => {
+              this.save.emit(res);
+              this.close.emit();
+            }, 1000);
+          } else {
             this.isLoading = false;
             this.messageService.add({ severity: 'error', summary: 'Error', detail: res.message || 'Failed to add product' });
-            return;
           }
-          this.isLoading = false;
-          this.messageService.add({ severity: 'success', summary: 'Success', detail: res.message || 'Product added successfully!' });
-          setTimeout(() => {
-            this.save.emit(res);
-            this.close.emit();
-          }, 1000);
         },
         error: (err) => {
           this.isLoading = false;
@@ -878,18 +1009,17 @@ export class ProductsModalComponent implements OnInit {
 
     this.productsService.createProduct(requestBody, this.selectedFile || undefined).subscribe({
       next: (res: any) => {
-        if (res.status === 'failed' || res.statusCode === 500) {
+        if (res.status === 'Success' || res.status === 'success') {
+          this.isLoading = false;
+          this.messageService.add({ severity: 'success', summary: 'Success', detail: res.message || 'Product created successfully!' });
+          setTimeout(() => {
+            this.save.emit(res);
+            this.close.emit();
+          }, 1000);
+        } else {
           this.isLoading = false;
           this.messageService.add({ severity: 'error', summary: 'Error', detail: res.message || 'Creation failed' });
-          return;
         }
-
-        this.isLoading = false;
-        this.messageService.add({ severity: 'success', summary: 'Success', detail: res.message });
-        setTimeout(() => {
-          this.save.emit(res);
-          this.close.emit();
-        }, 1000);
       },
       error: (err) => {
         this.isLoading = false;
@@ -899,12 +1029,10 @@ export class ProductsModalComponent implements OnInit {
     });
   }
 
-
   addHardwareItem() {
     if (this.hardwareDropdown !== null && this.hardwareDropdown !== undefined) {
       // Use loose equality to avoid string/number mismatch
       const selectedHardware = this.availableHardware.find(h => h.id == this.hardwareDropdown || h.value == this.hardwareDropdown);
-
       if (selectedHardware) {
         const alreadyExists = this.selectedHardware.some(h => h.id == selectedHardware.id);
 
@@ -919,7 +1047,9 @@ export class ProductsModalComponent implements OnInit {
             value: 0,
             quantity: qty,
             units: selectedHardware.units || 'No\'s',
-            unitId: selectedHardware.unitId
+            unitId: selectedHardware.unitId,
+            make: selectedHardware.make,
+            model: selectedHardware.model
           };
           this.selectedHardware = [...this.selectedHardware, newItem];
         } else {

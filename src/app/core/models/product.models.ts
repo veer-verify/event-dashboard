@@ -71,6 +71,7 @@ export interface ProductAllDetailsInfo {
   status: string;
   location: string;
   publishedDate: string;
+  usedFor: string;
 }
 
 export interface ProductAllDetailsHardware {
@@ -81,7 +82,7 @@ export interface ProductAllDetailsHardware {
   qty?: number;
   cost: number;
   itemImage: string | null;
-  purchaseLink?: string | null;
+  purchaseLinks?: string | null;
 }
 
 export interface ProductAllDetailsProgress {
