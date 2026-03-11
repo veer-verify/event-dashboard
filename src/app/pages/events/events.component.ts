@@ -27,6 +27,7 @@ import { EventsService } from "./events.service";
 import { ESCALATED_COLORS } from "src/app/shared/constants/chart-colors";
 import { OverlayPanel } from "primeng/overlaypanel";
 import { OverlayPanelModule } from "primeng/overlaypanel";
+import { CopyCellRendererComponent } from "./copy-cell-renderer.component";
 import {
   Subscription,
   interval,
@@ -111,6 +112,7 @@ interface SecondEscalatedDetail {
     MatInputModule,
     MatSelectModule,
     forwardRef(() => FilePreviewPipe),
+    CopyCellRendererComponent,
   ],
 })
 export class EventsComponent {
@@ -2618,6 +2620,7 @@ alertSubTypes: any = [];
         cellClass: "custom-cell",
         cellStyle: { opacity: "0.5" },
         suppressHeaderMenuButton: true,
+        cellRenderer: CopyCellRendererComponent,  // copy cell element
       },
       {
         headerName: "SITE",
@@ -2625,7 +2628,8 @@ alertSubTypes: any = [];
         headerClass: "custom-header",
         cellClass: "custom-cell",
         suppressHeaderMenuButton: true,
-        getQuickFilterText: params => params.data.siteName
+        getQuickFilterText: params => params.data.siteName,
+         cellRenderer: CopyCellRendererComponent, // copy cell element
       },
       {
         headerName: "DEVICE",
@@ -2675,6 +2679,7 @@ alertSubTypes: any = [];
         cellClass: "custome-cell",
         cellStyle: { opacity: "0.5" },
         suppressHeaderMenuButton: true,
+         cellRenderer: CopyCellRendererComponent, // copy cell element
         valueGetter: (params) => {
           return params.data?.subActionTag ? params.data.subActionTag : "-";
         },
@@ -2713,6 +2718,7 @@ alertSubTypes: any = [];
         valueGetter: (params) => {
           return params.data?.subAlertTag ? params.data.subAlertTag : "-";
         },
+         cellRenderer: CopyCellRendererComponent, // copy cell element
       },
       // {
       //   headerName: "EMP.",
