@@ -670,7 +670,16 @@ export class CalendarComponent implements OnInit {
 
   // inline calendar date selection
   onInlineDateSelect(date: Date) {
+
+   
     if (this.isFutureDate(date)) return; // just in case
+    
+    const today = new Date();
+  const todayOnly = new Date(today); // new logic for time
+  todayOnly.setHours(0,0,0,0);
+
+  const selected = new Date(date);
+  selected.setHours(0,0,0,0);
 
     if (this.activeInput === 'start') {
       const copy = new Date(this.startDate);
@@ -679,6 +688,22 @@ export class CalendarComponent implements OnInit {
     } else {
       const copy = new Date(this.endDate);
       copy.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+
+        // Compare only dates
+    if (selected < todayOnly) {
+      // past date
+      copy.setHours(23, 59, 59, 999);
+
+    } else if (selected.getTime() === todayOnly.getTime()) {
+      // today
+      copy.setHours(
+        today.getHours(),
+        today.getMinutes(),
+        today.getSeconds(),
+        today.getMilliseconds()
+      );
+    }
+
       this.endDate = copy;
     }
   }
