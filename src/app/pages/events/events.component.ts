@@ -1523,12 +1523,13 @@ alertSubTypes: any = [];
   isSubmitting = false;
   submitResolution() {
     if (
-      !this.emailData?.recipientEmails?.length 
+      !this.emailData?.recipientEmails?.length || !this.action?.trim() || 
+!this.resolution?.trim()
     ) {
       this.showToast(
         "error",
         "Failed",
-        "Recipient Email are mandatory.",
+        "Recipient Email ,action taken and notes are mandatory",
       );
 
       return;
