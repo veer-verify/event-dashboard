@@ -1514,22 +1514,21 @@ alertSubTypes: any = [];
   }
 
     onAlertChange() {
-    console.log(this.alert)
+   
     const selectedAlert = this.alertTypes.find((a:any) => a.guardAlertTypeId == this.alert);
     this.alertSubTypes = selectedAlert ? selectedAlert.subAlerts : [];
-    console.log(this.alertSubTypes)
+  
   }
 
   isSubmitting = false;
   submitResolution() {
     if (
-      !this.emailData?.recipientEmails?.length ||
-      !this.selectedFiles.length
+      !this.emailData?.recipientEmails?.length 
     ) {
       this.showToast(
         "error",
         "Failed",
-        "Files and Recipient Email are mandatory.",
+        "Recipient Email are mandatory.",
       );
 
       return;
