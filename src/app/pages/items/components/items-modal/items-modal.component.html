@@ -234,7 +234,7 @@
             <div class="view-field">
               <label class="field-label">ITEM IMAGE</label>
               <div class="product-image-container" *ngIf="item?.itemImage">
-                <img [src]="getImageUrl(item.itemImage)" alt="Product" class="product-image-thumbnail" />
+                <img [src]="item.itemImage" alt="Product" class="product-image-thumbnail" />
               </div>
               <span class="field-value" *ngIf="!item?.itemImage">---</span>
             </div>
@@ -555,36 +555,37 @@
         </ng-template>
       </div>
 
-      <!-- Note Section (only for Create New Item) -->
-      <div class="info-note-box" *ngIf="mode === 'create'">
-        <h6 class="note-header text-header-sm">NOTE</h6>
-        <div class="note-columns-wrapper">
-          <div class="note-column-text">
-            <p>
-              RM - Raw material ; Digi key comps, transistors, screws, nuts,
-              resistors etc
-            </p>
-            <p>SC - Sub component ; Enclosure, cables, tie rods</p>
-            <p>
-              CO - component ; sensors, power boards, sensor boards, PI,
-              charger, battery, DVR, cameras, server etc
-            </p>
-            <p>FG - Mobile units, IVIS Central Devices etc</p>
-          </div>
-          <div class="note-column-text">
-            <p>
-              E - Electronics and Electrical - capacitors, routers, dongles,
-              power boards, MCB etc
-            </p>
-            <p>M - Mechanical - outdoor boxes, nuts & bolts</p>
-            <p>A - accessories - tapes, glues, cables, connectors etc</p>
-            <p>
-              T - Tools - bosch kits, screwdriver, soldering, equipment,
-              multipmeters, etc.
-            </p>
-            <p>G - laptops, phones, gadgets etc</p>
-            <p>S - all sims if any placed at customer locations</p>
-          </div>
+
+
+    <!-- Note Section (only for Create New Item or Add New Model) -->
+    <div class="info-note-box" *ngIf="mode === 'create' || isAddModelMode">
+      <h6 class="note-header text-header-sm">NOTE</h6>
+      <div class="note-columns-wrapper">
+        <div class="note-column-text">
+          <p>
+            RM - Raw material ; Digi key comps, transistors, screws, nuts,
+            resistors etc
+          </p>
+          <p>SC - Sub component ; Enclosure, cables, tie rods</p>
+          <p>
+            CO - component ; sensors, power boards, sensor boards, PI,
+            charger, battery, DVR, cameras, server etc
+          </p>
+          <p>FG - Mobile units, IVIS Central Devices etc</p>
+        </div>
+        <div class="note-column-text">
+          <p>
+            E - Electronics and Electrical - capacitors, routers, dongles,
+            power boards, MCB etc
+          </p>
+          <p>M - Mechanical - outdoor boxes, nuts & bolts</p>
+          <p>A - accessories - tapes, glues, cables, connectors etc</p>
+          <p>
+            T - Tools - bosch kits, screwdriver, soldering, equipment,
+            multipmeters, etc.
+          </p>
+          <p>G - laptops, phones, gadgets etc</p>
+          <p>S - all sims if any placed at customer locations</p>
         </div>
       </div>
     </div>

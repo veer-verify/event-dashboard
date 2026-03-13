@@ -10,7 +10,7 @@ import { InventoryService } from '../../../../core/services/inventory.service';
 import { MetadataService } from '../../../../core/services/metadata.service';
 import {
   ItemForIssue, ProductForIssue, MetadataResponse, MetadataItem, ReturnableStockItem, ReturnableStockProduct, ReturnableStockResponse,
-  ReturnDetailsData
+  ReturnDetailsData, ClosingStatementResponse, ClosingStatementDetail
 } from '../../../../core/models/inventory.models';
 import { OverlayOptions, MessageService } from 'primeng/api';
 import { FileUploadComponent } from '../../../../shared/file-upload/file-upload.component';
@@ -50,7 +50,7 @@ export interface ViewPurchaseItem extends PurchaseItem {
 export class InventoryActionsModalComponent implements OnInit, OnChanges {
   baseUrl: string = environment.apiBaseUrl;
 
-  getFileUrl(filePath: string): string {
+  getFileUrl(filePath: string | null | undefined): string {
     if (!filePath) return 'assets/mock_cam_check.jpg';
     if (filePath.startsWith('http')) return filePath;
     const cleanBase = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
@@ -119,6 +119,10 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   isBulkEditingStatus: boolean = false;
   isPreorderSubmitAttempted: boolean = false;
   isReturnSubmitAttempted: boolean = false;
+  isItemEntryAttempted: boolean = false;
+  isProductEntryAttempted: boolean = false;
+  isReturnItemEntryAttempted: boolean = false;
+  isReturnProductEntryAttempted: boolean = false;
   newItemSubmitAttempted: boolean = false;
   statusOptions: any[] = [
     { label: 'Pre-order', value: 'PREORDER' },
@@ -155,7 +159,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   newStockProduct: any = {
     name: null,
     qty: null,
-    billingStatus: null
+    billingStatus: null,
+    productStatus: 'SALE'
   };
   addedStockProducts: any[] = [];
 
@@ -171,6 +176,20 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   billingStatuses: { label: string; value: any }[] = [];
   shippingPlatforms: { label: string; value: any }[] = [];
   returnToOptions: { label: string; value: any }[] = [];
+  issueStatusOptions: any[] = [
+    { label: 'Issued', value: 'ISSUED' },
+    { label: 'Delivered', value: 'DELIVERED' }
+  ];
+
+  returnStatusOptions: any[] = [
+    { label: 'In Transit', value: 'IN_TRANSIT' },
+    { label: 'Returned', value: 'RETURNED' }
+  ];
+
+  productStatusOptions: any[] = [
+    { label: 'Sale', value: 'SALE' },
+    { label: 'Lease', value: 'LEASE' }
+  ];
 
   stockReturn: any = {
     returnFrom: 'Select',
@@ -178,15 +197,15 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   };
 
   newReturnItem: any = {
-    name: 'Select',
+    name: null,
     qty: null,
-    condition: 'Select'
+    condition: null
   };
 
   newReturnProduct: any = {
-    name: 'Select',
+    name: null,
     qty: null,
-    condition: 'Select'
+    condition: null
   };
 
   addedReturnItems: any[] = [];
@@ -249,37 +268,36 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     }
 
     // Load Items/Products
-    if (this.mode === 'stock-send' || this.mode === 'stock-return') {
+    if (this.mode === 'stock-send') {
       this.loadStockSendItemsDropdown();
       this.loadProductsDropdown();
+    } else if (this.mode === 'stock-return') {
+      // Stock return uses getReturnableStock called on returnFrom change
     } else if (this.mode === 'add-purchase' || this.mode === 'update-purchase') {
       this.loadPurchaseItemsDropdown();
     }
 
-    // Load dropdowns for Stock Send and Stock Return (sendFromOptions needed for Return From)
     if (this.mode === 'stock-send' || this.mode === 'stock-return') {
       this.loadStockSendDropdowns();
     }
 
-    // Set initial values from Input Data 
     this.patchForms();
 
-    // For Stock Send/Return modes (legacy support if needed)
     if (this.mode === 'stock-send') {
       if (!this.data.items) this.data.items = [{}];
     }
 
-    // Initialize mock data for Stock Send
     if (this.mode === 'stock-send') {
       this.addedStockItems = [];
       this.addedStockProducts = [];
     }
 
     if (this.mode === 'closing-statement') {
-      this.initClosingStatementMockData();
+      this.fetchClosingStatement();
     }
     if (this.mode === 'view-stock-send') {
       this.initViewStockSendData();
+      this.loadStockSendDropdowns();
     }
     if (this.mode === 'view-purchase') {
       this.initViewItems();
@@ -334,26 +352,69 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       site: [null, Validators.required],
       category: [null, Validators.required],
       billingStatus: [null, Validators.required],
-      transportationPlatform: [null],
-      trackingId: [''],
-      shipmentDate: [null],
+      status: [null, Validators.required],
+      transportationPlatform: [null, Validators.required],
+      trackingId: ['', Validators.required],
+      shipmentDate: [null, Validators.required],
       deliveredDate: [null],
       stockSendItems: this.fb.array([]),
       stockSendProducts: this.fb.array([])
+    }, { validators: this.dateRangeValidator });
+
+    this.stockSendForm.get('status')?.valueChanges.subscribe(val => {
+      const deliveredDate = this.stockSendForm.get('deliveredDate');
+      if (val === 'DELIVERED') {
+        deliveredDate?.setValidators([Validators.required]);
+        if (!deliveredDate?.value) {
+          // If status is DELIVERED, but no date, maybe set current date as default? 
+          // User didn't explicitly ask for default, but let's keep it clean.
+        }
+      } else {
+        deliveredDate?.clearValidators();
+        deliveredDate?.setValue(null, { emitEvent: false });
+      }
+      deliveredDate?.updateValueAndValidity();
+    });
+
+    this.stockSendForm.get('deliveredDate')?.valueChanges.subscribe(date => {
+      if (date && this.stockSendForm.get('status')?.value !== 'DELIVERED') {
+        this.stockSendForm.get('status')?.setValue('DELIVERED', { emitEvent: true });
+      }
+    });
+
+    this.stockSendForm.get('sendFrom')?.valueChanges.subscribe(storeId => {
+      this.onSendFromChange(storeId);
     });
 
     this.stockReturnForm = this.fb.group({
       returnFrom: ['Select', Validators.required],
       returnTo: ['Store', Validators.required],
+      status: [null, Validators.required],
+      returnDate: [null],
       stockReturnItems: this.fb.array([]),
       stockReturnProducts: this.fb.array([])
+    });
+
+    this.stockReturnForm.get('status')?.valueChanges.subscribe(val => {
+      const returnDate = this.stockReturnForm.get('returnDate');
+      if (val === 'RETURNED') {
+        returnDate?.setValidators([Validators.required]);
+      } else {
+        returnDate?.clearValidators();
+      }
+      returnDate?.updateValueAndValidity();
     });
 
     if (this.mode === 'stock-return') {
       this.stockReturnForm.get('returnFrom')?.valueChanges.subscribe(returnFromId => {
         if (returnFromId && returnFromId !== 'Select') {
+          // Find selected site's country to filter Return To stores
+          const selectedSite = this.returnFromOptions.find(o => o.value === returnFromId);
+          this.loadReturnToOptions(selectedSite?.country);
+
           this.loadReturnableStock(returnFromId);
         } else {
+          this.loadReturnToOptions(); // Reset to all stores
           this.returnableItemsList = [];
           this.returnableProductsList = [];
         }
@@ -370,7 +431,6 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         }
       },
       error: (err: any) => {
-        console.error('Failed to load returnable stock', err);
         this.returnableItemsList = [];
         this.returnableProductsList = [];
       }
@@ -378,67 +438,66 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   }
 
   loadStockSendDropdowns() {
-    // Load Inv_Category
-    this.metadataService.getDropdownByTypeName('Inv_Category').subscribe({
-      next: (res: MetadataResponse[]) => {
-        const metadataArray: MetadataItem[] = res?.[0]?.metadata || [];
-        this.categoryOptions = metadataArray.map((item: MetadataItem) => ({
-          label: item.value,
-          value: item.keyId
-        }));
-      },
-      error: (err: any) => console.error('Failed to load categories', err)
-    });
+    if (this.mode === 'stock-send' || this.mode === 'view-stock-send') {
+      // Load Inv_Category
+      this.metadataService.getDropdownByTypeName('Inv_Category').subscribe({
+        next: (res: MetadataResponse[]) => {
+          const metadataArray: MetadataItem[] = res?.[0]?.metadata || [];
+          this.categoryOptions = metadataArray.map((item: MetadataItem) => ({
+            label: item.value,
+            value: item.keyId
+          }));
+        },
+        error: (err: any) => console.error('Failed to load categories', err)
+      });
 
-    // Load Inv_ShippingFlatform for Transportation dropdown
-    this.metadataService.getDropdownByTypeName('Inv_ShippingFlatform').subscribe({
-      next: (res: MetadataResponse[]) => {
-        const metadataArray: MetadataItem[] = res?.[0]?.metadata || [];
-        this.shippingPlatforms = metadataArray.map((item: MetadataItem) => ({
-          label: item.value,
-          value: item.keyId
-        }));
-      },
-      error: (err: any) => console.error('Failed to load shipping platforms', err)
-    });
+      // Load Inv_ShippingFlatform for Transportation dropdown
+      this.metadataService.getDropdownByTypeName('Inv_ShippingFlatform').subscribe({
+        next: (res: MetadataResponse[]) => {
+          const metadataArray: MetadataItem[] = res?.[0]?.metadata || [];
+          this.shippingPlatforms = metadataArray.map((item: MetadataItem) => ({
+            label: item.value,
+            value: item.keyId
+          }));
 
-    // Load Inv_BillingStatus for Item/Product Billing Status dropdowns
-    this.metadataService.getDropdownByTypeName('Inv_BillingStatus').subscribe({
-      next: (res: MetadataResponse[]) => {
-        const metadataArray: MetadataItem[] = res?.[0]?.metadata || [];
-        this.billingStatuses = metadataArray.map((item: MetadataItem) => ({
-          label: item.value,
-          value: item.keyId
-        }));
-      },
-      error: (err: any) => console.error('Failed to load billing statuses', err)
-    });
+          // Fallback: If transportationPlatform is missing but we have the string, find it
+          if (this.mode === 'view-stock-send' && this.viewStockSendData && !this.viewStockSendData.transportationPlatform && this.viewStockSendData.transportation) {
+            const match = this.shippingPlatforms.find(p => p.label.toLowerCase() === this.viewStockSendData.transportation.toLowerCase());
+            if (match) {
+              this.viewStockSendData.transportationPlatform = match.value;
+            }
+          }
+        },
+        error: (err: any) => console.error('Failed to load shipping platforms', err)
+      });
+
+      // Load Inv_BillingStatus for Item/Product Billing Status dropdowns
+      this.metadataService.getDropdownByTypeName('Inv_BillingStatus').subscribe({
+        next: (res: MetadataResponse[]) => {
+          const metadataArray: MetadataItem[] = res?.[0]?.metadata || [];
+          this.billingStatuses = metadataArray.map((item: MetadataItem) => ({
+            label: item.value,
+            value: item.keyId
+          }));
+        },
+        error: (err: any) => console.error('Failed to load billing statuses', err)
+      });
+    }
 
     // Load dropdown sources efficiently using backend filters
     if (this.mode === 'stock-return') {
       this.returnFromOptions = [];
 
-      // Stores for 'Return To' only
-      this.inventoryService.getPurchaseSources(undefined, 'Store').subscribe({
-        next: (res: any) => {
-          if (res?.status === 'Success' && res?.data) {
-            const options = res.data.map((s: any) => ({ label: s.sourceName, value: s.sourceId }));
-            this.returnToOptions = options;
-
-            if (this.returnToOptions.length > 0) {
-              if (!this.stockReturnForm.get('returnTo')?.value || this.stockReturnForm.get('returnTo')?.value === 'Store') {
-                this.stockReturnForm.patchValue({ returnTo: this.returnToOptions[0].value }, { emitEvent: false });
-              }
-            }
-          }
-        },
-        error: (err: any) => console.error('Failed to load store sources', err)
-      });
-
       this.inventoryService.getPurchaseSources(undefined, 'Site').subscribe({
         next: (res: any) => {
           if (res?.status === 'Success' && res?.data) {
-            this.returnFromOptions = res.data.map((s: any) => ({ label: s.sourceName, value: s.sourceId }));
+            this.returnFromOptions = res.data
+              .filter((s: any) => s.sourceType === 'Site')
+              .map((s: any) => ({
+                label: s.sourceName,
+                value: s.sourceId,
+                country: s.source_country
+              }));
           }
         },
         error: (err: any) => console.error('Failed to load site sources', err)
@@ -449,13 +508,21 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       this.inventoryService.getPurchaseSources(undefined, 'Store').subscribe({
         next: (res: any) => {
           if (res?.status === 'Success' && res?.data) {
-            this.sendFromOptions = res.data.map((s: any) => ({ label: s.sourceName, value: s.sourceId }));
+            this.sendFromOptions = res.data
+              .filter((s: any) => s.sourceType === 'Store')
+              .map((s: any) => ({ label: s.sourceName, value: s.sourceId }));
+            const currentSendFrom = this.stockSendForm.get('sendFrom')?.value;
+            if (currentSendFrom) {
+              this.onSendFromChange(currentSendFrom);
+            }
           }
         },
         error: (err: any) => console.error('Failed to load store sources', err)
       });
 
       // Site (Sites)
+      // Removed initial load as it will be dynamic based on Send From
+      /*
       this.inventoryService.getPurchaseSources(undefined, 'Site').subscribe({
         next: (res: any) => {
           if (res?.status === 'Success' && res?.data) {
@@ -464,6 +531,71 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         },
         error: (err: any) => console.error('Failed to load site sources', err)
       });
+      */
+    }
+  }
+
+  loadReturnToOptions(country?: string) {
+    this.inventoryService.getPurchaseSources(country, 'Store').subscribe({
+      next: (res: any) => {
+        if (res?.status === 'Success' && res?.data) {
+          this.returnToOptions = res.data
+            .filter((s: any) => s.sourceType === 'Store')
+            .map((s: any) => ({
+              label: s.sourceName,
+              value: s.sourceId
+            }));
+
+          if (this.returnToOptions.length > 0) {
+            const currentVal = this.stockReturnForm.get('returnTo')?.value;
+            if (!currentVal || currentVal === 'Store' || !this.returnToOptions.find(o => o.value === currentVal)) {
+              this.stockReturnForm.get('returnTo')?.setValue(this.returnToOptions[0].value, { emitEvent: false });
+            }
+          } else {
+            this.stockReturnForm.get('returnTo')?.setValue(null, { emitEvent: false });
+          }
+        }
+      },
+      error: (err: any) => console.error('Failed to load store sources for Return To', err)
+    });
+  }
+
+  onSendFromChange(storeId: any) {
+    if (!storeId || storeId === 'Select' || storeId === 'Store') {
+      this.siteOptions = [];
+      this.itemsList = [];
+      this.stockSendForm.get('site')?.setValue(null);
+      this.stockSendForm.get('site')?.disable();
+      return;
+    }
+
+    // Load store-specific items
+    this.loadStockSendItemsDropdown(storeId);
+
+    // Lookup the store name (label) to call the site API
+    const selectedStore = this.sendFromOptions.find(o => o.value === storeId);
+    const storeName = selectedStore ? selectedStore.label : null;
+
+    if (storeName && storeName !== 'Store') {
+      this.stockSendForm.get('site')?.enable();
+      this.inventoryService.getSitesByStore_1_0(storeName).subscribe({
+        next: (res: any) => {
+          if (res && res.data) {
+            this.siteOptions = res.data.map((s: any) => ({ label: s.siteName, value: s.siteId }));
+          } else {
+            this.siteOptions = [];
+          }
+          this.stockSendForm.get('site')?.setValue(null);
+        },
+        error: (err: any) => {
+          this.siteOptions = [];
+          this.stockSendForm.get('site')?.setValue(null);
+        }
+      });
+    } else {
+      this.siteOptions = [];
+      this.stockSendForm.get('site')?.setValue(null);
+      this.stockSendForm.get('site')?.disable();
     }
   }
 
@@ -610,10 +742,26 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
   /** Shapes the raw ItemForIssue list into {label, value} objects for p-dropdown */
   get itemsDropdownOptions(): { label: string; value: any }[] {
-    return this.itemsList.map(item => ({
-      label: `${item.itemName} - ${item.make} - ${item.model} - ${item.serialNumber || 'No Serial'}`,
-      value: item
-    }));
+    return this.itemsList.map(item => {
+      const hasSerial = item.serialNumber && item.serialNumber.trim() !== '' && item.serialNumber !== null;
+      const hasBarcode = item.barcode && item.barcode.trim() !== '' && item.barcode !== null;
+
+      let identifier = '';
+      if (hasSerial && hasBarcode) {
+        identifier = `SNo: ${item.serialNumber} | Bc: ${item.barcode}`;
+      } else if (hasSerial) {
+        identifier = `SNo: ${item.serialNumber}`;
+      } else if (hasBarcode) {
+        identifier = `Bc: ${item.barcode}`;
+      } else {
+        identifier = `Bulk (Qty: ${item.quantity})`;
+      }
+
+      return {
+        label: `${item.itemName} - ${item.make} - ${item.model} - ${identifier}`,
+        value: { ...item, isBulk: !hasSerial && !hasBarcode, availableQty: item.quantity }
+      };
+    });
   }
 
   get purchaseItemsDropdownOptions(): { label: string; value: number }[] {
@@ -863,15 +1011,18 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   }
 
   // ITEMS LIST from API for Stock Send/Return
-  loadStockSendItemsDropdown() {
-    this.inventoryService.getItemsForIssue().subscribe({
+  loadStockSendItemsDropdown(storeId?: number) {
+    this.inventoryService.getItemsForIssue(storeId).subscribe({
       next: (response) => {
         if (response?.data) {
           this.itemsList = response.data;
+        } else {
+          this.itemsList = [];
         }
       },
       error: (error: any) => {
         console.error('Failed to load items for issue', error);
+        this.itemsList = [];
       }
     });
   }
@@ -905,24 +1056,118 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
   /** Shapes the raw ProductForIssue list into {label, value} objects for p-dropdown */
   get productsDropdownOptions(): { label: string; value: any }[] {
-    return this.productsList.map(prod => ({
-      label: `${prod.productName} - ${prod.make} - ${prod.model} - ${prod.serialNumber || 'No Serial'}`,
-      value: prod
-    }));
+    return this.productsList.map(prod => {
+      const hasSerial = prod.serialNumber && prod.serialNumber.trim() !== '' && prod.serialNumber !== null;
+      const hasBarcode = prod.barCode && prod.barCode.trim() !== '' && prod.barCode !== null;
+
+      let identifier = '';
+      if (hasSerial && hasBarcode) {
+        identifier = `SNo: ${prod.serialNumber} | Bc: ${prod.barCode}`;
+      } else if (hasSerial) {
+        identifier = `SNo: ${prod.serialNumber}`;
+      } else if (hasBarcode) {
+        identifier = `Bc: ${prod.barCode}`;
+      } else {
+        identifier = `Qty: 1`; // Fallback, though user stated they always have serial/barcode
+      }
+
+      return {
+        label: `${prod.productName} - ${prod.make} - ${prod.model} - ${identifier}`,
+        value: { ...prod, isBulk: false }
+      };
+    });
   }
 
-  // RETURNABLE STOCK FORMATTERS
-  get returnItemsDropdownOptions(): { label: string; value: number }[] {
-    return this.returnableItemsList.map(item => ({
-      label: `${item.itemName} - ${item.make} - ${item.model} - ${item.serialNumber}`,
-      value: item.issueItemId
-    }));
+  onStockItemSelect(event: any) {
+    const selected = event.value;
+    if (selected) {
+      if (!selected.isBulk) {
+        this.newStockItem.qty = 1;
+      } else {
+        this.newStockItem.qty = 1; // Default to 1 for bulk too, but user can change
+      }
+    }
   }
 
-  get returnProductsDropdownOptions(): { label: string; value: number }[] {
-    return this.returnableProductsList.map(prod => ({
-      label: `${prod.productName} - ${prod.make} - ${prod.model} - ${prod.serialNumber}`,
-      value: prod.issueProductId || prod.productDetailsId
+  onStockProductSelect(event: any) {
+    const selected = event.value;
+    if (selected) {
+      this.newStockProduct.qty = 1;
+    }
+  }
+
+  get returnItemsDropdownOptions(): { label: string; value: any }[] {
+    return this.returnableItemsList.map(item => {
+      const hasSerial = item.serialNumber && item.serialNumber.trim() !== '' && item.serialNumber !== null;
+      const hasBarcode = item.barcode && item.barcode.trim() !== '' && item.barcode !== null;
+
+      let identifier = '';
+      if (hasSerial && hasBarcode) {
+        identifier = `SNo: ${item.serialNumber} | Bc: ${item.barcode}`;
+      } else if (hasSerial) {
+        identifier = `SNo: ${item.serialNumber}`;
+      } else if (hasBarcode) {
+        identifier = `Bc: ${item.barcode}`;
+      } else {
+        identifier = `Qty: ${item.quantity}`;
+      }
+
+      return {
+        label: `${item.itemName} - ${item.make} - ${item.model} - ${identifier}`,
+        value: { ...item, isBulk: !hasSerial && !hasBarcode }
+      };
+    });
+  }
+
+  get returnProductsDropdownOptions(): { label: string; value: any }[] {
+    return this.returnableProductsList.map(prod => {
+      const hasSerial = prod.serialNumber && prod.serialNumber.trim() !== '' && prod.serialNumber !== null;
+      const hasBarcode = prod.barCode && prod.barCode.trim() !== '' && prod.barCode !== null;
+
+      let identifier = '';
+      if (hasSerial && hasBarcode) {
+        identifier = `SNo: ${prod.serialNumber} | Bc: ${prod.barCode}`;
+      } else if (hasSerial) {
+        identifier = `SNo: ${prod.serialNumber}`;
+      } else if (hasBarcode) {
+        identifier = `Bc: ${prod.barCode}`;
+      } else {
+        identifier = `Qty: ${prod.quantity}`;
+      }
+
+      return {
+        label: `${prod.productName} - ${prod.make} - ${prod.model} - ${identifier}`,
+        value: { ...prod, isBulk: !hasSerial && !hasBarcode }
+      };
+    });
+  }
+
+  onReturnItemSelect(event: any) {
+    const selected = event.value;
+    if (selected) {
+      if (!selected.isBulk) {
+        this.newReturnItem.qty = 1;
+      } else {
+        this.newReturnItem.qty = 1;
+      }
+    }
+  }
+
+  onReturnProductSelect(event: any) {
+    const selected = event.value;
+    if (selected) {
+      if (!selected.isBulk) {
+        this.newReturnProduct.qty = 1;
+      } else {
+        this.newReturnProduct.qty = 1;
+      }
+    }
+  }
+
+  get conditionOptions(): { label: string; value: string }[] {
+    return this.returnConditions.map(c => ({
+      label: c.charAt(0).toUpperCase() + c.slice(1).toLowerCase(),
+      value: c
     }));
   }
 
@@ -931,19 +1176,26 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   isEditingIssueStatus: boolean = false;
 
   updateIssueStatus() {
-    this.submitted = true;
+    const shipmentDateStr = this.formatDateForPayload(this.viewStockSendData.shipmentDateObj);
+    const deliveredDateStr = this.formatDateForPayload(this.viewStockSendData.deliveredDateObj);
 
-    let deliveredDateStr = '';
-    if (this.viewStockSendData.deliveredDateObj) {
-      const d = this.viewStockSendData.deliveredDateObj;
-      const pad = (n: number) => n < 10 ? '0' + n : n;
-      deliveredDateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; // "2026-03-03"
-    } else {
-      deliveredDateStr = this.viewStockSendData.deliveredDate || '';
+    // Date Validation
+    if (this.viewStockSendData.status === 'DELIVERED') {
+      if (!this.viewStockSendData.deliveredDateObj) {
+        this.messageService.add({ severity: 'error', summary: 'Validation Error', detail: 'Delivered date is required for DELIVERED status.' });
+        return;
+      }
+      if (this.viewStockSendData.shipmentDateObj && this.viewStockSendData.deliveredDateObj < this.viewStockSendData.shipmentDateObj) {
+        this.messageService.add({ severity: 'error', summary: 'Validation Error', detail: 'Delivered date cannot be before shipment date.' });
+        return;
+      }
     }
 
     const updatePayload = {
       status: this.viewStockSendData.status,
+      transportationId: this.viewStockSendData.transportationPlatform,
+      trackingId: this.viewStockSendData.trackingId,
+      shipmentDate: shipmentDateStr,
       deliveredDate: deliveredDateStr,
       modifiedBy: this.userId
     };
@@ -961,6 +1213,16 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       issueId: issueId,
       payload: updatePayload
     });
+
+    this.isEditingIssueStatus = false;
+  }
+
+  private formatDateForPayload(date: Date | null | string): string {
+    if (!date) return '';
+    if (typeof date === 'string') return date;
+    const d = new Date(date);
+    const pad = (n: number) => n < 10 ? '0' + n : n;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
   // VIEW PURCHASE METHODS
@@ -981,9 +1243,9 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         const sFlag: string = (item.serialNumberFlag || '');
         const bFlag: string = (item.barcodeFlag || '');
         for (const sd of item.serialDetails) {
-          this.viewPurchaseItems.push({
+          const mappedItem: ViewPurchaseItem = {
             ...item,
-            purchaseItemId: sd.id || sd.purchaseItemId || sd.itemId || item.id || item.purchaseItemId || item.itemId,
+            purchaseItemId: sd.purchaseItemId || sd.id || item.purchaseItemId || item.id || item.itemId,
             count: 1,
             serialNo: sd.serialNumber || '-',
             barcodeNo: sd.barcode || '-',
@@ -993,7 +1255,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
             requiresBarcode: bFlag !== 'F',
             status: sd.status !== undefined && sd.status !== null ? String(sd.status).toUpperCase() : String(item.status || 'DELIVERED').toUpperCase(),
             returnReason: sd.returnReason || item.returnReason || ''
-          });
+          };
+          this.viewPurchaseItems.push(mappedItem);
         }
       } else {
         // No serial/barcode data — push grouped row or expand individuals for preorders
@@ -1018,7 +1281,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           for (let i = 0; i < count; i++) {
             this.viewPurchaseItems.push({
               ...item,
-              purchaseItemId: item.id || item.purchaseItemId || item.itemId,
+              purchaseItemId: item.purchaseItemId || item.id || item.itemId,
               count: 1,
               serialNo: '',
               barcodeNo: '',
@@ -1034,7 +1297,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           // Group row — items with both flags 'F', or non-preorder items
           this.viewPurchaseItems.push({
             ...item,
-            purchaseItemId: item.id || item.purchaseItemId || item.itemId,
+            purchaseItemId: item.purchaseItemId || item.id || item.itemId,
             count: count,
             serialNo: null,
             barcodeNo: null,
@@ -1219,12 +1482,15 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       category: header.category || '',
       billing: header.billing || '',
       transportation: header.transportation || '',
+      transportationPlatform: header.transportationId || null,
       trackingId: header.trackingId || '',
       shipmentDate: header.shipmentDate || '',
+      shipmentDateObj: header.shipmentDate ? new Date(header.shipmentDate) : null,
       deliveredDate: header.deliveredDate || '',
+      deliveredDateObj: header.deliveredDate ? new Date(header.deliveredDate) : null,
       status: header.status || '',
       items: items.map((item: any) => ({
-        id: item.id,
+        id: item.issueItemId || item.id,
         name: item.itemName,
         qty: item.quantity,
         unit: item.units,
@@ -1236,13 +1502,15 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         model: item.model || ''
       })),
       products: products.map((prod: any) => ({
-        id: prod.id,
+        id: prod.issueProductId || prod.id,
         name: prod.productName,
         qty: prod.quantity,
         unit: prod.units,
         billingStatus: prod.billingStatus,
         assignSite: prod.assignSite || header.issuedTo || '—',
         expanded: false,
+        make: prod.make || '',
+        model: prod.model || '',
         ingredients: (prod.hardware || []).map((hw: any) => ({
           name: hw.itemName,
           count: hw.itemsQuantity,
@@ -1274,74 +1542,138 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     transactions: []
   };
 
-  initClosingStatementMockData() {
-    this.closingStatementData = {
-      itemName: this.data.itemName || 'IP Bullet 1.3 MP Camera-IVIS-IPC-EJ5313PL-IR2',
-      availableCount: this.data.closing || 8,
-      startDate: '07/30/2025',
-      endDate: '13/01/2026',
-      transactions: [
-        {
-          date: '13/01/2026',
-          availableCount: 8,
-          records: [
-            { from: 'Reliance Store - Tadepally', to: 'Store', status: 'Used', count: 1, type: 'Returned' },
-            { from: 'Store', to: 'Bigbazar - Ammerpet', status: 'New', count: 1, type: 'Issued' }
-          ]
-        },
-        {
-          date: '10/09/2025',
-          availableCount: 8,
-          records: [
-            { from: 'Store', to: 'Reliance Store - Tadepally', status: 'New', count: 2, type: 'Issued' }
-          ]
-        },
-        {
-          date: '01/09/2025',
-          availableCount: 10,
-          records: [
-            { from: 'Amazon', to: 'Store', status: 'New', count: 10, type: 'Purchased' }
-          ]
+  fetchClosingStatement() {
+    // Determine filters. Use defaults or data if provided.
+    // Assuming this.data contains itemId and optionally dates.
+    const itemId = this.data.itemId || this.data.id || 4; // Fallback to 4 from screenshot if sample
+
+    // Dates from data or default range? 
+    // Usually user selected a range in the parent list, let's assume those are in this.data
+    // If not, use some defaults.
+    const startDate = this.data.startDate || '2026-03-11 00:00:00';
+    const endDate = this.data.endDate || '2026-03-12 23:59:59';
+    const storeId = this.data.storeId;
+
+    this.inventoryService.getClosingStatement(itemId, startDate, endDate, storeId).subscribe({
+      next: (res: ClosingStatementResponse) => {
+        if (res?.status === 'Success' && res?.data) {
+          const header = res.data.header;
+          const details = res.data.details || [];
+
+          // Format Header dates for display (DD/MM/YYYY)
+          const formatDateDisplay = (dateStr: string) => {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+          };
+
+          // Transform and Group by Date
+          const groupedTransactions: any[] = [];
+          const groups: { [key: string]: any } = {};
+
+          details.forEach((item: ClosingStatementDetail) => {
+            const dateKey = formatDateDisplay(item.date);
+            if (!groups[dateKey]) {
+              groups[dateKey] = {
+                date: dateKey,
+                availableCount: item.availableCount,
+                records: []
+              };
+              groupedTransactions.push(groups[dateKey]);
+            }
+
+            // Map Action to Type for Badge Styling
+            let mappedType = '';
+            switch (item.action?.toUpperCase()) {
+              case 'PURCHASE': mappedType = 'Purchased'; break;
+              case 'ISSUE': mappedType = 'Issued'; break;
+              case 'USED': mappedType = 'Returned'; break;
+              default: mappedType = item.action || '';
+            }
+
+            groups[dateKey].records.push({
+              from: item.from,
+              to: item.to,
+              status: item.status,
+              count: item.count,
+              type: mappedType
+            });
+          });
+
+          this.closingStatementData = {
+            itemName: header.itemName,
+            availableCount: header.availableCount,
+            startDate: formatDateDisplay(header.startDate),
+            endDate: formatDateDisplay(header.endDate),
+            transactions: groupedTransactions
+          };
         }
-      ]
-    };
+      },
+      error: (err) => {
+        console.error('Error fetching closing statement', err);
+        // Fallback or error message could go here
+      }
+    });
   }
 
   addStockItem() {
-    if (this.newStockItem.name && this.newStockItem.qty) {
-      const selectedItemObj = this.newStockItem.name; // Now holds the full item object
+    this.isItemEntryAttempted = true;
+    if (this.newStockItem.name && this.newStockItem.qty && this.newStockItem.billingStatus) {
+      const selectedItemObj = this.newStockItem.name;
       const itemsArray = this.stockSendForm.get('stockSendItems') as FormArray;
 
-      // Uniqueness check using ID and Serial Number to allow same item with different serials
-      const alreadyAdded = itemsArray.controls.some(ctrl =>
-        ctrl.get('itemId')?.value === selectedItemObj.id &&
-        ctrl.get('serialNumber')?.value === selectedItemObj.serialNumber
-      );
+      // Uniqueness check
+      const alreadyAdded = itemsArray.controls.some(ctrl => {
+        const sameId = ctrl.get('itemId')?.value === (selectedItemObj.id || selectedItemObj.itemId);
+        if (selectedItemObj.isBulk) {
+          return sameId && !ctrl.get('serialNumber')?.value;
+        } else {
+          return sameId && ctrl.get('serialNumber')?.value === selectedItemObj.serialNumber;
+        }
+      });
 
       if (alreadyAdded) {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'This item with this serial number is already added.' });
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: selectedItemObj.isBulk ? 'This bulk item is already added to the list.' : 'This item with this serial number is already added.'
+        });
         return;
       }
 
+      let finalQty = this.newStockItem.qty;
+      if (!selectedItemObj.isBulk) {
+        finalQty = 1;
+      } else if (selectedItemObj.availableQty && finalQty > selectedItemObj.availableQty) {
+        this.messageService.add({ severity: 'warn', summary: 'Quantity Warning', detail: `Only ${selectedItemObj.availableQty} available.` });
+        return;
+        // finalQty = selectedItemObj.availableQty;
+      }
+
       const displayItemName = `${selectedItemObj.itemName} - ${selectedItemObj.make} - ${selectedItemObj.model}`;
-      const details = `S.No. ${selectedItemObj.serialNumber || '-'} | Barcode: ${selectedItemObj.barcode || '-'}`;
+      const details = selectedItemObj.isBulk
+        ? `Bulk Item (Available: ${selectedItemObj.availableQty})`
+        : `S.No. ${selectedItemObj.serialNumber || '-'} | Barcode: ${selectedItemObj.barcode || '-'}`;
 
       const selectedBilling = this.billingStatuses.find(b => b.value === this.newStockItem.billingStatus);
       const billingStatusName = selectedBilling ? selectedBilling.label : '';
 
       itemsArray.push(this.fb.group({
-        name: [selectedItemObj.serialNumber || selectedItemObj.itemName],
+        name: [selectedItemObj.isBulk ? selectedItemObj.itemName : (selectedItemObj.serialNumber || selectedItemObj.barcode || selectedItemObj.itemName)],
         nameDisplay: [displayItemName],
-        qty: [this.newStockItem.qty, [Validators.required, Validators.min(1)]],
+        qty: [finalQty, [Validators.required, Validators.min(1)]],
         billingStatus: [this.newStockItem.billingStatus],
         billingStatusName: [billingStatusName],
         details: [details],
-        itemId: [selectedItemObj.id || 0],
-        serialNumber: [selectedItemObj.serialNumber || ''],
-        barcode: [selectedItemObj.barcode || '']
+        itemId: [selectedItemObj.id || selectedItemObj.itemId || 0],
+        serialNumber: [selectedItemObj.isBulk ? '' : (selectedItemObj.serialNumber || '')],
+        barcode: [selectedItemObj.isBulk ? '' : (selectedItemObj.barcode || '')],
+        isBulk: [selectedItemObj.isBulk]
       }));
 
       this.newStockItem = { name: null, qty: null, billingStatus: null };
+      this.isItemEntryAttempted = false;
     }
   }
 
@@ -1351,42 +1683,50 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   }
 
   addStockProduct() {
-    if (this.newStockProduct.name && this.newStockProduct.qty) {
-      const selectedProd = this.newStockProduct.name; // Now holds the full product object
+    this.isProductEntryAttempted = true;
+    if (this.newStockProduct.name && this.newStockProduct.qty && this.newStockProduct.billingStatus) {
+      const selectedProd = this.newStockProduct.name;
       const productsArray = this.stockSendForm.get('stockSendProducts') as FormArray;
 
-      // Uniqueness check
-      const alreadyAdded = productsArray.controls.some(ctrl =>
-        ctrl.get('productDetailsId')?.value === selectedProd.productDetailsId
-      );
+      // Uniqueness check: Products are always serialized (uniqueness by serialNumber or barCode)
+      const alreadyAdded = productsArray.controls.some(ctrl => {
+        const sameId = ctrl.get('productDetailsId')?.value === selectedProd.productDetailsId;
+        const snMatch = ctrl.get('serialNumber')?.value === selectedProd.serialNumber;
+        const bcMatch = ctrl.get('barcode')?.value === selectedProd.barCode;
+        return sameId && (snMatch || bcMatch);
+      });
 
       if (alreadyAdded) {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'This product is already added to the send list.' });
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'This specific product is already added.'
+        });
         return;
       }
 
-      if (selectedProd && this.newStockProduct.qty > selectedProd.quantity) {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: `Cannot send more than available quantity (${selectedProd.quantity}).` });
-        return;
-      }
-      const displayItemName = `${selectedProd.productName} - ${selectedProd.make} - ${selectedProd.model}`;
-      const details = `S.No. ${selectedProd.serialNumber || '-'} | Barcode: ${selectedProd.barCode || '-'}`;
+      const displayProdName = `${selectedProd.productName} - ${selectedProd.make} - ${selectedProd.model}`;
+      const details = `S.No. ${selectedProd.serialNumber || '-'} | Barcode: ${selectedProd.barCode || '-'} | Status: ${this.newStockProduct.productStatus}`;
 
       const selectedBilling = this.billingStatuses.find(b => b.value === this.newStockProduct.billingStatus);
       const billingStatusName = selectedBilling ? selectedBilling.label : '';
 
       productsArray.push(this.fb.group({
-        name: [selectedProd.serialNumber || selectedProd.productName],
-        nameDisplay: [displayItemName],
-        qty: [this.newStockProduct.qty, [Validators.required, Validators.min(1)]],
+        name: [selectedProd.serialNumber || selectedProd.barCode || selectedProd.productName],
+        nameDisplay: [displayProdName],
+        qty: [1, [Validators.required, Validators.min(1)]],
         billingStatus: [this.newStockProduct.billingStatus],
         billingStatusName: [billingStatusName],
         details: [details],
         productDetailsId: [selectedProd.productDetailsId || 0],
-        serialNumber: [selectedProd.serialNumber || '']
+        serialNumber: [selectedProd.serialNumber || ''],
+        barcode: [selectedProd.barCode || ''],
+        productStatus: [this.newStockProduct.productStatus || 'SALE'],
+        isBulk: [false]
       }));
 
-      this.newStockProduct = { name: null, qty: null, billingStatus: null };
+      this.newStockProduct = { name: null, qty: null, billingStatus: null, productStatus: 'SALE' };
+      this.isProductEntryAttempted = false;
     }
   }
 
@@ -1413,42 +1753,43 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
   // Stock Return Methods
   addReturnItem() {
+    this.isReturnItemEntryAttempted = true;
     if (this.newReturnItem.name && this.newReturnItem.qty && this.newReturnItem.condition) {
       const itemsArray = this.stockReturnForm.get('stockReturnItems') as FormArray;
-      const alreadyAdded = itemsArray.controls.some(ctrl => ctrl.get('name')?.value === this.newReturnItem.name);
+      const selectedItemObj = this.newReturnItem.name;
+
+      const alreadyAdded = itemsArray.controls.some(ctrl => ctrl.get('issueItemId')?.value === selectedItemObj.issueItemId);
 
       if (alreadyAdded) {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'This item is already added to the return list.' });
         return;
       }
 
-      const selectedItemObj = this.returnableItemsList.find(i => i.issueItemId === this.newReturnItem.name);
-
-      if (selectedItemObj && this.newReturnItem.qty > selectedItemObj.quantity) {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: `Cannot return more than available quantity (${selectedItemObj.quantity}).` });
+      let finalQty = this.newReturnItem.qty;
+      if (!selectedItemObj.isBulk) {
+        finalQty = 1;
+      } else if (selectedItemObj.quantity && finalQty > selectedItemObj.quantity) {
+        this.messageService.add({ severity: 'warn', summary: 'Quantity Warning', detail: `Only ${selectedItemObj.quantity} available to return.` });
         return;
+        // finalQty = selectedItemObj.quantity;
       }
 
-      const displayItemName = selectedItemObj
-        ? `${selectedItemObj.itemName} - ${selectedItemObj.make} - ${selectedItemObj.model}`
-        : this.newReturnItem.name;
-      const subtext = selectedItemObj
-        ? `S.No. ${selectedItemObj.serialNumber} | Barcode: ${selectedItemObj.barcode}`
-        : '';
+      const displayItemName = `${selectedItemObj.itemName} - ${selectedItemObj.make} - ${selectedItemObj.model}`;
 
       itemsArray.push(this.fb.group({
-        name: [this.newReturnItem.name, Validators.required],
+        name: [selectedItemObj.isBulk ? selectedItemObj.itemName : (selectedItemObj.serialNumber || selectedItemObj.barcode || selectedItemObj.itemName)],
         nameDisplay: [displayItemName],
-        qty: [this.newReturnItem.qty, [Validators.required, Validators.min(1)]],
+        qty: [finalQty, [Validators.required, Validators.min(1)]],
         condition: [this.newReturnItem.condition],
-        subtext: [subtext],
-        issueItemId: [selectedItemObj?.issueItemId || 0],
-        itemId: [selectedItemObj?.itemId || 0],
-        serialNumber: [selectedItemObj?.serialNumber || ''],
-        barcode: [selectedItemObj?.barcode || '']
+        issueItemId: [selectedItemObj.issueItemId || 0],
+        itemId: [selectedItemObj.itemId || 0],
+        serialNumber: [selectedItemObj.serialNumber || ''],
+        barcode: [selectedItemObj.barcode || ''],
+        isBulk: [selectedItemObj.isBulk]
       }));
 
       this.newReturnItem = { name: null, qty: null, condition: null };
+      this.isReturnItemEntryAttempted = false;
     }
   }
 
@@ -1458,42 +1799,43 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   }
 
   addReturnProduct() {
+    this.isReturnProductEntryAttempted = true;
     if (this.newReturnProduct.name && this.newReturnProduct.qty && this.newReturnProduct.condition) {
       const productsArray = this.stockReturnForm.get('stockReturnProducts') as FormArray;
-      const alreadyAdded = productsArray.controls.some(ctrl => ctrl.get('name')?.value === this.newReturnProduct.name);
+      const selectedProdObj = this.newReturnProduct.name;
+
+      const alreadyAdded = productsArray.controls.some(ctrl => ctrl.get('issueProductId')?.value === selectedProdObj.issueProductId);
 
       if (alreadyAdded) {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'This product is already added to the return list.' });
         return;
       }
 
-      const selectedProdObj = this.returnableProductsList.find(p => p.issueProductId === this.newReturnProduct.name);
-
-      if (selectedProdObj && this.newReturnProduct.qty > selectedProdObj.quantity) {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: `Cannot return more than available quantity (${selectedProdObj.quantity}).` });
+      let finalQty = this.newReturnProduct.qty;
+      if (!selectedProdObj.isBulk) {
+        finalQty = 1;
+      } else if (selectedProdObj.quantity && finalQty > selectedProdObj.quantity) {
+        this.messageService.add({ severity: 'warn', summary: 'Quantity Warning', detail: `Only ${selectedProdObj.quantity} available to return.` });
         return;
+        // finalQty = selectedProdObj.quantity;
       }
 
-      const displayProductName = selectedProdObj
-        ? `${selectedProdObj.productName} - ${selectedProdObj.make} - ${selectedProdObj.model}`
-        : this.newReturnProduct.name;
-      const subtext = selectedProdObj
-        ? `S.No. ${selectedProdObj.serialNumber} | Barcode: ${selectedProdObj.barCode}` // API uses barCode
-        : '';
+      const displayProductName = `${selectedProdObj.productName} - ${selectedProdObj.make} - ${selectedProdObj.model}`;
 
       productsArray.push(this.fb.group({
-        name: [this.newReturnProduct.name, Validators.required],
+        name: [selectedProdObj.serialNumber || selectedProdObj.barCode || selectedProdObj.productName],
         nameDisplay: [displayProductName],
-        qty: [this.newReturnProduct.qty, [Validators.required, Validators.min(1)]],
+        qty: [finalQty, [Validators.required, Validators.min(1)]],
         condition: [this.newReturnProduct.condition],
-        subtext: [subtext],
-        issueProductId: [selectedProdObj?.issueProductId || 0],
-        productDetailsId: [selectedProdObj?.productDetailsId || 0],
-        serialNumber: [selectedProdObj?.serialNumber || ''],
-        barCode: [selectedProdObj?.barCode || '']
+        issueProductId: [selectedProdObj.issueProductId || 0],
+        productDetailsId: [selectedProdObj.productDetailsId || 0],
+        serialNumber: [selectedProdObj.serialNumber || ''],
+        barCode: [selectedProdObj.barCode || ''],
+        isBulk: [selectedProdObj.isBulk]
       }));
 
       this.newReturnProduct = { name: null, qty: null, condition: null };
+      this.isReturnProductEntryAttempted = false;
     }
   }
 
@@ -1650,32 +1992,40 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         }
 
         // Map items securely from previously selected data
-        const mappedItems = sendFormValue.stockSendItems.map((item: any) => ({
-          itemId: item.itemId,
-          quantity: Number(item.qty),
-          serialNumber: item.serialNumber, // Use the stored serialNumber field
-          barcode: item.barcode,
-          billingTypeId: item.billingStatus || 1
+        const mappedItems = sendFormValue.stockSendItems.map((item: any) => {
+          const itm: any = {
+            itemId: Number(item.itemId),
+            billingTypeId: Number(item.billingStatus) || 1
+          };
+          if (item.serialNumber || item.barcode) {
+            itm.serialNumber = item.serialNumber || '';
+            itm.barcode = item.barcode || '';
+          } else {
+            itm.quantity = Number(item.qty);
+          }
+          return itm;
+        });
+
+        const mappedProducts = sendFormValue.stockSendProducts.map((prod: any) => ({
+          productDetailsId: Number(prod.productDetailsId),
+          productStatus: prod.productStatus || 'SALE',
+          billingTypeId: Number(prod.billingStatus) || 1
         }));
+
         const requestPayload = {
-          issueDate: formatYYYYMMDD(new Date()), // Assuming today's date for issueDate
+          issueDate: formatYYYYMMDD(new Date()),
           issuedFromId: Number(sendFormValue.sendFrom) || 0,
           issuedToId: Number(sendFormValue.site) || 0,
           categoryId: Number(sendFormValue.category) || 0,
           billingTypeId: Number(sendFormValue.billingStatus) || 0,
+          status: sendFormValue.status || 'ISSUED',
           transportationId: Number(sendFormValue.transportationPlatform) || 0,
-          trackingId: sendFormValue.trackingId || "",
+          trackingId: isNaN(Number(sendFormValue.trackingId)) ? sendFormValue.trackingId : Number(sendFormValue.trackingId),
           shipmentDate: formatYYYYMMDD(sendFormValue.shipmentDate),
-          deliveredDate: formatYYYYMMDD(sendFormValue.deliveredDate),
-          remarks: "Stock issued to site",
+          deliveredDate: sendFormValue.status === 'DELIVERED' ? formatYYYYMMDD(sendFormValue.deliveredDate) : null,
           items: mappedItems,
-          products: sendFormValue.stockSendProducts.map((prod: any) => ({
-            productDetailsId: prod.productDetailsId,
-            quantity: Number(prod.qty),
-            billingTypeId: prod.billingStatus || 1
-          })),
-          createdBy: this.userId,
-          createdTime: createdTimeStr
+          products: mappedProducts,
+          createdBy: this.userId
         };
 
         // Wrap in isStockSend so the inventory list captures it
@@ -1705,11 +2055,11 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         };
 
         const returnPayload = {
-          returnDate: formatReturnDate(new Date()), // Defaulting to today as there's no returnDate field explicitly yet
+          returnDate: returnFormValue.status === 'RETURNED' ? formatReturnDate(returnFormValue.returnDate) : formatReturnDate(new Date()),
           returnFromId: Number(returnFormValue.returnFrom) || 0,
           returnToId: Number(returnFormValue.returnTo) || 0,
-          remarks: "Items returned from site",
-          status: "IN_TRANSIT",
+          remarks: returnFormValue.status === 'RETURNED' ? "Items returned to store" : "Items in transit from site",
+          status: returnFormValue.status || "IN_TRANSIT",
           items: returnFormValue.stockReturnItems.map((item: any) => ({
             issueItemId: item.issueItemId,
             itemId: item.itemId,
@@ -1957,5 +2307,18 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     if (this.mode === 'stock-return') return 'RETURNING...';
     if (this.mode === 'view-purchase' || this.mode === 'view-stock-send' || this.mode === 'view-return') return 'SAVING...';
     return 'SUBMITTING...';
+  }
+
+  dateRangeValidator(group: FormGroup) {
+    const shipmentDate = group.get('shipmentDate')?.value;
+    const deliveredDate = group.get('deliveredDate')?.value;
+    const status = group.get('status')?.value;
+
+    if (status === 'DELIVERED' && shipmentDate && deliveredDate) {
+      if (new Date(deliveredDate) < new Date(shipmentDate)) {
+        return { dateRangeInvalid: true };
+      }
+    }
+    return null;
   }
 }

@@ -21,11 +21,8 @@
     <div class="sites-list">
       <div *ngFor="let site of filteredSites" class="site-item font-Neometric-Medium"
         [class.active]="selectedSite === site.name" (click)="selectSite(site.name)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="site-icon">
-          <!-- Building Icon -->
-          <path
-            d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm-4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2z" />
-        </svg>
+        <img [src]="selectedSite === site.name ? 'assets/headericons/sites-icon-active.svg' : 'assets/headericons/sites-icon.svg'"
+          alt="Site" class="site-icon" />
         <span>{{ site.name }}</span>
       </div>
     </div>

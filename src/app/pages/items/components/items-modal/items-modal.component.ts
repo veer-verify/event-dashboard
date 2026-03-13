@@ -48,19 +48,6 @@ export class ItemsModalComponent implements OnInit {
     }
   }
 
-  getImageUrl(path: string | null | undefined): string {
-    if (!path) return 'assets/image-placeholder.svg';
-    if (path.startsWith('http')) return path; // Already absolute URL
-
-    // Remove './' if it exists at the start of the path
-    const cleanPath = path.startsWith('./') ? path.substring(2) : path;
-    const baseUrl = environment.apiBaseUrl;
-
-    // Using simple concatenation (since API URL ends with /verifai-inventory/api)
-    // You might need to adjust baseUrl based on where static assets are served from
-    return `${baseUrl}/${cleanPath}`;
-  }
-
   isEditing: boolean = false;
   itemForm!: FormGroup;
   submitted: boolean = false;
@@ -262,7 +249,7 @@ export class ItemsModalComponent implements OnInit {
   executeGetCodeApi(payload: any) {
     this.itemsService.getItemCode(payload).subscribe({
       next: (res) => {
-        console.log(res);
+        // console.log(res);
         const generatedCode = res.itemCode || "";
         this.itemForm.patchValue(
           {

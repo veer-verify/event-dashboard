@@ -72,6 +72,7 @@ export interface ProductAllDetailsInfo {
   location: string;
   publishedDate: string;
   usedFor: string;
+  remarks?: string;
 }
 
 export interface ProductAllDetailsHardware {

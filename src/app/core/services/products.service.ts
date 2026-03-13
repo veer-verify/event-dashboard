@@ -6,8 +6,8 @@ import { environment } from "../../../environments/environment";
 
 @Injectable({ providedIn: "root" })
 export class ProductsService {
-  private baseUrl = environment.apiBaseUrl;
-  // private baseUrl = environment.apiBaseUrl + '/inventory';
+  // private baseUrl = environment.apiBaseUrl;
+  private baseUrl = environment.apiBaseUrl + '/inventory';
 
   constructor(private http: HttpClient) { }
 
@@ -26,7 +26,6 @@ export class ProductsService {
     return this.http.get<any>(`${this.baseUrl}/getAllProductsList_1_0`, { params }).pipe(
       retry(1),
       catchError((error) => {
-        console.error("Error fetching products:", error);
         return throwError(() => error);
       }),
     );
@@ -39,7 +38,6 @@ export class ProductsService {
     return this.http.get<any>(`${this.baseUrl}/getProductsList_1_0`).pipe(
       retry(1),
       catchError((error) => {
-        console.error("Error fetching masters products:", error);
         return throwError(() => error);
       }),
     );
@@ -55,7 +53,6 @@ export class ProductsService {
       .pipe(
         retry(1),
         catchError((error) => {
-          console.error("Error fetching product details:", error);
           return throwError(() => error);
         }),
       );
@@ -71,7 +68,6 @@ export class ProductsService {
       .pipe(
         retry(1),
         catchError((error) => {
-          console.error("Error fetching all product details:", error);
           return throwError(() => error);
         }),
       );
@@ -98,7 +94,19 @@ export class ProductsService {
       .put<any>(`${this.baseUrl}/updateProductDetails_1_0`, productData)
       .pipe(
         catchError((error) => {
-          console.error("Error updating product:", error);
+          return throwError(() => error);
+        }),
+      );
+  }
+
+  /**
+   * Update an individual product item (list item view)
+   */
+  updateProductListItem(payload: any): Observable<any> {
+    return this.http
+      .put<any>(`${this.baseUrl}/updateProduct_1_0`, payload)
+      .pipe(
+        catchError((error) => {
           return throwError(() => error);
         }),
       );
@@ -111,7 +119,6 @@ export class ProductsService {
     return this.http.get<any>(`${this.baseUrl}/getProducts_1_0`).pipe(
       retry(1),
       catchError((error) => {
-        console.error("Error fetching products list:", error);
         return throwError(() => error);
       }),
     );
@@ -137,7 +144,6 @@ export class ProductsService {
   addNewProduct(payload: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/addNewProduct_1_0`, payload).pipe(
       catchError((error) => {
-        console.error('Error adding new product:', error);
         return throwError(() => error);
       })
     );

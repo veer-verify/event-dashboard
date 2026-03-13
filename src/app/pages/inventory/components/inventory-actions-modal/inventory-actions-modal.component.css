@@ -10,30 +10,129 @@
   letter-spacing: 0.5px;
 }
 
-/* Closing Statement Refactored Styles */
+/* Closing Statement Redesign */
 .closing-statement-wrapper {
-  grid-column: 1 / -1;
-  padding: 20px;
+  padding: 0 5px;
 }
 
+.grid-closing-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 20px;
+  background: #FAFAFA;
+  padding: 15px 25px;
+  border-radius: 6px;
+  margin-bottom: 30px;
+  border: 1px solid #f0f0f0;
+}
+
+.closing-header-col {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.closing-header-label {
+  font-size: 10px;
+  color: #999;
+  text-transform: uppercase;
+  font-family: 'Neometric Medium', sans-serif;
+  letter-spacing: 0.5px;
+}
+
+.closing-header-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: #000;
+  text-transform: uppercase;
+}
+
+/* Timeline/Transactions */
 .transaction-group-item {
-  margin-bottom: 25px;
+  margin-bottom: 30px;
 }
 
 .trans-date-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
-  width: 100%;
+  padding: 0 5px;
+  margin-bottom: 12px;
+  font-family: 'Neometric Bold', sans-serif;
 }
 
-.trans-card-grid {
+.trans-date-header .date-text {
+  font-size: 13px;
+  color: #000;
+  font-weight: 700;
+}
+
+.trans-date-header .avail-count-text {
+  font-size: 12px;
+  color: #000;
+  font-weight: 700;
+}
+
+.timeline-card {
+  background: #FFFFFF;
+  border-radius: 6px;
+  padding: 12px 25px;
   margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #f2f2f2;
   display: grid;
-  grid-template-columns: 2fr 2fr 1fr 1fr 120px;
+  grid-template-columns: 1fr 1fr 1.2fr 100px 100px;
   gap: 15px;
   align-items: center;
+}
+
+.trans-entry-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trans-entry-label {
+  font-size: 9px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.trans-entry-val {
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+}
+
+.trans-badge-col {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.status-badge-sm {
+  padding: 6px 0;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  width: 90px;
+  display: inline-block;
+  text-transform: uppercase;
+}
+
+.badge-purchased {
+  background-color: #53BF8B; /* Teal/Greenish */
+}
+
+.badge-returned {
+  background-color: #53BF8B; /* Same as Purchased in XD? Let's check. XD shows teal-ish for both */
+  opacity: 0.9;
+}
+
+.badge-issued {
+  background-color: #ED3237; /* Red */
 }
 
 /* STOCK SEND & RETURN PREVIEW STYLES (Existing) */
@@ -126,7 +225,7 @@
 
 .view-items-header {
   display: grid;
-  grid-template-columns: 1fr 2.2fr 1fr 1.2fr 1.2fr;
+  grid-template-columns: 50px 2.5fr 1fr 1fr 1.5fr;
   gap: 15px;
   padding: 12px 0;
   border-bottom: 1px solid #E0E0E0;
@@ -187,7 +286,7 @@
 
 .view-item-row {
   display: grid;
-  grid-template-columns: 1fr 2.2fr 1fr 1.2fr 1.2fr;
+  grid-template-columns: 50px 2.5fr 1fr 1fr 1.5fr;
   gap: 15px;
   padding: 15px 0;
   border-bottom: 1px solid #f0f0f0;
@@ -413,7 +512,7 @@
 
 
 .product-row-parent {
-  grid-template-columns: 3.2fr 1fr 1.2fr 1.2fr;
+  grid-template-columns: 50px 2.5fr 1fr 1fr 1.5fr;
   align-items: center;
   background: #fff;
   border-bottom: none;
@@ -428,7 +527,7 @@
 }
 
 .product-row-child {
-  grid-template-columns: 3.2fr 1fr 1.2fr 1.2fr;
+  grid-template-columns: 50px 2.5fr 1fr 1fr 1.5fr;
   border-bottom: none;
   padding-top: 0;
   padding-bottom: 15px;
@@ -674,4 +773,22 @@
 
 .ml-15 {
   margin-left: 15px;
+}
+
+/* Validation Styles */
+.dropdown-invalid ::ng-deep .p-dropdown {
+  border-color: #ED3237 !important;
+}
+
+.invalid-input {
+  border-color: #ED3237 !important;
+  background-color: #fff8f8 !important;
+}
+
+.text-red {
+  color: #ED3237 !important;
+}
+
+.text-xs {
+  font-size: 10px !important;
 }

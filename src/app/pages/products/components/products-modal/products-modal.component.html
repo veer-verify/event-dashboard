@@ -448,10 +448,30 @@
                                 </div>
                                 <div class="view-field">
                                     <label class="field-label">Use for</label>
-                                    <span class="field-value">{{ allDetails?.productDetails?.usedFor || "-" }}</span>
+                                    <ng-container *ngIf="!isEditing">
+                                        <span class="field-value">{{ allDetails?.productDetails?.usedFor || "-" }}</span>
+                                    </ng-container>
+                                    <ng-container *ngIf="isEditing">
+                                        <p-multiSelect [options]="dropdownArrays.productStatus" formControlName="usedFor"
+                                            optionLabel="name" optionValue="id" placeholder="Select" [filter]="true"
+                                            filterBy="name" display="chip" styleClass="w-full" appendTo="body"
+                                            [overlayOptions]="customOverlayOptions">
+                                        </p-multiSelect>
+                                    </ng-container>
                                 </div>
 
-                                <div class="view-field"></div>
+                                <div class="view-field">
+                                    <label class="field-label">Current Location</label>
+                                    <ng-container *ngIf="!isEditing">
+                                        <span class="field-value">{{ allDetails?.productDetails?.location || "-" }}</span>
+                                    </ng-container>
+                                    <ng-container *ngIf="isEditing">
+                                        <p-dropdown appendTo="body" [overlayOptions]="customOverlayOptions"
+                                            [options]="storesDropdown" formControlName="currentLocationId" optionLabel="label"
+                                            optionValue="value" placeholder="Select" [filter]="true" styleClass="w-full">
+                                        </p-dropdown>
+                                    </ng-container>
+                                </div>
 
                                 <!-- Row 4 -->
                                 <div class="view-field">
@@ -460,25 +480,54 @@
                                 </div>
                                 <div class="view-field">
                                     <label class="field-label">Published Date</label>
-                                    <span class="field-value">{{ allDetails?.productDetails?.publishedDate || "-"
-                                        }}</span>
+                                    <ng-container *ngIf="!isEditing">
+                                        <span class="field-value">{{ allDetails?.productDetails?.publishedDate || "-"
+                                            }}</span>
+                                    </ng-container>
+                                    <ng-container *ngIf="isEditing">
+                                        <div class="calendar-wrapper relative-position">
+                                            <p-calendar #calendarListItem formControlName="publishedDate" dateFormat="dd/mm/yy"
+                                                placeholder="-- / -- / ----" styleClass="w-full date-picker-custom"
+                                                inputStyleClass="field-input-text w-full" [showIcon]="false"
+                                                [maxDate]="maxDate"></p-calendar>
+                                            <img src="assets/calender.svg" class="calendar-icon-custom" alt="calendar"
+                                                (click)="calendarListItem.toggle()" />
+                                        </div>
+                                    </ng-container>
                                 </div>
 
-                                <div class="view-field"></div>
+                                <div class="view-field">
+                                    <label class="field-label">Remarks</label>
+                                    <ng-container *ngIf="!isEditing">
+                                        <span class="field-value">{{ allDetails?.productDetails?.remarks || "-" }}</span>
+                                    </ng-container>
+                                    <ng-container *ngIf="isEditing">
+                                        <input type="text" class="field-input-text" formControlName="remarks"
+                                            placeholder="Enter" />
+                                    </ng-container>
+                                </div>
 
                                 <!-- Row 5 -->
                                 <div class="view-field"></div>
                                 <div class="view-field">
                                     <label class="field-label">Status</label>
-                                    <span class="status-badge" [ngClass]="{
-                                        'status-bg-sale': allDetails?.productDetails?.status === 'Sale',
-                                        'status-bg-new': allDetails?.productDetails?.status === 'New',
-                                        'status-bg-lease': allDetails?.productDetails?.status === 'Lease',
-                                        'status-bg-used': allDetails?.productDetails?.status === 'Used',
-                                        'status-bg-scrap': allDetails?.productDetails?.status === 'Scrap'
-                                    }">
-                                        {{ (allDetails?.productDetails?.status || "-") | uppercase }}
-                                    </span>
+                                    <ng-container *ngIf="!isEditing">
+                                        <span class="status-badge" [ngClass]="{
+                                            'status-bg-sale': allDetails?.productDetails?.status === 'Sale',
+                                            'status-bg-new': allDetails?.productDetails?.status === 'New',
+                                            'status-bg-lease': allDetails?.productDetails?.status === 'Lease',
+                                            'status-bg-used': allDetails?.productDetails?.status === 'Used',
+                                            'status-bg-scrap': allDetails?.productDetails?.status === 'Scrap'
+                                        }">
+                                            {{ (allDetails?.productDetails?.status || "-") | uppercase }}
+                                        </span>
+                                    </ng-container>
+                                    <ng-container *ngIf="isEditing">
+                                        <p-dropdown appendTo="body" [overlayOptions]="customOverlayOptions"
+                                            [options]="dropdownArrays.productStatus" formControlName="statusId" optionLabel="name"
+                                            optionValue="id" placeholder="Select" [showClear]="false" [filter]="true"
+                                            filterBy="name" styleClass="w-full"></p-dropdown>
+                                    </ng-container>
                                 </div>
                             </div>
 
@@ -541,7 +590,7 @@
                                                     <div class="hw-img-placeholder" *ngIf="!hw.itemImage">
                                                         <img src="assets/image-placeholder.svg" alt="img" />
                                                     </div>
-                                                    <img *ngIf="hw.itemImage" [src]="getImageUrl(hw.itemImage)"
+                                                    <img *ngIf="hw.itemImage" [src]="hw.itemImage"
                                                         alt="Item Image" class="hw-img" />
                                                 </td>
                                                 <td class="col-name">
@@ -697,10 +746,11 @@
                 </div>
             </ng-container>
 
-            <!-- Action Buttons (Not for listitem mode) -->
-            <div class="modal-footer" *ngIf="mode !== 'listitem'">
-                <!-- Default Buttons (Edit/Index) -->
-                <ng-container *ngIf="!showPreview">
+
+            <!-- Action Buttons -->
+            <div class="modal-footer">
+                <!-- Buttons for mode other than listitem or listitem with editing -->
+                <ng-container *ngIf="mode !== 'listitem' && !showPreview">
                     <ng-container *ngIf="isEditing">
                         <button class="btn-secondary" (click)="close.emit()" [disabled]="isLoading">
                             CANCEL
@@ -720,6 +770,16 @@
                     </ng-container>
                 </ng-container>
 
+                <!-- Buttons for listitem mode when editing -->
+                <ng-container *ngIf="mode === 'listitem' && isEditing">
+                    <button class="btn-secondary" (click)="isEditing = false" [disabled]="isLoading">
+                        CANCEL
+                    </button>
+                    <button class="btn-primary" (click)="confirmSave()" [disabled]="isLoading">
+                        {{ isLoading ? "SAVING..." : "UPDATE" }}
+                    </button>
+                </ng-container>
+
                 <!-- Preview Buttons -->
                 <ng-container *ngIf="showPreview">
                     <button class="btn-secondary" (click)="cancelPreview()" [disabled]="isLoading">
@@ -729,6 +789,39 @@
                         {{ isLoading ? "SAVING..." : "CONFIRM" }}
                     </button>
                 </ng-container>
+            </div>
+
+            <!-- Note Section (only for Create Product or Add Product) -->
+            <div class="info-note-box" *ngIf="mode === 'create' || isAddProductMode">
+                <h6 class="note-header text-header-sm">NOTE</h6>
+                <div class="note-columns-wrapper">
+                    <div class="note-column-text">
+                        <p>
+                            RM - Raw material ; Digi key comps, transistors, screws, nuts,
+                            resistors etc
+                        </p>
+                        <p>SC - Sub component ; Enclosure, cables, tie rods</p>
+                        <p>
+                            CO - component ; sensors, power boards, sensor boards, PI,
+                            charger, battery, DVR, cameras, server etc
+                        </p>
+                        <p>FG - Mobile units, IVIS Central Devices etc</p>
+                    </div>
+                    <div class="note-column-text">
+                        <p>
+                            E - Electronics and Electrical - capacitors, routers, dongles,
+                            power boards, MCB etc
+                        </p>
+                        <p>M - Mechanical - outdoor boxes, nuts & bolts</p>
+                        <p>A - accessories - tapes, glues, cables, connectors etc</p>
+                        <p>
+                            T - Tools - bosch kits, screwdriver, soldering, equipment,
+                            multipmeters, etc.
+                        </p>
+                        <p>G - laptops, phones, gadgets etc</p>
+                        <p>S - all sims if any placed at customer locations</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

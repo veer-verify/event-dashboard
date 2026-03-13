@@ -38,7 +38,6 @@ export class MetadataService {
       .pipe(
         retry(1),
         catchError((error) => {
-          console.error(`Error fetching metadata for typeName "${typeName}":`, error);
           return throwError(() => error);
         }),
       );
@@ -68,9 +67,7 @@ export class MetadataService {
       })
       .pipe(
         retry(1),
-        // tap((response) => console.log(`Metadata response for type ${typeId}:`, response)),
         catchError((error) => {
-          console.error(`Error fetching metadata for typeId ${typeId}:`, error);
           return throwError(() => error);
         }),
       );

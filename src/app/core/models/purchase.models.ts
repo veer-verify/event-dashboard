@@ -28,25 +28,36 @@ export interface PurchaseDetail {
     statusColor: string;
 }
 
+export interface SerialDetail {
+    purchaseItemId: number;
+    serialNumber: string;
+    barcode: string;
+    status: string;
+}
+
 export interface PurchaseItem {
     itemId: number;
     itemName: string;
     itemCode: string;
     make: string;
     model: string;
+    serialNumberFlag?: string;
+    barcodeFlag?: string;
     count: number;
     unitPrice: number;
     gstPercent: number;
     totalPricePerUnit: number;
     status: string;
     statusColor: string;
-    serialDetails: any[]; // Update to specific interface if serial details format is known
+    serialDetails: SerialDetail[];
 }
 
 export interface PurchaseFile {
     id: number;
     fileType: string;
-    filePath: string;
+    storedFileName?: string;
+    fileUrl?: string;
+    filePath?: string; // Keep for backward compatibility if needed
 }
 
 export interface PurchaseDetailsData {

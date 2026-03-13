@@ -115,7 +115,8 @@ export interface IssuedDetailHeader {
 }
 
 export interface IssuedDetailItem {
-  id: number;
+  id?: number;
+  issueItemId?: number;
   itemName: string;
   quantity: number;
   units: string;
@@ -123,6 +124,8 @@ export interface IssuedDetailItem {
   serialNumber: string;
   barcode: string;
   assignSite: string | null;
+  make?: string;
+  model?: string;
 }
 
 export interface IssuedHardware {
@@ -132,7 +135,8 @@ export interface IssuedHardware {
 }
 
 export interface IssuedDetailProduct {
-  id: number;
+  id?: number;
+  issueProductId?: number;
   productDetailsId: number;
   productName: string;
   quantity: number;
@@ -140,6 +144,8 @@ export interface IssuedDetailProduct {
   billingStatus: string;
   hardware: IssuedHardware[];
   expanded?: boolean;
+  make?: string;
+  model?: string;
 }
 
 export interface IssuedDetailResponse {
@@ -195,6 +201,7 @@ export interface ItemForIssue {
   units: string;
   serialNumberFlag: string;
   barcodeFlag: string;
+  quantity: number;
 }
 
 export interface ItemsForIssueResponse {
@@ -243,7 +250,7 @@ export interface ReturnableStockProduct {
   make: string;
   model: string;
   serialNumber: string;
-  barCode: string; // From JSON: barCode (capital C)
+  barCode: string;
   quantity: number;
   issueId: number;
 }
@@ -392,4 +399,31 @@ export interface SiteInventoryResponse {
   statusCode: number;
   viewType: 'NORMAL' | 'DETAILED';
   data: SiteInventoryNormalItem[] | SiteInventoryDetailedItem[];
+}
+export interface ClosingStatementHeader {
+  itemName: string;
+  availableCount: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface ClosingStatementDetail {
+  date: string;
+  from: string;
+  to: string;
+  status: string;
+  count: number;
+  action: string;
+  availableCount: number;
+}
+
+export interface ClosingStatementData {
+  header: ClosingStatementHeader;
+  details: ClosingStatementDetail[];
+}
+
+export interface ClosingStatementResponse {
+  status: string;
+  statusCode: number;
+  data: ClosingStatementData;
 }

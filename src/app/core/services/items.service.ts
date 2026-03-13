@@ -13,8 +13,8 @@ import { InventoryItemsResponse, InventoryItemDetailsResponse } from "../models/
 
 @Injectable({ providedIn: "root" })
 export class ItemsService {
-  private baseUrl = environment.apiBaseUrl;
-  // private baseUrl = environment.apiBaseUrl + '/inventory';
+  // private baseUrl = environment.apiBaseUrl;
+  private baseUrl = environment.apiBaseUrl + '/inventory';
 
   constructor(private http: HttpClient) { }
 
@@ -48,7 +48,6 @@ export class ItemsService {
 
     return this.http.get<InventoryItemsResponse>(`${this.baseUrl}/getAllInventoryItems_1_0`, { params }).pipe(
       catchError((error) => {
-        console.error("Error fetching all inventory items:", error);
         return throwError(() => error);
       })
     );
@@ -63,7 +62,6 @@ export class ItemsService {
       .pipe(
         retry(1),
         catchError((error) => {
-          console.error("Error fetching item details:", error);
           return throwError(() => error);
         }),
       );
@@ -76,7 +74,6 @@ export class ItemsService {
     const params = new HttpParams().set('purchaseItemId', purchaseItemId.toString());
     return this.http.get<InventoryItemDetailsResponse>(`${this.baseUrl}/getInventoryItemDetails_1_0`, { params }).pipe(
       catchError((error) => {
-        console.error("Error fetching inventory item details:", error);
         return throwError(() => error);
       })
     );

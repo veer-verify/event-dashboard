@@ -52,18 +52,6 @@ export class ProductsModalComponent implements OnInit {
     }
   }
 
-  getImageUrl(path: string | null | undefined): string {
-    if (!path) return 'assets/image-placeholder.svg';
-    if (path.startsWith('http')) return path; // Already absolute URL
-
-    // Remove './' if it exists at the start of the path
-    const cleanPath = path.startsWith('./') ? path.substring(2) : path;
-    const baseUrl = environment.apiBaseUrl;
-
-    // Using simple concatenation 
-    return `${baseUrl}/${cleanPath}`;
-  }
-
   isEditing: boolean = false;
   productForm!: FormGroup;
   submitted: boolean = false;
@@ -139,6 +127,8 @@ export class ProductsModalComponent implements OnInit {
       }
     }
     else if (this.mode === "listitem") {
+      this.loadStores();
+      this.loadDropdowns();
       if (this.product?.productId || this.product?.id) {
         this.fetchAllProductDetails(this.product.productId || this.product.id);
       }
@@ -250,6 +240,34 @@ export class ProductsModalComponent implements OnInit {
           }
 
           this.allDetails = data;
+          
+          if (this.mode === "listitem") {
+            const details = data.productDetails;
+            const usedForNames = details.usedFor ? details.usedFor.split(',').map((s: string) => s.trim()) : [];
+            const usedForIds = this.dropdownArrays.productStatus
+              .filter((item: any) => usedForNames.includes(item.name))
+              .map((item: any) => item.id);
+
+            const store = this.storesDropdown.find(s => s.label === details.location);
+            const status = this.dropdownArrays.productStatus.find((s: any) => s.name === details.status);
+
+            let pubDate = null;
+            if (details.publishedDate && details.publishedDate !== '-') {
+              // Try to parse the date dd/mm/yyyy
+              const parts = details.publishedDate.split('/');
+              if (parts.length === 3) {
+                pubDate = new Date(+parts[2], +parts[1] - 1, +parts[0]);
+              }
+            }
+
+            this.productForm.patchValue({
+              currentLocationId: store ? store.value : null,
+              statusId: status ? status.id : null,
+              remarks: details.remarks || "", // Assuming remarks might be in allDetails or details
+              publishedDate: pubDate,
+              usedFor: usedForIds
+            });
+          }
 
         }
         this.isLoading = false;
@@ -506,6 +524,14 @@ export class ProductsModalComponent implements OnInit {
         make: ["", Validators.required],
         model: ["", Validators.required],
         publishedDate: [""],
+        usedFor: [[]],
+      });
+    } else if (this.mode === "listitem") {
+      this.productForm = this.fb.group({
+        currentLocationId: [null, Validators.required],
+        statusId: [null, Validators.required],
+        remarks: [""],
+        publishedDate: [null],
         usedFor: [[]],
       });
     } else {
@@ -795,6 +821,46 @@ export class ProductsModalComponent implements OnInit {
         next: (res: any) => {
           if (res?.status === 'Success' || res?.status === 'success') {
             this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Remarks updated successfully!' });
+            setTimeout(() => {
+              this.save.emit(res);
+              this.close.emit();
+            }, 1000);
+          } else {
+            this.isLoading = false;
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: res?.message || 'Update failed' });
+          }
+        },
+        error: (err) => {
+          this.isLoading = false;
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Update failed' });
+        }
+      });
+      return;
+    }
+
+    if (this.mode === 'listitem' && this.isEditing) {
+      const now = new Date();
+      const pad = (n: number) => n < 10 ? '0' + n : n;
+      const modifiedTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ` +
+        `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+      const pubDate = formValue.publishedDate ? 
+          `${formValue.publishedDate.getFullYear()}-${pad(formValue.publishedDate.getMonth() + 1)}-${pad(formValue.publishedDate.getDate())}` : null;
+
+      const updatePayload = {
+        productDetailId: this.product.productId || this.product.id,
+        currentLocationId: formValue.currentLocationId ? Number(formValue.currentLocationId) : 0,
+        statusId: formValue.statusId ? Number(formValue.statusId) : 0,
+        remarks: formValue.remarks || "",
+        publishedDate: pubDate,
+        usedFor: Array.isArray(formValue.usedFor) ? formValue.usedFor.map((id: any) => Number(id)) : [],
+        modifiedBy: this.userId || 0
+      };
+
+      this.productsService.updateProductListItem(updatePayload).subscribe({
+        next: (res: any) => {
+          if (res?.status === 'Success' || res?.status === 'success') {
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Product updated successfully!' });
             setTimeout(() => {
               this.save.emit(res);
               this.close.emit();

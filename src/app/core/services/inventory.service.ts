@@ -9,15 +9,17 @@ import {
   ReturnListResponse,
   ReturnDetailsResponse,
   UpdateReturnPayload,
-  SiteInventoryResponse
+  SiteInventoryResponse,
+  ClosingStatementResponse
 } from '../models/inventory.models';
+import { PurchaseDetailsResponse } from '../models/purchase.models';
 
 @Injectable({
   providedIn: 'root'
 })
 export class InventoryService {
-  private baseUrl = environment.apiBaseUrl;
-  // private baseUrl = environment.apiBaseUrl + '/inventory';
+  // private baseUrl = environment.apiBaseUrl;
+  private baseUrl = environment.apiBaseUrl + '/inventory';
 
   constructor(private http: HttpClient) { }
 
@@ -40,9 +42,16 @@ export class InventoryService {
       catchError((error) => throwError(() => error))
     );
   }
-  getPurchaseDetails(purchaseId: number): Observable<any> {
+
+  getSitesByStore_1_0(storeName: string): Observable<any> {
+    const params = new HttpParams().set('storeName', storeName);
+    return this.http.get<any>(`${this.baseUrl}/getSitesByStore_1_0`, { params }).pipe(
+      catchError((error) => throwError(() => error))
+    );
+  }
+  getPurchaseDetails(purchaseId: number): Observable<PurchaseDetailsResponse> {
     let params = new HttpParams().set('purchaseId', purchaseId.toString());
-    return this.http.get<any>(`${this.baseUrl}/getPurchaseDetails_1_0`, { params }).pipe(
+    return this.http.get<PurchaseDetailsResponse>(`${this.baseUrl}/getPurchaseDetails_1_0`, { params }).pipe(
       catchError((error) => throwError(() => error))
     );
   }
@@ -144,8 +153,12 @@ export class InventoryService {
     );
   }
 
-  getItemsForIssue(): Observable<ItemsForIssueResponse> {
-    return this.http.get<ItemsForIssueResponse>(`${this.baseUrl}/itemsForIssue_1_0`).pipe(
+  getItemsForIssue(storeId?: number): Observable<ItemsForIssueResponse> {
+    let params = new HttpParams();
+    if (storeId) {
+      params = params.set('storeId', storeId.toString());
+    }
+    return this.http.get<ItemsForIssueResponse>(`${this.baseUrl}/itemsForIssue_1_0`, { params }).pipe(
       catchError((error) => throwError(() => error))
     );
   }
@@ -184,5 +197,20 @@ export class InventoryService {
   updateReturn(returnId: number, payload: UpdateReturnPayload): Observable<any> {
     const params = new HttpParams().set('returnId', returnId.toString());
     return this.http.put<any>(`${this.baseUrl}/updateReturn_1_0`, payload, { params });
+  }
+
+  getClosingStatement(itemId: number, startDate: string, endDate: string, storeId?: number): Observable<ClosingStatementResponse> {
+    let params = new HttpParams()
+      .set('itemId', itemId.toString())
+      .set('startDate', startDate)
+      .set('endDate', endDate);
+
+    if (storeId) {
+      params = params.set('storeId', storeId.toString());
+    }
+
+    return this.http.get<ClosingStatementResponse>(`${this.baseUrl}/getClosingStatement_1_0`, { params }).pipe(
+      catchError((error) => throwError(() => error))
+    );
   }
 }
