@@ -24,6 +24,7 @@ export interface ProductListItem {
   publishedDate: string;
   currentLocation: string;
   status: string;
+  productImage?: string;
 }
 
 export interface MasterProduct {

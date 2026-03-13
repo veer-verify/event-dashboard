@@ -15,6 +15,7 @@ import { AuthService } from "../../../../login/login.service";
 import { MessageService, OverlayOptions } from "primeng/api";
 import { debounceTime, distinctUntilChanged } from "rxjs/operators";
 import { FileUploadComponent } from "../../../../shared/file-upload/file-upload.component";
+import { ImagePipe } from "../../../../shared/image.pipe";
 import { ItemDetail, InventoryItemData } from "../../../../core/models/item.models";
 import { environment } from "../../../../../environments/environment";
 
@@ -27,7 +28,8 @@ import { environment } from "../../../../../environments/environment";
     CommonModule,
     DropdownModule,
     MultiSelectModule,
-    FileUploadComponent
+    FileUploadComponent,
+    ImagePipe
   ],
   templateUrl: "./items-modal.component.html",
   styleUrl: "./items-modal.component.css",
@@ -661,7 +663,7 @@ export class ItemsModalComponent implements OnInit {
         modifiedTime: modifiedTime
       };
 
-      this.itemsService.updateItem(updatePayload.itemId, updatePayload).subscribe({
+      this.itemsService.updateItem(updatePayload.itemId, updatePayload, this.selectedFile || undefined).subscribe({
         next: (res: any) => {
           if (res?.status === 'Success' || res?.status === 'success') {
             this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Item updated successfully!' });

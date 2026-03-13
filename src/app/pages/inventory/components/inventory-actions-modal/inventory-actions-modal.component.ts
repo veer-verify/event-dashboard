@@ -14,13 +14,15 @@ import {
 } from '../../../../core/models/inventory.models';
 import { OverlayOptions, MessageService } from 'primeng/api';
 import { FileUploadComponent } from '../../../../shared/file-upload/file-upload.component';
-import { environment } from '../../../../../environments/environment';
+import { ImagePipe } from '../../../../shared/image.pipe';
 import { AuthService } from '../../../../login/login.service';
 import { PurchaseItem } from '../../../../core/models/purchase.models';
 
 export interface ViewPurchaseItem extends PurchaseItem {
   id?: number;
   purchaseItemId?: number;
+  allPurchaseItemIds?: number[];
+  actionQty?: number;
   serialNo?: string;
   newSerialNumber?: string;
   barcodeNo?: string;
@@ -43,20 +45,11 @@ export interface ViewPurchaseItem extends PurchaseItem {
 @Component({
   selector: 'app-inventory-actions-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, DropdownModule, CalendarModule, InputSwitchModule, FileUploadComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, DropdownModule, CalendarModule, InputSwitchModule, FileUploadComponent, ImagePipe],
   templateUrl: './inventory-actions-modal.component.html',
   styleUrls: ['./inventory-actions-modal.component.css']
 })
 export class InventoryActionsModalComponent implements OnInit, OnChanges {
-  baseUrl: string = environment.apiBaseUrl;
-
-  getFileUrl(filePath: string | null | undefined): string {
-    if (!filePath) return 'assets/mock_cam_check.jpg';
-    if (filePath.startsWith('http')) return filePath;
-    const cleanBase = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
-    const cleanPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
-    return `${cleanBase}${cleanPath}`;
-  }
   customOverlayOptions: OverlayOptions = {
     styleClass: 'dropdown-zindex-fix'
   };
@@ -1227,87 +1220,116 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
   // VIEW PURCHASE METHODS
   initViewItems() {
-    // console.log(this.data);
     let rawItems: any[] = [];
     if (this.data?.items) {
       rawItems = this.data.items;
     } else if (this.data?.itemsDetails) {
-      console.log(this.data?.itemsDetails);
       rawItems = this.data.itemsDetails;
     }
 
     this.viewPurchaseItems = [];
     for (const item of rawItems) {
-      // console.log(rawItems);
-      if (item.serialDetails && item.serialDetails.length > 0) {
-        const sFlag: string = (item.serialNumberFlag || '');
-        const bFlag: string = (item.barcodeFlag || '');
-        for (const sd of item.serialDetails) {
-          const mappedItem: ViewPurchaseItem = {
+      const sFlag: string = (item.serialNumberFlag || '');
+      const bFlag: string = (item.barcodeFlag || '');
+      const requiresSerial = sFlag !== 'F';
+      const requiresBarcode = bFlag !== 'F';
+      const isBulk = sFlag === 'F' && bFlag === 'F';
+
+      const serialDetails = item.serialDetails || [];
+
+      if (isBulk) {
+        // Bulk items (F & F) — group by status
+        const groups: { [key: string]: any[] } = {};
+        
+        for (const sd of serialDetails) {
+          const status = String(sd.status || item.status || (this.isPreorderInvoice ? 'PREORDER' : 'DELIVERED')).toUpperCase();
+          if (!groups[status]) groups[status] = [];
+          groups[status].push(sd);
+        }
+
+        const statuses = Object.keys(groups);
+        if (statuses.length === 0) {
+          // Fallback if no serialDetails (shouldn't happen with current backend logic but safe to have)
+          this.viewPurchaseItems.push({
             ...item,
-            purchaseItemId: sd.purchaseItemId || sd.id || item.purchaseItemId || item.id || item.itemId,
+            purchaseItemId: item.purchaseItemId || item.id || item.itemId,
+            allPurchaseItemIds: [],
+            count: item.count || 1,
+            actionQty: 0,
+            serialNo: null,
+            barcodeNo: null,
+            serialNumberFlag: sFlag,
+            barcodeFlag: bFlag,
+            requiresSerial: false,
+            requiresBarcode: false,
+            status: String(item.status || (this.isPreorderInvoice ? 'PREORDER' : 'DELIVERED')).toUpperCase(),
+            returnReason: item.returnReason || ''
+          });
+        } else {
+          for (const status of statuses) {
+            const groupDetails = groups[status];
+            const allIds = groupDetails.map((sd: any) => sd.purchaseItemId || sd.id);
+            this.viewPurchaseItems.push({
+              ...item,
+              purchaseItemId: allIds[0],
+              allPurchaseItemIds: allIds,
+              count: allIds.length,
+              actionQty: 0,
+              serialNo: null,
+              barcodeNo: null,
+              serialNumberFlag: sFlag,
+              barcodeFlag: bFlag,
+              requiresSerial: false,
+              requiresBarcode: false,
+              status: status,
+              returnReason: groupDetails[0].returnReason || item.returnReason || ''
+            });
+          }
+        }
+      } else {
+        // Serialized items (at least one 'T') — expand into individual rows
+        for (const sd of serialDetails) {
+          this.viewPurchaseItems.push({
+            ...item,
+            purchaseItemId: sd.purchaseItemId || sd.id,
             count: 1,
             serialNo: sd.serialNumber || '-',
             barcodeNo: sd.barcode || '-',
             serialNumberFlag: sFlag,
             barcodeFlag: bFlag,
-            requiresSerial: sFlag !== 'F',
-            requiresBarcode: bFlag !== 'F',
+            requiresSerial: requiresSerial,
+            requiresBarcode: requiresBarcode,
             status: sd.status !== undefined && sd.status !== null ? String(sd.status).toUpperCase() : String(item.status || 'DELIVERED').toUpperCase(),
             returnReason: sd.returnReason || item.returnReason || ''
-          };
-          this.viewPurchaseItems.push(mappedItem);
+          });
         }
-      } else {
-        // No serial/barcode data — push grouped row or expand individuals for preorders
-        let count = 1;
-        if (item.qty) {
-          count = parseInt(item.qty, 10);
-        } else if (item.count) {
-          count = parseInt(item.count, 10);
+
+        // Handle potential remaining count not covered by serialDetails
+        let totalCount = 1;
+        if (item.count !== undefined && item.count !== null) {
+          totalCount = parseInt(item.count, 10);
+        } else if (item.qty !== undefined && item.qty !== null) {
+          totalCount = parseInt(item.qty, 10);
         }
-        if (isNaN(count) || count < 1) count = 1;
+        if (isNaN(totalCount) || totalCount < 1) totalCount = 1;
 
-        const serialFlag: string = (item.serialNumberFlag || '');
-        const barcodeFlag: string = (item.barcodeFlag || '');
-
-        const requiresSerial = (serialFlag !== 'F');
-        const requiresBarcode = (barcodeFlag !== 'F');
-
-        const isPreorder = this.isPreorderInvoice;
-
-        if (isPreorder && (requiresSerial || requiresBarcode)) {
-          // Expand into individual rows — one per unit
-          for (let i = 0; i < count; i++) {
+        if (totalCount > serialDetails.length) {
+          const remaining = totalCount - serialDetails.length;
+          for (let i = 0; i < remaining; i++) {
             this.viewPurchaseItems.push({
               ...item,
               purchaseItemId: item.purchaseItemId || item.id || item.itemId,
               count: 1,
-              serialNo: '',
-              barcodeNo: '',
-              serialNumberFlag: serialFlag,
-              barcodeFlag: barcodeFlag,
+              serialNo: '-',
+              barcodeNo: '-',
+              serialNumberFlag: sFlag,
+              barcodeFlag: bFlag,
               requiresSerial: requiresSerial,
               requiresBarcode: requiresBarcode,
-              status: String(item.status || 'PREORDER').toUpperCase(),
+              status: String(item.status || (this.isPreorderInvoice ? 'PREORDER' : 'DELIVERED')).toUpperCase(),
               returnReason: item.returnReason || ''
             });
           }
-        } else {
-          // Group row — items with both flags 'F', or non-preorder items
-          this.viewPurchaseItems.push({
-            ...item,
-            purchaseItemId: item.purchaseItemId || item.id || item.itemId,
-            count: count,
-            serialNo: null,
-            barcodeNo: null,
-            serialNumberFlag: serialFlag,
-            barcodeFlag: barcodeFlag,
-            requiresSerial: false,
-            requiresBarcode: false,
-            status: String(item.status || (isPreorder ? 'PREORDER' : 'DELIVERED')).toUpperCase(),
-            returnReason: item.returnReason || ''
-          });
         }
       }
     }
@@ -1336,6 +1358,39 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       item.newSerialNumber = item.serialNo !== '-' && item.serialNo !== null ? item.serialNo : '';
       item.newBarcode = item.barcodeNo !== '-' && item.barcodeNo !== null ? item.barcodeNo : '';
       item.returnReason = item.returnReason || undefined;
+      item.actionQty = 0;
+    }
+  }
+
+  isItemBeingFilled(item: ViewPurchaseItem): boolean {
+    const isBulk = item.serialNumberFlag === 'F' && item.barcodeFlag === 'F';
+    if (isBulk) return (item.actionQty || 0) > 0;
+    return !!(item.newSerialNumber?.trim() || item.newBarcode?.trim());
+  }
+
+  getFilteredStatusOptions(item: ViewPurchaseItem): any[] {
+    const isAlreadyDelivered = String(item.status).toUpperCase() === 'DELIVERED';
+    const hasSerials = !!(item.serialNo && item.serialNo !== '-') || !!(item.barcodeNo && item.barcodeNo !== '-');
+
+    if (isAlreadyDelivered || hasSerials) {
+      return this.statusOptions.filter(opt => opt.value !== 'PREORDER');
+    }
+    return this.statusOptions;
+  }
+
+  onTrackingInfoChange(item: ViewPurchaseItem): void {
+    const hasTrackingInfo = !!(item.newSerialNumber?.trim() || item.newBarcode?.trim());
+    const originalStatus = String(item.status).toUpperCase();
+
+    if (hasTrackingInfo) {
+      if (item.newStatus === 'PREORDER') {
+        item.newStatus = 'DELIVERED';
+      }
+    } else {
+      // Revert to PREORDER only if it was originally a PREORDER and not currently RETURNED
+      if (originalStatus === 'PREORDER' && item.newStatus !== 'RETURNED') {
+        item.newStatus = 'PREORDER';
+      }
     }
   }
 
@@ -1344,50 +1399,79 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     this.isReturnSubmitAttempted = true;
 
     let hasErrors = false;
+    const itemsBeingReturned = this.viewPurchaseItems.filter(i => i.newStatus?.toString().toUpperCase() === 'RETURNED' && i.status?.toString().toUpperCase() !== 'RETURNED');
+    const itemsBeingFilled = this.viewPurchaseItems.filter(i => this.isItemBeingFilled(i));
+
+    // 1. Validate Invoice Number (if applicable)
     if (this.isPreorderInvoice) {
-      // Validate Invoice No.
-      if (!this.data.newInvoiceNumber || !this.data.newInvoiceNumber.trim()) {
-        hasErrors = true;
-      }
-
-      const missingSerials = this.viewPurchaseItems.some(i => {
-        return i.requiresSerial && (!i.newSerialNumber || i.newSerialNumber.trim() === '');
-      });
-      if (missingSerials) {
-        hasErrors = true;
-      }
-
-      const missingBarcodes = this.viewPurchaseItems.some(i => {
-        return i.requiresBarcode && (!i.newBarcode || i.newBarcode.trim() === '');
-      });
-      if (missingBarcodes) {
-        hasErrors = true;
-      }
-    } else {
-      const missingReasons = this.viewPurchaseItems.some(i => i.newStatus === 'RETURNED' && (!i.returnReason || i.returnReason.trim() === ''));
-      if (missingReasons) {
-        hasErrors = true;
+      const invoiceNumberChanged = this.data.newInvoiceNumber !== (this.data?.purchase?.invoiceNumber || this.data?.invoiceNumber);
+      if ((itemsBeingFilled.length > 0 || invoiceNumberChanged) && (!this.data.newInvoiceNumber || !this.data.newInvoiceNumber.trim())) {
+        const existing = this.data?.purchase?.invoiceNumber || this.data?.invoiceNumber;
+        if (existing) {
+          this.data.newInvoiceNumber = existing;
+        } else {
+          hasErrors = true;
+        }
       }
     }
 
-    if (hasErrors) return;
+    // 2. Validate Returns (Reason and Quantity)
+    const missingReasons = itemsBeingReturned.some(i => !i.returnReason || !i.returnReason.trim());
+    if (missingReasons) hasErrors = true;
+
+    const invalidBulkQty = itemsBeingReturned.some(i => {
+      const isBulk = i.serialNumberFlag === 'F' && i.barcodeFlag === 'F';
+      return isBulk && (i.actionQty === undefined || i.actionQty < 1 || i.actionQty > (i.count || 0));
+    });
+    if (invalidBulkQty) hasErrors = true;
+
+    // 3. Validate Serial/Barcode updates (for preorders OR existing item edits)
+    // Only validate if user actually touched these fields or is marking them delivered
+    const itemsWithTrackingChanges = this.viewPurchaseItems.filter(i => {
+      const oldSerial = (i.serialNo !== '-' && i.serialNo !== null) ? i.serialNo : '';
+      const oldBarcode = (i.barcodeNo !== '-' && i.barcodeNo !== null) ? i.barcodeNo : '';
+      return (i.newSerialNumber !== undefined && i.newSerialNumber !== oldSerial) || 
+             (i.newBarcode !== undefined && i.newBarcode !== oldBarcode) ||
+             (i.status?.toString().toUpperCase() === 'PREORDER' && i.newStatus?.toString().toUpperCase() === 'DELIVERED');
+    });
+
+    const missingSerials = itemsWithTrackingChanges.some(i => i.requiresSerial && (!i.newSerialNumber || !i.newSerialNumber.trim()));
+    if (missingSerials) hasErrors = true;
+
+    const missingBarcodes = itemsWithTrackingChanges.some(i => i.requiresBarcode && (!i.newBarcode || !i.newBarcode.trim()));
+    if (missingBarcodes) hasErrors = true;
+
+
+    if (hasErrors) {
+      this.messageService.clear();
+      this.messageService.add({ severity: 'error', summary: 'Validation Error', detail: 'Please fill all required fields before saving.' });
+      return;
+    }
 
     const modifiedItems = this.viewPurchaseItems.filter(item => {
+      const isBulk = item.serialNumberFlag === 'F' && item.barcodeFlag === 'F';
       const statusChanged = item.newStatus && item.newStatus !== String(item.status).toUpperCase();
+
+      if (isBulk && !this.isPreorderInvoice && item.newStatus === 'RETURNED') {
+        return (item.actionQty || 0) > 0;
+      }
+      if (isBulk && this.isPreorderInvoice) {
+        return (item.actionQty || 0) > 0;
+      }
 
       let serialChanged = false;
       let barcodeChanged = false;
       let reasonChanged = false;
 
-      if (this.isPreorderInvoice) {
-        const oldSerial = (item.serialNo !== '-' && item.serialNo !== null) ? item.serialNo : '';
-        const newSerial = item.newSerialNumber || '';
-        serialChanged = oldSerial !== newSerial;
+      const oldSerial = (item.serialNo !== '-' && item.serialNo !== null) ? item.serialNo : '';
+      const newSerial = item.newSerialNumber || '';
+      serialChanged = oldSerial !== newSerial && !!newSerial;
 
-        const oldBarcode = (item.barcodeNo !== '-' && item.barcodeNo !== null) ? item.barcodeNo : '';
-        const newBarcode = item.newBarcode || '';
-        barcodeChanged = oldBarcode !== newBarcode;
-      } else {
+      const oldBarcode = (item.barcodeNo !== '-' && item.barcodeNo !== null) ? item.barcodeNo : '';
+      const newBarcode = item.newBarcode || '';
+      barcodeChanged = oldBarcode !== newBarcode && !!newBarcode;
+
+      if (!this.isPreorderInvoice) {
         reasonChanged = item.newStatus === 'RETURNED' && !!item.returnReason;
       }
 
@@ -1403,6 +1487,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
     if (!invoiceNumberChanged && modifiedItems.length === 0) {
       this.isBulkEditingStatus = false;
+      this.isPreorderSubmitAttempted = false;
+      this.isReturnSubmitAttempted = false;
       return;
     }
 
@@ -1423,51 +1509,69 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     }
 
     const payloadItems: any[] = [];
-
-    // For preorder, we typically want to process all items to ensure they move to DELIVERED
-    const itemsToProcess = this.isPreorderInvoice ? this.viewPurchaseItems : modifiedItems;
+    const itemsToProcess = this.isPreorderInvoice ? modifiedItems : modifiedItems;
 
     itemsToProcess.forEach(item => {
-      const id = item.purchaseItemId || item.id || null;
-      let targetStatus = item.newStatus || item.status;
+      const isBulk = item.serialNumberFlag === 'F' && item.barcodeFlag === 'F';
 
       if (this.isPreorderInvoice) {
-        targetStatus = 'DELIVERED';
-      }
-
-      let existing = payloadItems.find((p: any) => p.purchaseItemId === id && p.status === targetStatus);
-
-      if (!existing) {
-        existing = {
-          purchaseItemId: id,
-          serialNumbers: [],
-          barcodes: [],
-          status: targetStatus
-        };
-        if (targetStatus === 'RETURNED' && item.returnReason) {
-          existing.returnReason = item.returnReason;
-        }
-        payloadItems.push(existing);
-      }
-
-      if (this.isPreorderInvoice) {
-        if (item.newSerialNumber && item.newSerialNumber !== '-') {
-          existing.serialNumbers.push(item.newSerialNumber);
-        }
-        if (item.newBarcode && item.newBarcode !== '-') {
-          existing.barcodes.push(item.newBarcode);
+        // Preorder update: Move only filled units to DELIVERED
+        if (isBulk) {
+          const qtyToDeliver = item.actionQty || 0;
+          const idsToDeliver = (item.allPurchaseItemIds || []).slice(0, qtyToDeliver);
+          idsToDeliver.forEach(id => {
+            payloadItems.push({
+              purchaseItemId: id,
+              status: 'DELIVERED',
+              serialNumber: null,
+              barcode: null
+            });
+          });
+        } else {
+          payloadItems.push({
+            purchaseItemId: item.purchaseItemId || item.id,
+            status: 'DELIVERED',
+            serialNumber: item.newSerialNumber || null,
+            barcode: item.newBarcode || null
+          });
         }
       } else {
-        const serialToPass = (item.serialNo !== '-' && item.serialNo !== null) ? item.serialNo : null;
-        const barcodeToPass = (item.barcodeNo !== '-' && item.barcodeNo !== null) ? item.barcodeNo : null;
-        if (serialToPass && !existing.serialNumbers.includes(serialToPass)) existing.serialNumbers.push(serialToPass);
-        if (barcodeToPass && !existing.barcodes.includes(barcodeToPass)) existing.barcodes.push(barcodeToPass);
+        // Delivered update
+        if (isBulk && item.newStatus === 'RETURNED') {
+          const idsToReturn = (item.allPurchaseItemIds || []).slice(0, item.actionQty);
+          idsToReturn.forEach(id => {
+            payloadItems.push({
+              purchaseItemId: id,
+              status: 'RETURNED',
+              returnReason: item.returnReason || '',
+              serialNumber: null,
+              barcode: null
+            });
+          });
+        } else if (isBulk) {
+          const ids = item.allPurchaseItemIds || [item.purchaseItemId];
+          ids.forEach(id => {
+            payloadItems.push({
+              purchaseItemId: id,
+              status: item.newStatus === 'PREORDER' ? 'DELIVERED' : item.newStatus,
+              serialNumber: null,
+              barcode: null
+            });
+          });
+        } else {
+          // Serialized unit update
+          payloadItems.push({
+            purchaseItemId: item.purchaseItemId || item.id,
+            status: item.newStatus === 'PREORDER' ? 'DELIVERED' : item.newStatus,
+            serialNumber: (item.newSerialNumber || item.serialNo !== '-' ? item.newSerialNumber || item.serialNo : null),
+            barcode: (item.newBarcode || item.barcodeNo !== '-' ? item.newBarcode || item.barcodeNo : null),
+            returnReason: item.newStatus === 'RETURNED' ? (item.returnReason || '') : undefined
+          });
+        }
       }
     });
 
     payload.items = payloadItems;
-
-    console.log("Sending Bulk Update Payload:", payload);
     this.submit.emit({ isStatusUpdate: true, payload: payload });
   }
 
@@ -1543,15 +1647,10 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   };
 
   fetchClosingStatement() {
-    // Determine filters. Use defaults or data if provided.
-    // Assuming this.data contains itemId and optionally dates.
     const itemId = this.data.itemId || this.data.id || 4; // Fallback to 4 from screenshot if sample
 
-    // Dates from data or default range? 
-    // Usually user selected a range in the parent list, let's assume those are in this.data
-    // If not, use some defaults.
-    const startDate = this.data.startDate || '2026-03-11 00:00:00';
-    const endDate = this.data.endDate || '2026-03-12 23:59:59';
+    const startDate = this.data.startDate;
+    const endDate = this.data.endDate;
     const storeId = this.data.storeId;
 
     this.inventoryService.getClosingStatement(itemId, startDate, endDate, storeId).subscribe({

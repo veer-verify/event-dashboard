@@ -449,13 +449,14 @@
                                 <div class="view-field">
                                     <label class="field-label">Use for</label>
                                     <ng-container *ngIf="!isEditing">
-                                        <span class="field-value">{{ allDetails?.productDetails?.usedFor || "-" }}</span>
+                                        <span class="field-value">{{ allDetails?.productDetails?.usedFor || "-"
+                                            }}</span>
                                     </ng-container>
                                     <ng-container *ngIf="isEditing">
-                                        <p-multiSelect [options]="dropdownArrays.productStatus" formControlName="usedFor"
-                                            optionLabel="name" optionValue="id" placeholder="Select" [filter]="true"
-                                            filterBy="name" display="chip" styleClass="w-full" appendTo="body"
-                                            [overlayOptions]="customOverlayOptions">
+                                        <p-multiSelect [options]="dropdownArrays.productStatus"
+                                            formControlName="usedFor" optionLabel="name" optionValue="id"
+                                            placeholder="Select" [filter]="true" filterBy="name" display="chip"
+                                            styleClass="w-full" appendTo="body" [overlayOptions]="customOverlayOptions">
                                         </p-multiSelect>
                                     </ng-container>
                                 </div>
@@ -463,12 +464,14 @@
                                 <div class="view-field">
                                     <label class="field-label">Current Location</label>
                                     <ng-container *ngIf="!isEditing">
-                                        <span class="field-value">{{ allDetails?.productDetails?.location || "-" }}</span>
+                                        <span class="field-value">{{ allDetails?.productDetails?.location || "-"
+                                            }}</span>
                                     </ng-container>
                                     <ng-container *ngIf="isEditing">
                                         <p-dropdown appendTo="body" [overlayOptions]="customOverlayOptions"
-                                            [options]="storesDropdown" formControlName="currentLocationId" optionLabel="label"
-                                            optionValue="value" placeholder="Select" [filter]="true" styleClass="w-full">
+                                            [options]="storesDropdown" formControlName="currentLocationId"
+                                            optionLabel="label" optionValue="value" placeholder="Select" [filter]="true"
+                                            styleClass="w-full">
                                         </p-dropdown>
                                     </ng-container>
                                 </div>
@@ -486,8 +489,9 @@
                                     </ng-container>
                                     <ng-container *ngIf="isEditing">
                                         <div class="calendar-wrapper relative-position">
-                                            <p-calendar #calendarListItem formControlName="publishedDate" dateFormat="dd/mm/yy"
-                                                placeholder="-- / -- / ----" styleClass="w-full date-picker-custom"
+                                            <p-calendar #calendarListItem formControlName="publishedDate"
+                                                dateFormat="dd/mm/yy" placeholder="-- / -- / ----"
+                                                styleClass="w-full date-picker-custom"
                                                 inputStyleClass="field-input-text w-full" [showIcon]="false"
                                                 [maxDate]="maxDate"></p-calendar>
                                             <img src="assets/calender.svg" class="calendar-icon-custom" alt="calendar"
@@ -499,7 +503,8 @@
                                 <div class="view-field">
                                     <label class="field-label">Remarks</label>
                                     <ng-container *ngIf="!isEditing">
-                                        <span class="field-value">{{ allDetails?.productDetails?.remarks || "-" }}</span>
+                                        <span class="field-value">{{ allDetails?.productDetails?.remarks || "-"
+                                            }}</span>
                                     </ng-container>
                                     <ng-container *ngIf="isEditing">
                                         <input type="text" class="field-input-text" formControlName="remarks"
@@ -524,9 +529,9 @@
                                     </ng-container>
                                     <ng-container *ngIf="isEditing">
                                         <p-dropdown appendTo="body" [overlayOptions]="customOverlayOptions"
-                                            [options]="dropdownArrays.productStatus" formControlName="statusId" optionLabel="name"
-                                            optionValue="id" placeholder="Select" [showClear]="false" [filter]="true"
-                                            filterBy="name" styleClass="w-full"></p-dropdown>
+                                            [options]="dropdownArrays.productStatus" formControlName="statusId"
+                                            optionLabel="name" optionValue="id" placeholder="Select" [showClear]="false"
+                                            [filter]="true" filterBy="name" styleClass="w-full"></p-dropdown>
                                     </ng-container>
                                 </div>
                             </div>
@@ -587,10 +592,7 @@
                                             <tr *ngFor="let hw of allDetails!.hardware; let i = index">
                                                 <td class="col-index">{{ i + 1 }}</td>
                                                 <td class="col-image">
-                                                    <div class="hw-img-placeholder" *ngIf="!hw.itemImage">
-                                                        <img src="assets/image-placeholder.svg" alt="img" />
-                                                    </div>
-                                                    <img *ngIf="hw.itemImage" [src]="hw.itemImage"
+                                                    <img *ngIf="hw.itemImage" [src]="hw.itemImage | image | async"
                                                         alt="Item Image" class="hw-img" />
                                                 </td>
                                                 <td class="col-name">

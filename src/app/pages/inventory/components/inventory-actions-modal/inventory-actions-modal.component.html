@@ -311,8 +311,8 @@
                 <ng-container *ngIf="isBulkEditingStatus && isPreorderInvoice; else invoiceReadOnly">
                   <input type="text" class="field-input-text" [(ngModel)]="data.newInvoiceNumber"
                     [ngModelOptions]="{standalone: true}" placeholder="Enter Invoice No."
-                    [class.input-invalid]="isPreorderSubmitAttempted && (!data.newInvoiceNumber || !data.newInvoiceNumber.trim())">
-                  <div *ngIf="isPreorderSubmitAttempted && (!data.newInvoiceNumber || !data.newInvoiceNumber.trim())"
+                    [class.input-invalid]="isPreorderSubmitAttempted && (!data.newInvoiceNumber || !data.newInvoiceNumber.trim()) && (viewPurchaseItems.some(isItemBeingFilled.bind(this)) || data.newInvoiceNumber !== (data?.purchase?.invoiceNumber || data?.invoiceNumber))">
+                  <div *ngIf="isPreorderSubmitAttempted && (!data.newInvoiceNumber || !data.newInvoiceNumber.trim()) && (viewPurchaseItems.some(isItemBeingFilled.bind(this)) || data.newInvoiceNumber !== (data?.purchase?.invoiceNumber || data?.invoiceNumber))"
                     class="text-red text-xs mt-1">Invoice Number is required</div>
                 </ng-container>
                 <ng-template #invoiceReadOnly>
@@ -409,18 +409,26 @@
 
                     <div class="col-serial">
                       <!-- VIEW MODE -->
-                      <ng-container *ngIf="!isBulkEditingStatus || !isPreorderInvoice">
+                      <ng-container *ngIf="!isBulkEditingStatus">
                         <span *ngIf="item.serialNo && item.serialNo !== '-'">{{ item.serialNo }}</span>
                         <span *ngIf="!item.serialNo || item.serialNo === '-'"
                           style="color:#ccc; font-style:italic; font-size:11px;">—</span>
                       </ng-container>
                       <!-- EDIT MODE -->
-                      <ng-container *ngIf="isBulkEditingStatus && isPreorderInvoice">
+                      <ng-container *ngIf="isBulkEditingStatus">
                         <ng-container *ngIf="item.requiresSerial">
-                          <input type="text" class="field-input-text full-width" [(ngModel)]="item.newSerialNumber"
+                          <!-- If already has serial, show as text -->
+                          <span *ngIf="item.serialNo && item.serialNo !== '-'"
+                            style="font-weight: 600; font-size: 13px; color: #333;">{{ item.serialNo }}</span>
+
+                          <!-- If no serial, show input -->
+                          <input *ngIf="!item.serialNo || item.serialNo === '-'" type="text"
+                            class="field-input-text full-width" [(ngModel)]="item.newSerialNumber"
                             [ngModelOptions]="{standalone: true}" placeholder="Serial No."
-                            [class.input-invalid]="isPreorderSubmitAttempted && item.requiresSerial && !item.newSerialNumber">
-                          <div *ngIf="isPreorderSubmitAttempted && item.requiresSerial && !item.newSerialNumber"
+                            (ngModelChange)="onTrackingInfoChange(item)"
+                            [class.input-invalid]="isPreorderSubmitAttempted && item.requiresSerial && !item.newSerialNumber && isItemBeingFilled(item)">
+                          <div
+                            *ngIf="isPreorderSubmitAttempted && item.requiresSerial && !item.newSerialNumber && isItemBeingFilled(item)"
                             class="text-red text-xs mt-5">
                             Serial required</div>
                         </ng-container>
@@ -431,18 +439,26 @@
 
                     <div class="col-barcode">
                       <!-- VIEW MODE -->
-                      <ng-container *ngIf="!isBulkEditingStatus || !isPreorderInvoice">
+                      <ng-container *ngIf="!isBulkEditingStatus">
                         <span *ngIf="item.barcodeNo && item.barcodeNo !== '-'">{{ item.barcodeNo }}</span>
                         <span *ngIf="!item.barcodeNo || item.barcodeNo === '-'"
                           style="color:#ccc; font-style:italic; font-size:11px;">—</span>
                       </ng-container>
                       <!-- EDIT MODE -->
-                      <ng-container *ngIf="isBulkEditingStatus && isPreorderInvoice">
+                      <ng-container *ngIf="isBulkEditingStatus">
                         <ng-container *ngIf="item.requiresBarcode">
-                          <input type="text" class="field-input-text full-width" [(ngModel)]="item.newBarcode"
+                          <!-- If already has barcode, show as text -->
+                          <span *ngIf="item.barcodeNo && item.barcodeNo !== '-'"
+                            style="font-weight: 600; font-size: 13px; color: #333;">{{ item.barcodeNo }}</span>
+
+                          <!-- If no barcode, show input -->
+                          <input *ngIf="!item.barcodeNo || item.barcodeNo === '-'" type="text"
+                            class="field-input-text full-width" [(ngModel)]="item.newBarcode"
                             [ngModelOptions]="{standalone: true}" placeholder="Barcode No."
-                            [class.input-invalid]="isPreorderSubmitAttempted && item.requiresBarcode && !item.newBarcode">
-                          <div *ngIf="isPreorderSubmitAttempted && item.requiresBarcode && !item.newBarcode"
+                            (ngModelChange)="onTrackingInfoChange(item)"
+                            [class.input-invalid]="isPreorderSubmitAttempted && item.requiresBarcode && !item.newBarcode && isItemBeingFilled(item)">
+                          <div
+                            *ngIf="isPreorderSubmitAttempted && item.requiresBarcode && !item.newBarcode && isItemBeingFilled(item)"
                             class="text-red text-xs mt-5">
                             Barcode required</div>
                         </ng-container>
@@ -468,24 +484,46 @@
                       </div>
                       <div class="status-edit-mode flex-align-center-gap-5" *ngIf="isBulkEditingStatus"
                         style="display:flex; flex-direction: column; align-items:flex-start;">
-                        <ng-container *ngIf="isPreorderInvoice">
-                          <span class="text-uppercase" [style.color]="getItemStatusColor(item.newStatus || item.status)"
-                            style="font-weight: 700; font-size: 11px; margin-top: 8px;">
-                            {{ item.newStatus || item.status }}
-                          </span>
-                        </ng-container>
-                        <ng-container *ngIf="!isPreorderInvoice">
-                          <p-dropdown [options]="statusOptions" [(ngModel)]="item.newStatus" optionLabel="label"
-                            optionValue="value" placeholder="Select" appendTo="body" [style]="{'width':'130px'}"
-                            [overlayOptions]="customOverlayOptions" [ngModelOptions]="{standalone: true}"></p-dropdown>
-                          <div *ngIf="item.newStatus === 'RETURNED'" style="margin-top: 5px; width: 100%;">
-                            <input type="text" class="field-input-text full-width" [(ngModel)]="item.returnReason"
-                              [ngModelOptions]="{standalone: true}" placeholder="Return Reason">
-                            <div *ngIf="isReturnSubmitAttempted && !item.returnReason" class="text-red text-xs mt-2">
-                              Reason required</div>
-                          </div>
-                        </ng-container>
+                        
+                        <!-- Show as text if already RETURNED -->
+                        <span *ngIf="item.status?.toString()?.toUpperCase() === 'RETURNED'" [style.color]="getItemStatusColor(item.status)"
+                          style="font-weight: 700; font-size: 11px;">{{ item.status }}</span>
+
+                        <!-- Show dropdown if NOT already RETURNED -->
+                        <p-dropdown *ngIf="item.status?.toString()?.toUpperCase() !== 'RETURNED'" [options]="getFilteredStatusOptions(item)" [(ngModel)]="item.newStatus" optionLabel="label"
+                          optionValue="value" placeholder="Select" appendTo="body" [style]="{'width':'130px'}"
+                          [overlayOptions]="customOverlayOptions" [ngModelOptions]="{standalone: true}"></p-dropdown>
                       </div>
+                    </div>
+                  </div>
+
+                  <!-- Expanded Return Inputs Row (Only if transitioning TO return) -->
+                  <div *ngIf="isBulkEditingStatus && item.newStatus?.toString()?.toUpperCase() === 'RETURNED' && item.status?.toString()?.toUpperCase() !== 'RETURNED'"
+                    style="display: flex; gap: 20px; padding-left: 55px; margin-top: -5px; padding-bottom: 5px;">
+                    
+                    <!-- Return Qty (Only for bulk items) -->
+                    <div *ngIf="item.serialNumberFlag === 'F' && item.barcodeFlag === 'F'" style="flex: 0 0 120px;">
+                      <label style="display: block; font-size: 9px; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 4px;">Qty to Return</label>
+                      <input type="number" class="field-input-text full-width" [(ngModel)]="item.actionQty"
+                        [ngModelOptions]="{standalone: true}" placeholder="Qty" [max]="item.count || 0"
+                        min="1" (keydown)="preventNegative($event)"
+                        [class.input-invalid]="isReturnSubmitAttempted && (item.actionQty === undefined || item.actionQty < 1 || item.actionQty > (item.count || 0))"
+                        style="height: 36px; font-weight: 600;">
+                      <div
+                        *ngIf="isReturnSubmitAttempted && (item.actionQty === undefined || item.actionQty < 1 || item.actionQty > (item.count || 0))"
+                        class="text-red text-xs mt-2">
+                        Max {{ item.count }}</div>
+                    </div>
+
+                    <!-- Return Reason -->
+                    <div style="flex: 1; max-width: 500px;">
+                      <label style="display: block; font-size: 9px; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 4px;">Reason for Return</label>
+                      <input type="text" class="field-input-text full-width" [(ngModel)]="item.returnReason"
+                        [ngModelOptions]="{standalone: true}" placeholder="Enter detailed reason here..."
+                        [class.input-invalid]="isReturnSubmitAttempted && !item.returnReason"
+                        style="height: 36px; font-weight: 600;">
+                      <div *ngIf="isReturnSubmitAttempted && !item.returnReason" class="text-red text-xs mt-2">
+                        Reason is required</div>
                     </div>
                   </div>
 
@@ -516,7 +554,7 @@
               <div class="images-grid" *ngIf="(data?.files?.length || data?.files?.length) > 0">
                 <ng-container *ngFor="let file of (data?.files || data?.files)">
                   <div class="ref-image-card">
-                    <img [src]="getFileUrl(file.fileUrl || file.filePath)" alt="Ref">
+                    <img [src]="(file.fileUrl || file.filePath) | image | async" alt="Ref">
                   </div>
                 </ng-container>
               </div>
@@ -1389,3 +1427,4 @@
       </div>
     </div>
   </div>
+</div>

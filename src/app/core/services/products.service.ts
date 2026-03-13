@@ -6,7 +6,6 @@ import { environment } from "../../../environments/environment";
 
 @Injectable({ providedIn: "root" })
 export class ProductsService {
-  // private baseUrl = environment.apiBaseUrl;
   private baseUrl = environment.apiBaseUrl + '/inventory';
 
   constructor(private http: HttpClient) { }
@@ -141,11 +140,12 @@ export class ProductsService {
   /**
    * Add a new product instance (stock) - addProduct mode
    */
-  addNewProduct(payload: any): Observable<any> {
+  addNewProduct(payload: FormData): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/addNewProduct_1_0`, payload).pipe(
       catchError((error) => {
         return throwError(() => error);
       })
     );
   }
+
 }

@@ -7,11 +7,13 @@ import { PaginationComponent } from '../../../../shared/pagination/pagination.co
 import { InventoryItem } from '../../../../core/models/item.models';
 import { ItemsService } from '../../../../core/services/items.service';
 import { MessageService } from 'primeng/api';
+import { ImagePipe } from '../../../../shared/image.pipe';
 
 @Component({
   selector: 'app-items-all-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, AgGridModule, PaginationComponent],
+  imports: [CommonModule, FormsModule, AgGridModule, PaginationComponent, ImagePipe],
+  providers: [ImagePipe],
   templateUrl: './items-all-tab.component.html',
   styleUrls: ['./items-all-tab.component.css']
 })
@@ -51,6 +53,7 @@ export class ItemsAllTabComponent implements OnInit, OnChanges {
   private ngZone = inject(NgZone);
   private itemsService = inject(ItemsService);
   private messageService = inject(MessageService);
+  private imagePipe = inject(ImagePipe);
 
   @HostListener('window:resize', ['$event'])
   onResize(event: any) {
@@ -76,7 +79,11 @@ export class ItemsAllTabComponent implements OnInit, OnChanges {
           imgContainer.classList.add('ag-cell-item-img-box');
 
           const img = document.createElement("img");
-          img.src = "assets/ptz.jpg";
+          if (params.data.itemImage) {
+            this.imagePipe.transform(params.data.itemImage).then(src => {
+              if (src) img.src = src;
+            });
+          }
           img.alt = params.data.itemName;
           img.classList.add('ag-cell-item-img');
           imgContainer.appendChild(img);

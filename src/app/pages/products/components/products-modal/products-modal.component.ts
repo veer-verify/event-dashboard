@@ -17,6 +17,7 @@ import { InventoryService } from "../../../../core/services/inventory.service";
 import { AuthService } from "../../../../login/login.service";
 import { MessageService, OverlayOptions } from "primeng/api";
 import { FileUploadComponent } from "../../../../shared/file-upload/file-upload.component";
+import { ImagePipe } from "../../../../shared/image.pipe";
 import { ProductAllDetails } from "../../../../core/models/product.models";
 import { environment } from "../../../../../environments/environment";
 
@@ -31,7 +32,8 @@ import { environment } from "../../../../../environments/environment";
     MultiSelectModule,
     MultiSelectModule,
     CalendarModule,
-    FileUploadComponent
+    FileUploadComponent,
+    ImagePipe
   ],
   templateUrl: "./products-modal.component.html",
   styleUrl: "./products-modal.component.css",
@@ -240,7 +242,7 @@ export class ProductsModalComponent implements OnInit {
           }
 
           this.allDetails = data;
-          
+
           if (this.mode === "listitem") {
             const details = data.productDetails;
             const usedForNames = details.usedFor ? details.usedFor.split(',').map((s: string) => s.trim()) : [];
@@ -323,7 +325,7 @@ export class ProductsModalComponent implements OnInit {
                 labelParts.push(`Barcode: ${item.barcode}`);
               }
               let baseLabel = labelParts.length > 0 ? labelParts.join(' - ') : `Unit ID: ${item.id}`;
-              
+
               // Include quantity available in label if > 1 or no serial
               if (!item.serialNumber || item.serialNumber === 'null' || item.serialNumber === '-') {
                 baseLabel += ` (Available: ${item.quantity})`;
@@ -844,8 +846,8 @@ export class ProductsModalComponent implements OnInit {
       const modifiedTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ` +
         `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
-      const pubDate = formValue.publishedDate ? 
-          `${formValue.publishedDate.getFullYear()}-${pad(formValue.publishedDate.getMonth() + 1)}-${pad(formValue.publishedDate.getDate())}` : null;
+      const pubDate = formValue.publishedDate ?
+        `${formValue.publishedDate.getFullYear()}-${pad(formValue.publishedDate.getMonth() + 1)}-${pad(formValue.publishedDate.getDate())}` : null;
 
       const updatePayload = {
         productDetailId: this.product.productId || this.product.id,
@@ -942,10 +944,10 @@ export class ProductsModalComponent implements OnInit {
                 matchedUnitId = Number(foundUnit.id);
               }
             }
-            
+
             existingGroup.itemUnitId = matchedUnitId;
             existingGroup.cost = alloc.cost; // Assuming cost is per unit price?
-            
+
             // If we have a serial number or barcode, we treat it as serialized and use purchaseItemIds
             const opts = this.getOptionsForHardware(hw.id);
             const opt = opts.find((o: any) => o.value === alloc.purchaseItemId);
@@ -971,13 +973,13 @@ export class ProductsModalComponent implements OnInit {
           itemUnitId: group.itemUnitId,
           cost: group.cost
         };
-        
+
         if (group.purchaseItemIds && group.purchaseItemIds.length > 0) {
           result.purchaseItemIds = group.purchaseItemIds;
         } else {
           result.quantity = group.quantity;
         }
-        
+
         return result;
       });
 
@@ -992,7 +994,13 @@ export class ProductsModalComponent implements OnInit {
         createdTime: formatDate(new Date())
       };
 
-      this.productsService.addNewProduct(addProductPayload).subscribe({
+      const formData = new FormData();
+      formData.append('data', JSON.stringify(addProductPayload));
+      if (this.selectedFile) {
+        formData.append('file', this.selectedFile);
+      }
+
+      this.productsService.addNewProduct(formData).subscribe({
         next: (res: any) => {
           if (res.status === 'Success' || res.status === 'success') {
             this.isLoading = false;
@@ -1006,7 +1014,7 @@ export class ProductsModalComponent implements OnInit {
             this.messageService.add({ severity: 'error', summary: 'Error', detail: res.message || 'Failed to add product' });
           }
         },
-        error: (err) => {
+        error: (err: any) => {
           this.isLoading = false;
           const errorMsg = err.error?.message || err.message || 'Error adding product';
           this.messageService.add({ severity: 'error', summary: 'Error', detail: errorMsg });

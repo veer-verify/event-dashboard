@@ -6,11 +6,13 @@ import { ColDef, GridApi, GridReadyEvent, ICellRendererParams, GridOptions, them
 import { PaginationComponent } from '../../../../shared/pagination/pagination.component';
 import { ProductsService } from '../../../../core/services/products.service';
 import { ProductListItem } from '../../../../core/models/product.models';
+import { ImagePipe } from '../../../../shared/image.pipe';
 
 @Component({
   selector: 'app-products-all-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, AgGridModule, PaginationComponent],
+  imports: [CommonModule, FormsModule, AgGridModule, PaginationComponent, ImagePipe],
+  providers: [ImagePipe],
   templateUrl: './products-all-tab.component.html',
   styleUrls: ['./products-all-tab.component.css']
 })
@@ -50,6 +52,7 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
 
   private productsService = inject(ProductsService);
   private ngZone = inject(NgZone);
+  private imagePipe = inject(ImagePipe);
 
   constructor() {
     this.allColumnDefs = [
@@ -80,7 +83,11 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
           imgContainer.style.flexShrink = "0";
 
           const img = document.createElement("img");
-          img.src = "assets/ptz.jpg";
+          if (params.data?.productImage) {
+            this.imagePipe.transform(params.data.productImage).then(src => {
+              if (src) img.src = src;
+            });
+          }
           img.alt = params.data?.productName || '';
           img.style.width = "100%";
           img.style.height = "100%";

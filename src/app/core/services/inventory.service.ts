@@ -18,7 +18,6 @@ import { PurchaseDetailsResponse } from '../models/purchase.models';
   providedIn: 'root'
 })
 export class InventoryService {
-  // private baseUrl = environment.apiBaseUrl;
   private baseUrl = environment.apiBaseUrl + '/inventory';
 
   constructor(private http: HttpClient) { }

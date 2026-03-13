@@ -13,7 +13,6 @@ import { InventoryItemsResponse, InventoryItemDetailsResponse } from "../models/
 
 @Injectable({ providedIn: "root" })
 export class ItemsService {
-  // private baseUrl = environment.apiBaseUrl;
   private baseUrl = environment.apiBaseUrl + '/inventory';
 
   constructor(private http: HttpClient) { }
@@ -113,9 +112,14 @@ export class ItemsService {
   /**
    * Update an existing item
    */
-  updateItem(itemId: number, itemData: any): Observable<any> {
+  updateItem(itemId: number, itemData: any, imageFile?: File): Observable<any> {
+    const formData = new FormData();
+    formData.append("itemUpdateRequest", JSON.stringify(itemData));
+    if (imageFile) {
+      formData.append("file", imageFile);
+    }
     return this.http
-      .put<any>(`${this.baseUrl}/updateItem_1_0`, itemData)
+      .put<any>(`${this.baseUrl}/updateItem_1_0`, formData)
       .pipe(
         catchError((error) => {
           return throwError(() => error);

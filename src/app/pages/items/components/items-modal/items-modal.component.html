@@ -234,7 +234,7 @@
             <div class="view-field">
               <label class="field-label">ITEM IMAGE</label>
               <div class="product-image-container" *ngIf="item?.itemImage">
-                <img [src]="item.itemImage" alt="Product" class="product-image-thumbnail" />
+                <img [src]="item.itemImage | image | async" alt="Product" class="product-image-thumbnail" />
               </div>
               <span class="field-value" *ngIf="!item?.itemImage">---</span>
             </div>
@@ -524,7 +524,7 @@
       </form>
 
       <!-- Product Image Section -->
-      <div class="product-image-section" *ngIf="mode === 'create' || mode === 'addModel'">
+      <div class="product-image-section" *ngIf="mode === 'create' || mode === 'addModel' || (mode === 'view' && isEditing)">
         <app-file-upload label="ITEM IMAGE" [multiple]="false" layout="row"
           (filesSelected)="onFileUploadChange($event)"></app-file-upload>
       </div>

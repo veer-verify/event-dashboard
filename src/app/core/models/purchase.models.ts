@@ -30,8 +30,8 @@ export interface PurchaseDetail {
 
 export interface SerialDetail {
     purchaseItemId: number;
-    serialNumber: string;
-    barcode: string;
+    serialNumber: string | null;
+    barcode: string | null;
     status: string;
 }
 
