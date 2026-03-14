@@ -19,6 +19,7 @@ import { UnifiedFilterPanelComponent, FilterField } from '../../../../shared/uni
 })
 export class InventoryReturnTabComponent implements OnInit, OnChanges {
   @Input() reloadTrigger: number = 0;
+  @Input() selectedStore: any;
   searchText: string = '';
   startDate?: string;
   endDate?: string;
@@ -121,7 +122,7 @@ export class InventoryReturnTabComponent implements OnInit, OnChanges {
           span.style.fontWeight = '500';
 
           const lowerStatus = params.value ? params.value.toLowerCase() : '';
-          if (lowerStatus === 'in_transit') {
+          if (lowerStatus === 'in_transit' || lowerStatus === 'in transit') {
             span.style.color = '#F44336';
           } else if (lowerStatus === 'returned') {
             span.style.color = '#53BF8B';
@@ -173,6 +174,10 @@ export class InventoryReturnTabComponent implements OnInit, OnChanges {
     if (changes['reloadTrigger'] && !changes['reloadTrigger'].firstChange) {
       this.fetchReturnList();
     }
+    if (changes['selectedStore'] && !changes['selectedStore'].firstChange) {
+      this.currentPage = 1;
+      this.fetchReturnList();
+    }
   }
 
   fetchReturnList() {
@@ -181,7 +186,8 @@ export class InventoryReturnTabComponent implements OnInit, OnChanges {
       pageSize: this.pageSize,
       search: this.searchText,
       startDate: this.startDate,
-      endDate: this.endDate
+      endDate: this.endDate,
+      storeId: this.selectedStore && this.selectedStore.code !== 'all' ? this.selectedStore.code : undefined
     }).subscribe({
       next: (res) => {
         if (res.statusCode === 200 && res.data) {

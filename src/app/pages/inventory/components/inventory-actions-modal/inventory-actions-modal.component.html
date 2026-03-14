@@ -312,7 +312,8 @@
                   <input type="text" class="field-input-text" [(ngModel)]="data.newInvoiceNumber"
                     [ngModelOptions]="{standalone: true}" placeholder="Enter Invoice No."
                     [class.input-invalid]="isPreorderSubmitAttempted && (!data.newInvoiceNumber || !data.newInvoiceNumber.trim()) && (viewPurchaseItems.some(isItemBeingFilled.bind(this)) || data.newInvoiceNumber !== (data?.purchase?.invoiceNumber || data?.invoiceNumber))">
-                  <div *ngIf="isPreorderSubmitAttempted && (!data.newInvoiceNumber || !data.newInvoiceNumber.trim()) && (viewPurchaseItems.some(isItemBeingFilled.bind(this)) || data.newInvoiceNumber !== (data?.purchase?.invoiceNumber || data?.invoiceNumber))"
+                  <div
+                    *ngIf="isPreorderSubmitAttempted && (!data.newInvoiceNumber || !data.newInvoiceNumber.trim()) && (viewPurchaseItems.some(isItemBeingFilled.bind(this)) || data.newInvoiceNumber !== (data?.purchase?.invoiceNumber || data?.invoiceNumber))"
                     class="text-red text-xs mt-1">Invoice Number is required</div>
                 </ng-container>
                 <ng-template #invoiceReadOnly>
@@ -484,13 +485,15 @@
                       </div>
                       <div class="status-edit-mode flex-align-center-gap-5" *ngIf="isBulkEditingStatus"
                         style="display:flex; flex-direction: column; align-items:flex-start;">
-                        
+
                         <!-- Show as text if already RETURNED -->
-                        <span *ngIf="item.status?.toString()?.toUpperCase() === 'RETURNED'" [style.color]="getItemStatusColor(item.status)"
-                          style="font-weight: 700; font-size: 11px;">{{ item.status }}</span>
+                        <span *ngIf="item.status?.toString()?.toUpperCase() === 'RETURNED'"
+                          [style.color]="getItemStatusColor(item.status)" style="font-weight: 700; font-size: 11px;">{{
+                          item.status }}</span>
 
                         <!-- Show dropdown if NOT already RETURNED -->
-                        <p-dropdown *ngIf="item.status?.toString()?.toUpperCase() !== 'RETURNED'" [options]="getFilteredStatusOptions(item)" [(ngModel)]="item.newStatus" optionLabel="label"
+                        <p-dropdown *ngIf="item.status?.toString()?.toUpperCase() !== 'RETURNED'"
+                          [options]="getFilteredStatusOptions(item)" [(ngModel)]="item.newStatus" optionLabel="label"
                           optionValue="value" placeholder="Select" appendTo="body" [style]="{'width':'130px'}"
                           [overlayOptions]="customOverlayOptions" [ngModelOptions]="{standalone: true}"></p-dropdown>
                       </div>
@@ -498,15 +501,18 @@
                   </div>
 
                   <!-- Expanded Return Inputs Row (Only if transitioning TO return) -->
-                  <div *ngIf="isBulkEditingStatus && item.newStatus?.toString()?.toUpperCase() === 'RETURNED' && item.status?.toString()?.toUpperCase() !== 'RETURNED'"
+                  <div
+                    *ngIf="isBulkEditingStatus && item.newStatus?.toString()?.toUpperCase() === 'RETURNED' && item.status?.toString()?.toUpperCase() !== 'RETURNED'"
                     style="display: flex; gap: 20px; padding-left: 55px; margin-top: -5px; padding-bottom: 5px;">
-                    
+
                     <!-- Return Qty (Only for bulk items) -->
                     <div *ngIf="item.serialNumberFlag === 'F' && item.barcodeFlag === 'F'" style="flex: 0 0 120px;">
-                      <label style="display: block; font-size: 9px; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 4px;">Qty to Return</label>
+                      <label
+                        style="display: block; font-size: 9px; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 4px;">Qty
+                        to Return</label>
                       <input type="number" class="field-input-text full-width" [(ngModel)]="item.actionQty"
-                        [ngModelOptions]="{standalone: true}" placeholder="Qty" [max]="item.count || 0"
-                        min="1" (keydown)="preventNegative($event)"
+                        [ngModelOptions]="{standalone: true}" placeholder="Qty" [max]="item.count || 0" min="1"
+                        (keydown)="preventNegative($event)"
                         [class.input-invalid]="isReturnSubmitAttempted && (item.actionQty === undefined || item.actionQty < 1 || item.actionQty > (item.count || 0))"
                         style="height: 36px; font-weight: 600;">
                       <div
@@ -517,7 +523,9 @@
 
                     <!-- Return Reason -->
                     <div style="flex: 1; max-width: 500px;">
-                      <label style="display: block; font-size: 9px; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 4px;">Reason for Return</label>
+                      <label
+                        style="display: block; font-size: 9px; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 4px;">Reason
+                        for Return</label>
                       <input type="text" class="field-input-text full-width" [(ngModel)]="item.returnReason"
                         [ngModelOptions]="{standalone: true}" placeholder="Enter detailed reason here..."
                         [class.input-invalid]="isReturnSubmitAttempted && !item.returnReason"
@@ -798,18 +806,19 @@
                     Shipment Date is required</div>
                 </div>
                 <div class="input-field-group" *ngIf="stockSendForm.get('status')?.value === 'DELIVERED'">
-              <label class="field-label">Delivered Date <span class="text-red">*</span></label>
-              <div class="calendar-wrapper relative-position"
+                  <label class="field-label">Delivered Date <span class="text-red">*</span></label>
+                  <div class="calendar-wrapper relative-position"
                     [ngClass]="{'input-invalid-wrapper': submitted && stockSendForm.get('deliveredDate')?.invalid}">
-                <p-calendar #deliveredCalendar formControlName="deliveredDate" dateFormat="dd/mm/yy"
-                  placeholder="-- / -- / ----" styleClass="w-full date-picker-custom"
-                  inputStyleClass="field-input-text w-full" [showIcon]="false" [maxDate]="maxDate"></p-calendar>
-                <img src="assets/calender.svg" class="calendar-icon-custom" alt="calendar"
-                  (click)="deliveredCalendar.toggle()" />
-              </div>
-              <small class="text-red" *ngIf="stockSendForm.errors?.['dateRangeInvalid'] && stockSendForm.get('deliveredDate')?.touched">
-                Delivered date cannot be before shipment date.
-              </small>
+                    <p-calendar #deliveredCalendar formControlName="deliveredDate" dateFormat="dd/mm/yy"
+                      placeholder="-- / -- / ----" styleClass="w-full date-picker-custom"
+                      inputStyleClass="field-input-text w-full" [showIcon]="false" [maxDate]="maxDate"></p-calendar>
+                    <img src="assets/calender.svg" class="calendar-icon-custom" alt="calendar"
+                      (click)="deliveredCalendar.toggle()" />
+                  </div>
+                  <small class="text-red"
+                    *ngIf="stockSendForm.errors?.['dateRangeInvalid'] && stockSendForm.get('deliveredDate')?.touched">
+                    Delivered date cannot be before shipment date.
+                  </small>
                   <div *ngIf="submitted && stockSendForm.get('deliveredDate')?.invalid" class="text-red text-xs mt-1">
                     Delivered Date is required</div>
                 </div>
@@ -864,6 +873,12 @@
               </div>
             </div>
 
+            <div class="field-column mt-15">
+              <label class="field-label">Remarks</label>
+              <textarea class="field-input-text w-full" style="height: 60px; padding: 10px;"
+                placeholder="Enter remarks..." formControlName="remarks"></textarea>
+            </div>
+
             <!-- ITEMS SECTION -->
             <div class="items-section-container">
               <div class="items-section-header">ITEMS</div>
@@ -914,10 +929,14 @@
                   class="stock-send-row-grid grid-return-row" [formGroupName]="i">
                   <div class="list-text">
                     <b>{{ itemCtrl.get('nameDisplay')?.value }}</b>
-                    <div class="item-sub-text" *ngIf="itemCtrl.get('serialNumber')?.value || itemCtrl.get('barcode')?.value">
-                      <span *ngIf="itemCtrl.get('serialNumber')?.value">S.No.: <span class="text-bold-black">{{ itemCtrl.get('serialNumber')?.value }}</span></span>
-                      <span *ngIf="itemCtrl.get('serialNumber')?.value && itemCtrl.get('barcode')?.value" class="text-red"> | </span>
-                      <span *ngIf="itemCtrl.get('barcode')?.value">Barcode: <span class="text-bold-black">{{ itemCtrl.get('barcode')?.value }}</span></span>
+                    <div class="item-sub-text"
+                      *ngIf="itemCtrl.get('serialNumber')?.value || itemCtrl.get('barcode')?.value">
+                      <span *ngIf="itemCtrl.get('serialNumber')?.value">S.No.: <span class="text-bold-black">{{
+                          itemCtrl.get('serialNumber')?.value }}</span></span>
+                      <span *ngIf="itemCtrl.get('serialNumber')?.value && itemCtrl.get('barcode')?.value"
+                        class="text-red"> | </span>
+                      <span *ngIf="itemCtrl.get('barcode')?.value">Barcode: <span class="text-bold-black">{{
+                          itemCtrl.get('barcode')?.value }}</span></span>
                     </div>
                   </div>
                   <div class="list-text">{{ itemCtrl.get('qty')?.value }} No's</div>
@@ -981,10 +1000,14 @@
                   class="stock-send-row-grid grid-return-row" [formGroupName]="i">
                   <div class="list-text">
                     <b>{{ prodCtrl.get('nameDisplay')?.value }}</b>
-                    <div class="item-sub-text" *ngIf="prodCtrl.get('serialNumber')?.value || prodCtrl.get('barCode')?.value">
-                      <span *ngIf="prodCtrl.get('serialNumber')?.value">S.No.: <span class="text-bold-black">{{ prodCtrl.get('serialNumber')?.value }}</span></span>
-                      <span *ngIf="prodCtrl.get('serialNumber')?.value && prodCtrl.get('barCode')?.value" class="text-red"> | </span>
-                      <span *ngIf="prodCtrl.get('barCode')?.value">Barcode: <span class="text-bold-black">{{ prodCtrl.get('barCode')?.value }}</span></span>
+                    <div class="item-sub-text"
+                      *ngIf="prodCtrl.get('serialNumber')?.value || prodCtrl.get('barCode')?.value">
+                      <span *ngIf="prodCtrl.get('serialNumber')?.value">S.No.: <span class="text-bold-black">{{
+                          prodCtrl.get('serialNumber')?.value }}</span></span>
+                      <span *ngIf="prodCtrl.get('serialNumber')?.value && prodCtrl.get('barCode')?.value"
+                        class="text-red"> | </span>
+                      <span *ngIf="prodCtrl.get('barCode')?.value">Barcode: <span class="text-bold-black">{{
+                          prodCtrl.get('barCode')?.value }}</span></span>
                     </div>
                   </div>
                   <div class="list-text">{{ prodCtrl.get('qty')?.value }} No's</div>
@@ -1080,7 +1103,7 @@
                 <label class="field-label">Send From</label>
                 <span class="field-value">{{ viewStockSendData.sendFrom }}</span>
               </div>
-               <div class="view-field">
+              <div class="view-field">
                 <label class="field-label">Transportation</label>
                 <span class="field-value" *ngIf="!isEditingIssueStatus">{{ viewStockSendData.transportation }}</span>
                 <div *ngIf="isEditingIssueStatus" style="margin-top: 4px; width: 100%;">
@@ -1095,7 +1118,7 @@
                 <label class="field-label">Send to</label>
                 <span class="field-value">{{ viewStockSendData.sendTo }}</span>
               </div>
-               <div class="view-field">
+              <div class="view-field">
                 <label class="field-label">Tracking ID</label>
                 <span class="field-value" *ngIf="!isEditingIssueStatus">{{ viewStockSendData.trackingId }}</span>
                 <div *ngIf="isEditingIssueStatus" style="margin-top: 4px;">
@@ -1109,7 +1132,7 @@
                 <label class="field-label">Category</label>
                 <span class="field-value">{{ viewStockSendData.category }}</span>
               </div>
-               <div class="view-field">
+              <div class="view-field">
                 <label class="field-label">Shipment Date</label>
                 <span class="field-value" *ngIf="!isEditingIssueStatus">{{ viewStockSendData.shipmentDate }}</span>
                 <div class="calendar-wrapper relative-position" *ngIf="isEditingIssueStatus">
@@ -1131,16 +1154,18 @@
                 <label class="field-label">Delivered Date</label>
                 <span class="field-value" *ngIf="!isEditingIssueStatus">{{ viewStockSendData.deliveredDate || '---'
                   }}</span>
-                 <div class="calendar-wrapper relative-position" *ngIf="isEditingIssueStatus">
+                <div class="calendar-wrapper relative-position" *ngIf="isEditingIssueStatus">
                   <p-calendar #deliveredCalendarEdit [(ngModel)]="viewStockSendData.deliveredDateObj"
                     [ngModelOptions]="{standalone: true}" dateFormat="dd/mm/yy" placeholder="-- / -- / ----"
                     styleClass="w-full date-picker-custom" inputStyleClass="field-input-text w-full" [showIcon]="false"
-                    [maxDate]="maxDate" (ngModelChange)="viewStockSendData.deliveredDateObj ? viewStockSendData.status = 'DELIVERED' : null"></p-calendar>
+                    [maxDate]="maxDate"
+                    (ngModelChange)="viewStockSendData.deliveredDateObj ? viewStockSendData.status = 'DELIVERED' : null"></p-calendar>
                   <img src="assets/calender.svg" class="calendar-icon-custom" alt="calendar"
                     (click)="deliveredCalendarEdit.toggle()" />
                 </div>
                 <!-- Validation Message -->
-                <div *ngIf="isEditingIssueStatus && viewStockSendData.status === 'DELIVERED' && viewStockSendData.shipmentDateObj && viewStockSendData.deliveredDateObj && viewStockSendData.deliveredDateObj < viewStockSendData.shipmentDateObj"
+                <div
+                  *ngIf="isEditingIssueStatus && viewStockSendData.status === 'DELIVERED' && viewStockSendData.shipmentDateObj && viewStockSendData.deliveredDateObj && viewStockSendData.deliveredDateObj < viewStockSendData.shipmentDateObj"
                   class="text-red" style="font-size: 10px; margin-top: 4px;">
                   Delivered date cannot be before shipment date.
                 </div>
@@ -1154,12 +1179,13 @@
                   <span class="status-badge" [ngStyle]="getStatusColor(viewStockSendData?.status)">
                     {{ viewStockSendData?.status }}
                   </span>
-                  <button class="btn-edit-outline" (click)="isEditingIssueStatus = true"
+                  <button class="btn-edit-outline" (click)="onEditIssueStatus()"
+                    *ngIf="viewStockSendData?.status !== 'DELIVERED'"
                     style="background: white; border: 1px solid #ddd; padding: 4px 12px; border-radius: 4px; display: flex; align-items: center; gap: 6px; font-weight: bold; color: #333; font-size: 11px;">
                     <img src="assets/icons/pencil.svg" alt="Edit" style="width: 12px; height: 12px;"> EDIT
                   </button>
                 </div>
-                 <div *ngIf="isEditingIssueStatus" style="margin-top: 4px; width: 100%;">
+                <div *ngIf="isEditingIssueStatus" style="margin-top: 4px; width: 100%;">
                   <p-dropdown [options]="issueStatusOptions" [(ngModel)]="viewStockSendData.status"
                     [ngModelOptions]="{standalone: true}" optionLabel="label" optionValue="value" appendTo="body"
                     styleClass="w-full" [overlayOptions]="customOverlayOptions"
@@ -1293,7 +1319,15 @@
               </div>
               <div class="view-field">
                 <label class="field-label">Return Date</label>
-                <span class="field-value">{{ viewReturnData?.header?.returnDate || '---' }}</span>
+                <span class="field-value" *ngIf="!isEditingReturnStatus">{{ viewReturnData?.header?.returnDate || '---' }}</span>
+                <div class="calendar-wrapper relative-position" *ngIf="isEditingReturnStatus">
+                  <p-calendar #returnCalendarEdit [(ngModel)]="viewReturnData!.header.returnDateObj"
+                    [ngModelOptions]="{standalone: true}" dateFormat="dd/mm/yy" placeholder="-- / -- / ----"
+                    styleClass="w-full date-picker-custom" inputStyleClass="field-input-text w-full" [showIcon]="false"
+                    [maxDate]="maxDate"></p-calendar>
+                  <img src="assets/calender.svg" class="calendar-icon-custom" alt="calendar"
+                    (click)="returnCalendarEdit.toggle()" />
+                </div>
               </div>
               <div class="view-field">
                 <label class="field-label">Status</label>
@@ -1356,7 +1390,7 @@
                     <span *ngIf="!isEditingReturnStatus" class="status-badge text-uppercase"
                       [ngStyle]="getConditionColor(item.conditionType)" style="font-weight: 600;">{{ item.conditionType
                       }}</span>
-                    <p-dropdown *ngIf="isEditingReturnStatus" [options]="['NEW', 'USED', 'SCRAP', 'DEFECTIVE']"
+                    <p-dropdown *ngIf="isEditingReturnStatus" [options]="['USED', 'SCRAP']"
                       [(ngModel)]="item.conditionType" appendTo="body" styleClass="w-full"
                       [overlayOptions]="customOverlayOptions"></p-dropdown>
                   </div>
@@ -1378,8 +1412,7 @@
                   <div>Condition</div>
                 </div>
                 <div *ngFor="let prod of viewReturnData?.products; let i = index"
-                  class="view-item-row grid-view-item-row"
-                  style="padding: 15px 0;">
+                  class="view-item-row grid-view-item-row" style="padding: 15px 0;">
                   <div class="text-bold-black">{{ i + 1 }}</div>
                   <div>
                     <div class="item-name-text" style="font-weight: 500; color: #ed3237;">{{ prod.productName }}</div>
@@ -1400,7 +1433,7 @@
                     <span *ngIf="!isEditingReturnStatus" class="status-badge text-uppercase"
                       [ngStyle]="getConditionColor(prod.conditionType)" style="font-weight: 600;">{{ prod.conditionType
                       }}</span>
-                    <p-dropdown *ngIf="isEditingReturnStatus" [options]="['NEW', 'USED', 'SCRAP', 'DEFECTIVE']"
+                    <p-dropdown *ngIf="isEditingReturnStatus" [options]="['USED', 'SCRAP']"
                       [(ngModel)]="prod.conditionType" appendTo="body" styleClass="w-full"
                       [overlayOptions]="customOverlayOptions"></p-dropdown>
                   </div>
@@ -1415,7 +1448,8 @@
       <!-- Footer Buttons (For non-purchase modes) -->
       <div class="modal-footer"
         *ngIf="mode !== 'add-purchase' && mode !== 'update-purchase' && mode !== 'view-purchase' && (isEditing || isEditingIssueStatus || isEditingReturnStatus)">
-        <button class="btn-secondary" (click)="isEditingIssueStatus ? (isEditingIssueStatus = false) : close.emit()" [disabled]="isLoading">
+        <button class="btn-secondary" (click)="isEditingIssueStatus ? (isEditingIssueStatus = false) : close.emit()"
+          [disabled]="isLoading">
           CANCEL
         </button>
 

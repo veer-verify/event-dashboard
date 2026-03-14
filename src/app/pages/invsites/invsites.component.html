@@ -75,3 +75,8 @@
   (apply)="onFilterApply($event)" (reset)="onFilterReset()" (close)="onFilterClose()"
   (modelChange)="onFilterCriteriaChange($event)">
 </app-unified-filter-panel>
+
+<!-- Item Details Modal -->
+<app-inventory-site-item-details-modal [visible]="showItemDetailsModal" [title]="itemDetailsTitle"
+  [itemData]="selectedItemData" (close)="closeItemDetailsModal()">
+</app-inventory-site-item-details-modal>

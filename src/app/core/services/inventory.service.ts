@@ -10,7 +10,8 @@ import {
   ReturnDetailsResponse,
   UpdateReturnPayload,
   SiteInventoryResponse,
-  ClosingStatementResponse
+  ClosingStatementResponse,
+  SiteInventoryItemDetailsResponse
 } from '../models/inventory.models';
 import { PurchaseDetailsResponse } from '../models/purchase.models';
 
@@ -27,6 +28,14 @@ export class InventoryService {
       .set('siteId', siteId.toString())
       .set('viewType', viewType);
     return this.http.get<SiteInventoryResponse>(`${this.baseUrl}/getSiteInventory_1_0`, { params });
+  }
+
+  getSiteInventoryItemDetails_1_0(siteId: number, itemId: number, type: string): Observable<SiteInventoryItemDetailsResponse> {
+    const params = new HttpParams()
+      .set('siteId', siteId.toString())
+      .set('itemId', itemId.toString())
+      .set('type', type);
+    return this.http.get<SiteInventoryItemDetailsResponse>(`${this.baseUrl}/getSiteInventoryItemDetails_1_0`, { params });
   }
 
   getPurchaseSources(country?: string, entityType?: string): Observable<any> {

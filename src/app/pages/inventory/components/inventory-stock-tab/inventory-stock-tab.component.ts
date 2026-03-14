@@ -150,7 +150,15 @@ export class InventoryStockTabComponent implements OnInit, OnChanges {
           span.style.color = '#53BF8B';
           span.style.cursor = 'pointer';
           span.onclick = () => {
-            this.ngZone.run(() => this.viewClosingStatement.emit(params.data));
+            this.ngZone.run(() => {
+              const emitData = {
+                ...params.data,
+                startDate: this.startDate,
+                endDate: this.endDate,
+                storeId: this.selectedStore?.code === 'all' ? undefined : this.selectedStore?.code
+              };
+              this.viewClosingStatement.emit(emitData);
+            });
           };
           if (!params.value || params.value === 0) {
             span.style.background = '#ED32371A';

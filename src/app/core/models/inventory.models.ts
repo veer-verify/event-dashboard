@@ -281,9 +281,11 @@ export interface AddReturnPayload {
   returnFromId: number;
   returnToId: number;
   remarks: string;
+  status: string;
   items: AddReturnItemPayload[];
   products: AddReturnProductPayload[];
   createdBy: number;
+  createdTime: string;
 }
 
 export interface ReturnListItem {
@@ -320,6 +322,7 @@ export interface ReturnListResponse {
 export interface ReturnDetailsHeader {
   id: number;
   returnDate: string;
+  returnDateObj?: Date;
   returnFrom: string;
   returnTo: string;
   status: string;
@@ -391,7 +394,15 @@ export interface SiteInventoryDetailedItem {
   activityDate: string;
   name: string;
   action: string;
-  quantity: number;
+  totalQty: number;
+  storeQty: number;
+  onlineQty: number;
+  units: string;
+  make?: string;
+  model?: string;
+  serialNumber?: string;
+  barcode?: string;
+  barCode?: string;
 }
 
 export interface SiteInventoryResponse {
@@ -426,4 +437,30 @@ export interface ClosingStatementResponse {
   status: string;
   statusCode: number;
   data: ClosingStatementData;
+}
+
+export interface SiteItemDetailsHeader {
+  siteName: string;
+  itemName: string;
+  make: string;
+  model: string;
+}
+
+export interface SiteItemDetailsRecord {
+  date: string;
+  deliveredFromStore: number;
+  deliveredFromOnline: number;
+  returnedToStore: number;
+  returnedToOnline: number;
+}
+
+export interface SiteInventoryItemDetailsData {
+  header: SiteItemDetailsHeader;
+  details: SiteItemDetailsRecord[];
+}
+
+export interface SiteInventoryItemDetailsResponse {
+  status: string;
+  statusCode: number;
+  data: SiteInventoryItemDetailsData;
 }

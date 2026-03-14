@@ -3,16 +3,17 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InvsitesListViewComponent } from './components/invsites-list-view/invsites-list-view.component';
 import { InvsitesDetailedViewComponent } from './components/invsites-detailed-view/invsites-detailed-view.component';
+import { InventorySiteItemDetailsModalComponent } from './components/inventory-site-item-details-modal/inventory-site-item-details-modal.component';
 import { SiteItem } from '../../core/models/invsites.models';
 import { InventoryService } from '../../core/services/inventory.service';
-import { SiteInventoryNormalItem, SiteInventoryDetailedItem } from '../../core/models/inventory.models';
+import { SiteInventoryNormalItem, SiteInventoryDetailedItem, SiteInventoryItemDetailsData } from '../../core/models/inventory.models';
 
 import { UnifiedFilterPanelComponent, FilterField } from '../../shared/unified-filter-panel/unified-filter-panel.component';
 
 @Component({
   selector: 'app-invsites',
   standalone: true,
-  imports: [CommonModule, FormsModule, InvsitesListViewComponent, InvsitesDetailedViewComponent, UnifiedFilterPanelComponent],
+  imports: [CommonModule, FormsModule, InvsitesListViewComponent, InvsitesDetailedViewComponent, UnifiedFilterPanelComponent, InventorySiteItemDetailsModalComponent],
   templateUrl: './invsites.component.html',
   styleUrl: './invsites.component.css'
 })
@@ -38,6 +39,11 @@ export class InvSitesComponent implements OnInit {
   types: string[] = [];
   makes: string[] = [];
   models: string[] = [];
+
+  // Item Details Modal Props
+  showItemDetailsModal: boolean = false;
+  selectedItemData: SiteInventoryItemDetailsData | null = null;
+  itemDetailsTitle: string = '';
 
   constructor(private inventoryService: InventoryService) { }
 
@@ -201,6 +207,23 @@ export class InvSitesComponent implements OnInit {
   }
 
   handleViewDetails(data: any) {
-    console.log("View details for", data);
+    const site = this.sites.find(s => s.name === this.selectedSite);
+    if (!site || !data.id) return;
+
+    this.itemDetailsTitle = data.name;
+    this.inventoryService.getSiteInventoryItemDetails_1_0(site.id, data.id, data.type).subscribe({
+      next: (res) => {
+        if (res?.status === 'Success' && res?.data) {
+          this.selectedItemData = res.data;
+          this.showItemDetailsModal = true;
+        }
+      },
+      error: (err) => console.error('Failed to load item detailed activity', err)
+    });
+  }
+
+  closeItemDetailsModal() {
+    this.showItemDetailsModal = false;
+    this.selectedItemData = null;
   }
 }
