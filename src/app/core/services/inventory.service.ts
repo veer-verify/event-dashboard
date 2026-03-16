@@ -96,6 +96,13 @@ export class InventoryService {
     );
   }
 
+  saveBulkStatus(payload: any): Observable<any> {
+    // Note: Assuming endpoint name based on context or similar pattern
+    return this.http.put<any>(`${this.baseUrl}/saveBulkStatus_1_0`, payload).pipe(
+      catchError((error) => throwError(() => error))
+    );
+  }
+
   createIssue_1_0(payload: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/createIssue_1_0`, payload).pipe(
       catchError((error) => throwError(() => error))
@@ -159,6 +166,14 @@ export class InventoryService {
     return this.http.get<ReturnableStockResponse>(`${this.baseUrl}/getReturnableStock_1_0`, { params }).pipe(
       catchError((error) => throwError(() => error))
     );
+  }
+
+  getReturnableStockItems(siteId?: number): Observable<any> {
+    return siteId ? this.getReturnableStock(siteId) : new Observable(obs => obs.next({ data: { items: [] } }));
+  }
+
+  getReturnableStockProducts(siteId?: number): Observable<any> {
+    return siteId ? this.getReturnableStock(siteId) : new Observable(obs => obs.next({ data: { products: [] } }));
   }
 
   getItemsForIssue(storeId?: number): Observable<ItemsForIssueResponse> {

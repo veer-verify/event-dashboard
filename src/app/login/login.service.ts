@@ -77,6 +77,11 @@ export class AuthService {
     return raw ? (JSON.parse(raw) as LoginResponse) : null;
   }
 
+  getUserId(): string | null {
+    const user = this.getStoredUser();
+    return user?.UserId ? user.UserId.toString() : null;
+  }
+
   /** ✅ Needed by your auth.guard.ts */
   isLoggedIn(): boolean {
     const user =

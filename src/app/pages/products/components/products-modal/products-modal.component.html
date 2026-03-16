@@ -488,7 +488,7 @@
                                 <div class="view-field"></div>
                                 <div class="view-field">
                                     <label class="field-label">Status</label>
-                                    <ng-container *ngIf="!isEditing">
+                                    <ng-container>
                                         <span class="status-badge" [ngClass]="{
                                             'status-bg-sale': allDetails?.productDetails?.status?.toUpperCase() === 'SALE' || allDetails?.productDetails?.status?.toUpperCase() === 'SALE DELIVERED',
                                             'status-bg-new': allDetails?.productDetails?.status?.toUpperCase() === 'NEW',
@@ -499,12 +499,12 @@
                                             {{ (allDetails?.productDetails?.status || "-") | uppercase }}
                                         </span>
                                     </ng-container>
-                                    <ng-container *ngIf="isEditing">
+                                    <!-- <ng-container *ngIf="isEditing">
                                         <p-dropdown appendTo="body" [overlayOptions]="customOverlayOptions"
                                             [options]="dropdownArrays.productStatus" formControlName="statusId"
                                             optionLabel="name" optionValue="id" placeholder="Select" [showClear]="false"
                                             [filter]="true" filterBy="name" styleClass="w-full"></p-dropdown>
-                                    </ng-container>
+                                    </ng-container> -->
                                 </div>
                             </div>
 
@@ -630,7 +630,7 @@
                                             <div class="prog-col prog-col-status">
                                                 <span class="prog-label">Status</span>
                                                 <span class="status-badge" [ngClass]="{
-                                                    'status-bg-sale': prog.action === 'Sale' || prog.action === 'SALE DELIVERED' || prog.action === 'Sale Delivered',
+                                                    'status-bg-sale': prog.action === 'Sale' || prog.action === 'SALE DELIVERED' || prog.action === 'Sale Delivered' || prog.action === 'RETURNED Delivered' || prog.action === 'Sale Issued',
                                                     'status-bg-new': prog.action === 'Published' || prog.action === 'New',
                                                     'status-bg-lease': prog.action === 'Lease',
                                                     'status-bg-used': prog.action === 'Used',

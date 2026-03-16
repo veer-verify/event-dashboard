@@ -144,7 +144,7 @@ export class InventoryIssuedTabComponent implements OnInit, OnChanges {
 
           const lowerStatus = params.value ? params.value.toLowerCase() : '';
           if (lowerStatus === 'delivered' || lowerStatus === 'working') {
-            span.style.color = '#000000';
+            span.style.color = '#53BF8B';
           } else if (lowerStatus === 'issued') {
             span.style.color = '#000000';
           } else if (lowerStatus === 'in_transit' || lowerStatus === 'in transit') {

@@ -534,18 +534,25 @@ export class ProductsModalComponent implements OnInit {
     this.submitted = false;
   }
 
-  loadDropdowns() {
+  loadDropdowns(call: string = "ALL") {
     this.isLoading = true;
     this.metadataService.getAllItemDropdowns().subscribe({
       next: (response: any) => {
-        const keys = [
-          "units",
-          "nature",
-          "domain",
-          "partcodes",
-          "made",
-          "productStatus",
-        ];
+        let keys = [];
+        if (call === "ALL") {
+          keys = [
+            "units",
+            "nature",
+            "domain",
+            "partcodes",
+            "made",
+            "productStatus",
+          ];
+        }
+        else {
+          keys = [call];
+        }
+
 
         keys.forEach((key) => {
           if (response[key] && Array.isArray(response[key]) && response[key].length > 0) {
@@ -833,8 +840,8 @@ export class ProductsModalComponent implements OnInit {
 
       const updatePayload = {
         productDetailId: this.product.productId || this.product.id,
-        currentLocationId: formValue.currentLocationId ? Number(formValue.currentLocationId) : 0,
-        statusId: formValue.statusId ? Number(formValue.statusId) : 0,
+        // currentLocationId: formValue.currentLocationId ? Number(formValue.currentLocationId) : 0,
+        // statusId: formValue.statusId ? Number(formValue.statusId) : 0,
         remarks: formValue.remarks || "",
         publishedDate: pubDate,
         usedFor: Array.isArray(formValue.usedFor) ? formValue.usedFor.map((id: any) => Number(id)) : [],
@@ -1162,11 +1169,10 @@ export class ProductsModalComponent implements OnInit {
     const statusObj = this.dropdownArrays.productStatus.find((s: any) => s.name.toLowerCase() === details.status?.toLowerCase());
 
     let pubDate = null;
+
     if (details.publishedDate && details.publishedDate !== '-') {
-      const parts = details.publishedDate.split('/');
-      if (parts.length === 3) {
-        pubDate = new Date(+parts[2], +parts[1] - 1, +parts[0]);
-      }
+      const [year, month, day] = details.publishedDate.split('-');
+      pubDate = new Date(+year, +month - 1, +day);
     }
 
     this.productForm.patchValue({

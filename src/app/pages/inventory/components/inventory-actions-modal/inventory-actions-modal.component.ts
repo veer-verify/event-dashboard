@@ -17,6 +17,8 @@ import { FileUploadComponent } from '../../../../shared/file-upload/file-upload.
 import { ImagePipe } from '../../../../shared/image.pipe';
 import { AuthService } from '../../../../login/login.service';
 import { PurchaseItem } from '../../../../core/models/purchase.models';
+import { InventoryActionsPurchaseEditSectionComponent } from './sections/inventory-actions-purchase-edit-section.component';
+import { InventoryActionsClosingStatementSectionComponent } from './sections/inventory-actions-closing-statement-section.component';
 
 export interface ViewPurchaseItem extends PurchaseItem {
   id?: number;
@@ -47,7 +49,18 @@ export interface ViewPurchaseItem extends PurchaseItem {
 @Component({
   selector: 'app-inventory-actions-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, DropdownModule, CalendarModule, InputSwitchModule, FileUploadComponent, ImagePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    DropdownModule,
+    CalendarModule,
+    InputSwitchModule,
+    FileUploadComponent,
+    ImagePipe,
+    InventoryActionsPurchaseEditSectionComponent,
+    InventoryActionsClosingStatementSectionComponent
+  ],
   templateUrl: './inventory-actions-modal.component.html',
   styleUrls: ['./inventory-actions-modal.component.css']
 })
@@ -82,13 +95,13 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   hasMissingBarcodes: boolean = false;
 
   get isPreorderUpdate(): boolean {
-    return this.mode === 'update-purchase' &&
-      (this.data?.status === 'pre-order' || this.data?.purchase?.status === 'pre-order');
+    const s = String(this.data?.status || this.data?.purchase?.status || '').toUpperCase().replace(/[_\s-]/g, '');
+    return this.mode === 'update-purchase' && (s === 'PREORDER' || s === 'PREORDERED');
   }
 
   get isDeliveredUpdate(): boolean {
-    return this.mode === 'update-purchase' &&
-      (this.data?.status?.toLowerCase() === 'delivered' || this.data?.purchase?.status?.toLowerCase() === 'delivered');
+    const s = String(this.data?.status || this.data?.purchase?.status || '').toUpperCase().replace(/[_\s-]/g, '');
+    return this.mode === 'update-purchase' && s === 'DELIVERED';
   }
 
   countries: string[] = ['India', 'USA', 'UK'];
@@ -126,8 +139,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   ];
 
   get isPreorderInvoice(): boolean {
-    const status = this.data?.purchase?.status || this.data?.status || this.data?.purchase?.invoiceType || this.data?.invoiceType || '';
-    return String(status).toUpperCase() === 'PREORDER' || String(status).toUpperCase() === 'PRE-ORDERED';
+    const status = String(this.data?.purchase?.status || this.data?.status || this.data?.purchase?.invoiceType || this.data?.invoiceType || '').toUpperCase().replace(/[_\s-]/g, '');
+    return status === 'PREORDER' || status === 'PREORDERED';
   }
 
   // STOCK SEND MODE STATE
@@ -1267,7 +1280,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       payload: updatePayload
     });
 
-    this.isEditingIssueStatus = false;
+    // this.isEditingIssueStatus = false;
   }
 
   private formatDateForPayload(date: Date | null | string): string {
@@ -1302,9 +1315,10 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         const groups: { [key: string]: any[] } = {};
 
         for (const sd of serialDetails) {
-          const status = String(sd.status || item.status || (this.isPreorderInvoice ? 'PREORDER' : 'DELIVERED')).toUpperCase();
-          if (!groups[status]) groups[status] = [];
-          groups[status].push(sd);
+          const status = String(sd.status || item.status || (this.isPreorderInvoice ? 'PREORDER' : 'DELIVERED')).toUpperCase().replace(/[_\s-]/g, '');
+          const normalizedStatus = status === 'PREORDER' || status === 'PREORDERED' ? 'PREORDER' : status;
+          if (!groups[normalizedStatus]) groups[normalizedStatus] = [];
+          groups[normalizedStatus].push(sd);
         }
 
         const statuses = Object.keys(groups);
@@ -1405,11 +1419,11 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
   getItemStatusColor(status: string): string {
     const s = (status || '').toLowerCase().replace(/[_\s-]/g, '');
-    if (s === 'delivered') return '#000000';
+    if (s === 'delivered') return '#53BF8B'; // Green
     if (s === 'issued') return '#000000';
-    if (s === 'returned') return '#ED3237';
-    if (s === 'intransit') return '#F44336';
-    if (s === 'preorder' || s === 'preordered' || s === 'preorder') return '#000000';
+    if (s === 'returned') return '#ED3237'; // Red
+    if (s === 'intransit') return '#ED3237';
+    if (s === 'preorder' || s === 'preordered') return '#000000'; // Black
     return '#FF9800';
   }
 
@@ -1450,15 +1464,15 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
   onTrackingInfoChange(item: ViewPurchaseItem): void {
     const hasTrackingInfo = !!(item.newSerialNumber?.trim() || item.newBarcode?.trim());
-    const originalStatus = String(item.status).toUpperCase();
+    const originalStatus = String(item.status).toUpperCase().replace(/[_\s-]/g, '');
 
     if (hasTrackingInfo) {
-      if (item.newStatus === 'PREORDER') {
+      if (originalStatus === 'PREORDER' || originalStatus === 'PREORDERED') {
         item.newStatus = 'DELIVERED';
       }
     } else {
       // Revert to PREORDER only if it was originally a PREORDER and not currently RETURNED
-      if (originalStatus === 'PREORDER' && item.newStatus !== 'RETURNED') {
+      if ((originalStatus === 'PREORDER' || originalStatus === 'PREORDERED') && item.newStatus !== 'RETURNED') {
         item.newStatus = 'PREORDER';
       }
     }
@@ -1489,20 +1503,34 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     const missingReasons = itemsBeingReturned.some(i => !i.returnReason || !i.returnReason.trim());
     if (missingReasons) hasErrors = true;
 
-    const invalidBulkQty = itemsBeingReturned.some(i => {
+    const itemsBeingFulfilled = this.viewPurchaseItems.filter(i => {
+      const curStatus = String(i.status || '').toUpperCase().replace(/[_\s-]/g, '');
+      const nextStatus = String(i.newStatus || '').toUpperCase().replace(/[_\s-]/g, '');
+      return (curStatus === 'PREORDER' || curStatus === 'PREORDERED') && nextStatus === 'DELIVERED';
+    });
+
+    const invalidReturnQty = itemsBeingReturned.some(i => {
       const isBulk = i.serialNumberFlag === 'F' && i.barcodeFlag === 'F';
       return isBulk && (i.actionQty === undefined || i.actionQty < 1 || i.actionQty > (i.count || 0));
     });
-    if (invalidBulkQty) hasErrors = true;
+    if (invalidReturnQty) hasErrors = true;
+
+    const invalidFulfillQty = itemsBeingFulfilled.some(i => {
+      const isBulk = i.serialNumberFlag === 'F' && i.barcodeFlag === 'F';
+      return isBulk && (i.actionQty === undefined || i.actionQty < 1 || i.actionQty > (i.count || 0));
+    });
+    if (invalidFulfillQty) hasErrors = true;
 
     // 3. Validate Serial/Barcode updates (for preorders OR existing item edits)
     // Only validate if user actually touched these fields or is marking them delivered
     const itemsWithTrackingChanges = this.viewPurchaseItems.filter(i => {
       const oldSerial = (i.serialNo !== '-' && i.serialNo !== null) ? i.serialNo : '';
       const oldBarcode = (i.barcodeNo !== '-' && i.barcodeNo !== null) ? i.barcodeNo : '';
+      const curStatus = String(i.status || '').toUpperCase().replace(/[_\s-]/g, '');
+      const nextStatus = String(i.newStatus || '').toUpperCase().replace(/[_\s-]/g, '');
       return (i.newSerialNumber !== undefined && i.newSerialNumber !== oldSerial) ||
         (i.newBarcode !== undefined && i.newBarcode !== oldBarcode) ||
-        (i.status?.toString().toUpperCase() === 'PREORDER' && i.newStatus?.toString().toUpperCase() === 'DELIVERED');
+        ((curStatus === 'PREORDER' || curStatus === 'PREORDERED') && nextStatus === 'DELIVERED');
     });
 
     const missingSerials = itemsWithTrackingChanges.some(i => i.requiresSerial && (!i.newSerialNumber || !i.newSerialNumber.trim()));
@@ -1527,7 +1555,13 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         return (item.actionQty || 0) > 0;
       }
       if (isBulk && this.isPreorderInvoice) {
-        return (item.actionQty || 0) > 0;
+        // If transitioning from PREORDER to DELIVERED, we need actionQty > 0
+        const curStatus = String(item.status || '').toUpperCase().replace(/[_\s-]/g, '');
+        const nextStatus = String(item.newStatus || '').toUpperCase().replace(/[_\s-]/g, '');
+        if ((curStatus === 'PREORDER' || curStatus === 'PREORDERED') && nextStatus === 'DELIVERED') {
+          return (item.actionQty || 0) > 0;
+        }
+        return statusChanged || reasonChanged;
       }
 
       let serialChanged = false;
@@ -1619,7 +1653,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           ids.forEach(id => {
             payloadItems.push({
               purchaseItemId: id,
-              status: item.newStatus === 'PREORDER' ? 'DELIVERED' : item.newStatus,
+              status: (String(item.newStatus).toUpperCase().replace(/[_\s-]/g, '') === 'PREORDER') ? 'DELIVERED' : item.newStatus,
               serialNumber: null,
               barcode: null
             });
@@ -1628,7 +1662,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           // Serialized unit update
           payloadItems.push({
             purchaseItemId: item.purchaseItemId || item.id,
-            status: item.newStatus === 'PREORDER' ? 'DELIVERED' : item.newStatus,
+            status: (String(item.newStatus).toUpperCase().replace(/[_\s-]/g, '') === 'PREORDER') ? 'DELIVERED' : item.newStatus,
             serialNumber: (item.newSerialNumber || item.serialNo !== '-' ? item.newSerialNumber || item.serialNo : null),
             barcode: (item.newBarcode || item.barcodeNo !== '-' ? item.newBarcode || item.barcodeNo : null),
             returnReason: item.newStatus === 'RETURNED' ? (item.returnReason || '') : undefined
@@ -1695,11 +1729,11 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
   getStatusClass(status: string): string {
     if (!status) return '';
-    const lower = status.toLowerCase();
+    const lower = status.toLowerCase().replace(/[_\s-]/g, '');
     if (lower === 'delivered') return 'status-badge-green';
     if (lower === 'returned') return 'status-badge-red';
     if (lower === 'issued') return 'status-badge-black';
-    if (lower === 'pre-order') return 'status-badge-black';
+    if (lower === 'preorder' || lower === 'preordered') return 'status-badge-black';
     return 'status-badge-gray';
   }
 
@@ -2500,12 +2534,36 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
   getStatusColor(status: string | undefined | null): any {
     if (!status) return { background: '#999999', color: '#ffffff' };
-    const s = status.toLowerCase();
-    if (s === 'delivered' || s === 'issued') return { background: '#000000', color: '#ffffff' };
-    if (s === 'returned' || s === 'success') return { background: '#53BF8B', color: '#ffffff' };
-    if (s === 'in transit' || s === 'in_transit') return { background: '#F44336', color: '#ffffff' };
-    if (s === 'scraped' || s === 'scrap') return { background: '#F44336', color: '#ffffff' };
-    return { background: '#999999', color: '#ffffff' };
+    const s = status.toLowerCase().replace(/[_\s-]/g, '');
+
+    // Default styles
+    let bg = '#999999';
+    let text = '#ffffff';
+
+    if (this.mode === 'view-stock-send') {
+      // ISSUED TAB CONTEXT
+      if (s === 'delivered') bg = '#53BF8B';
+      else if (s === 'issued') bg = '#000000';
+      else if (s === 'intransit') bg = '#F44336';
+      else if (s === 'returned') bg = '#53BF8B'; // Issued tab uses green/teal for return
+    } else if (this.mode === 'view-purchase') {
+      // PURCHASE TAB CONTEXT
+      if (s === 'delivered') bg = '#53BF8B';
+      else if (s === 'preorder' || s === 'preordered') bg = '#000000';
+      else if (s === 'returned') bg = '#ED3237'; // Purchase tab uses red for return
+    } else if (this.mode === 'view-return') {
+      // RETURN TAB CONTEXT
+      if (s === 'returned' || s === 'success') bg = '#53BF8B';
+      else if (s === 'intransit' || s === 'intransit') bg = '#F44336';
+    } else {
+      // FALLBACK
+      if (s === 'delivered' || s === 'success') bg = '#53BF8B';
+      else if (s === 'issued' || s === 'preorder' || s === 'preordered') bg = '#000000';
+      else if (s === 'returned' || s === 'returned') bg = '#ED3237';
+      else if (s === 'intransit') bg = '#F44336';
+    }
+
+    return { background: bg, color: text };
   }
 
   getConditionColor(condition: string | undefined | null): any {

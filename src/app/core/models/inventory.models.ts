@@ -132,6 +132,8 @@ export interface IssuedHardware {
   itemName: string;
   itemsQuantity: number;
   units: string;
+  make: string;
+  model: string;
 }
 
 export interface IssuedDetailProduct {
@@ -202,6 +204,7 @@ export interface ItemForIssue {
   serialNumberFlag: string;
   barcodeFlag: string;
   quantity: number;
+  availableQty?: number;
 }
 
 export interface ItemsForIssueResponse {
@@ -222,6 +225,7 @@ export interface ProductForIssue {
   make: string;
   model: string;
   units: string;
+  availableQty?: number;
 }
 
 export interface ProductsForIssueResponse {
@@ -331,16 +335,20 @@ export interface ReturnDetailsHeader {
 
 export interface ReturnDetailsItem {
   id: number;
+  returnItemId?: number;
   itemName: string;
   serialNumber: string;
   barcode: string;
   quantity: number;
   conditionType: string;
   billingType: string;
+  make?: string;
+  model?: string;
 }
 
 export interface ReturnDetailsProduct {
   id: number;
+  returnProductId?: number;
   productName: string;
   serialNumber: string;
   barCode: string;
