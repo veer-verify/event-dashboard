@@ -81,7 +81,7 @@ export class InventoryReturnTabComponent implements OnInit, OnChanges {
       { field: 'returnDate', headerName: 'DATE', flex: 1, minWidth: 100 },
       {
         field: 'returnFrom',
-        headerName: 'RETURN FROM',
+        headerName: 'SITE',
         flex: 1.5,
         minWidth: 160,
         cellRenderer: (params: ICellRendererParams) => {

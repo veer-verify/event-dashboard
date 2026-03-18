@@ -1418,13 +1418,29 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   }
 
   getItemStatusColor(status: string): string {
-    const s = (status || '').toLowerCase().replace(/[_\s-]/g, '');
+    const s = this.getNormalizedPurchaseDisplayStatus(status).toLowerCase().replace(/[_\s-]/g, '');
     if (s === 'delivered') return '#53BF8B'; // Green
-    if (s === 'issued') return '#000000';
     if (s === 'returned') return '#ED3237'; // Red
     if (s === 'intransit') return '#ED3237';
     if (s === 'preorder' || s === 'preordered') return '#000000'; // Black
     return '#FF9800';
+  }
+
+  getNormalizedPurchaseDisplayStatus(status: string | undefined | null): string {
+    const normalized = String(status || '').toUpperCase().replace(/[_\s-]/g, '');
+    if (normalized === 'RETURNED') return 'RETURNED';
+    if (normalized === 'USED' || normalized === 'ISSUED' || normalized === 'DELIVERED') return 'DELIVERED';
+    if (normalized === 'PREORDER' || normalized === 'PREORDERED') return 'PREORDER';
+    return String(status || 'DELIVERED').toUpperCase();
+  }
+
+  get canEditPurchaseStatus(): boolean {
+    if (!this.viewPurchaseItems || this.viewPurchaseItems.length === 0) return true;
+
+    return this.viewPurchaseItems.some(item => {
+      const normalized = String(item.status || '').toUpperCase().replace(/[_\s-]/g, '');
+      return !['USED', 'ISSUED', 'DELIVERED', 'RETURNED'].includes(normalized);
+    });
   }
 
   enableBulkEdit() {
@@ -1615,25 +1631,49 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       const isBulk = item.serialNumberFlag === 'F' && item.barcodeFlag === 'F';
 
       if (this.isPreorderInvoice) {
-        // Preorder update: Move only filled units to DELIVERED
+        // Preorder update: allow RETURNED transitions, otherwise move fulfilled units to DELIVERED
         if (isBulk) {
-          const qtyToDeliver = item.actionQty || 0;
-          const idsToDeliver = (item.allPurchaseItemIds || []).slice(0, qtyToDeliver);
-          idsToDeliver.forEach(id => {
-            payloadItems.push({
-              purchaseItemId: id,
-              status: 'DELIVERED',
-              serialNumber: null,
-              barcode: null
+          if (String(item.newStatus).toUpperCase() === 'RETURNED') {
+            const qtyToReturn = item.actionQty || 0;
+            const idsToReturn = (item.allPurchaseItemIds || []).slice(0, qtyToReturn);
+            idsToReturn.forEach(id => {
+              payloadItems.push({
+                purchaseItemId: id,
+                status: 'RETURNED',
+                returnReason: item.returnReason || '',
+                serialNumber: null,
+                barcode: null
+              });
             });
-          });
+          } else {
+            const qtyToDeliver = item.actionQty || 0;
+            const idsToDeliver = (item.allPurchaseItemIds || []).slice(0, qtyToDeliver);
+            idsToDeliver.forEach(id => {
+              payloadItems.push({
+                purchaseItemId: id,
+                status: 'DELIVERED',
+                serialNumber: null,
+                barcode: null
+              });
+            });
+          }
         } else {
-          payloadItems.push({
-            purchaseItemId: item.purchaseItemId || item.id,
-            status: 'DELIVERED',
-            serialNumber: item.newSerialNumber || null,
-            barcode: item.newBarcode || null
-          });
+          if (String(item.newStatus).toUpperCase() === 'RETURNED') {
+            payloadItems.push({
+              purchaseItemId: item.purchaseItemId || item.id,
+              status: 'RETURNED',
+              returnReason: item.returnReason || '',
+              serialNumber: item.newSerialNumber || null,
+              barcode: item.newBarcode || null
+            });
+          } else {
+            payloadItems.push({
+              purchaseItemId: item.purchaseItemId || item.id,
+              status: 'DELIVERED',
+              serialNumber: item.newSerialNumber || null,
+              barcode: item.newBarcode || null
+            });
+          }
         }
       } else {
         // Delivered update

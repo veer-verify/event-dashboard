@@ -1,0 +1,31 @@
+:host ::ng-deep .inventory-stock-grid .ag-cell {
+  overflow: hidden !important;
+}
+
+:host ::ng-deep .inventory-stock-grid .ag-cell-wrapper {
+  overflow: hidden !important;
+  width: 100%;
+  min-width: 0;
+}
+
+:host ::ng-deep .inventory-stock-grid .ag-cell-value {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  display: block !important;
+  width: 100%;
+  min-width: 0;
+}
+
+:host ::ng-deep .ag-theme-custom .ellipsis-cell .ag-cell-wrapper,
+:host ::ng-deep .ag-theme-custom .ellipsis-cell .ag-cell-value {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:host ::ng-deep .ag-theme-custom .ellipsis-cell .ag-cell-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}

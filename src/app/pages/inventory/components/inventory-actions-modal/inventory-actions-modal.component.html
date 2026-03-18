@@ -67,10 +67,10 @@
                 <label class="field-label">Status</label>
                 <div class="status-edit-wrapper flex-align-center-gap-10">
                   <span class="status-badge"
-                    [ngStyle]="getStatusColor(data?.purchase?.status || data?.status || 'Delivered')">
-                    {{ data?.purchase?.status || data?.status || 'Delivered' }}
+                    [ngStyle]="getStatusColor(getNormalizedPurchaseDisplayStatus(data?.purchase?.status || data?.status || 'Delivered'))">
+                    {{ getNormalizedPurchaseDisplayStatus(data?.purchase?.status || data?.status || 'Delivered') }}
                   </span>
-                  <button class="btn-edit-outline" *ngIf="!isBulkEditingStatus" (click)="enableBulkEdit()">
+                  <button class="btn-edit-outline" *ngIf="!isBulkEditingStatus && canEditPurchaseStatus" (click)="enableBulkEdit()">
                     <img src="assets/icons/pencil.svg" alt="Edit" class="icon-edit-sm">
                     EDIT
                   </button>
@@ -101,7 +101,7 @@
                     <div class="col-serial text-uppercase">SERIAL NO.</div>
                     <div class="col-barcode text-uppercase">BARCODE NO.</div>
                     <div class="col-count text-uppercase">COUNT</div>
-                    <div class="col-price text-uppercase">TOTAL PRICE (RATE + GST PER NO.)</div>
+                    <div class="col-price text-uppercase">UNIT PRICE (RATE + GST PER NO.)</div>
                     <div class="col-status text-uppercase">STATUS</div>
                   </div>
                 </div>
@@ -116,11 +116,11 @@
                     <div class="col-name">
                       <div class="item-name-text">{{ item.itemName }}</div>
                       <div class="item-sub-text">
-                        {{ item.itemCode || item.code || 'cc-ccc' }}
+                        {{ item.itemCode || '' }}
                         <span style="color: #ed3237; margin: 0 4px;">|</span>
-                        {{ item.make || 'Make' }}
+                        {{ item.make || '' }}
                         <span style="color: #ed3237; margin: 0 4px;">|</span>
-                        {{ item.model || 'Model' }}
+                        {{ item.model || '' }}
                       </div>
                       <div *ngIf="item.returnReason" class="damaged-badge">{{ item.returnReason }}</div>
                     </div>
@@ -188,16 +188,15 @@
                     <div class="col-count"><b>{{ item.count }}</b> No{{ item.count > 1 ? "'s" : "" }}</div>
 
                     <div class="col-price">
-                      <b>$ {{ item.totalPricePerUnit || item.totalPrice || '0.00' }}</b>
-                      <span class="price-breakup">($ {{ item.unitPrice || item.rate || '0.00' }} + {{ item.gstPercent ||
-                        item.gst || '0' }}%)</span>
+                      <b>$ {{ item.totalPricePerUnit || '0.00' }}</b>
+                      <span class="price-breakup">($ {{ item.unitPrice || '0.00' }} + {{ item.gstPercent || '0' }}%)</span>
                     </div>
 
                     <div class="col-status">
                       <div class="status-view-mode flex-align-center-gap-5 text-uppercase" *ngIf="!isBulkEditingStatus">
                         <span [style.color]="getItemStatusColor(item.status)"
                           style="font-weight: 700; font-size: 11px;">
-                          {{ item.status }}
+                          {{ getNormalizedPurchaseDisplayStatus(item.status) }}
                         </span>
                       </div>
                       <div class="status-edit-mode flex-align-center-gap-5" *ngIf="isBulkEditingStatus"

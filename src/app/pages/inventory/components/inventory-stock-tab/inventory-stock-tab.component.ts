@@ -45,6 +45,7 @@ export class InventoryStockTabComponent implements OnInit, OnChanges {
   gridOptions: GridOptions = {
     suppressCellFocus: true,
     suppressRowHoverHighlight: false,
+    enableBrowserTooltips: true,
     headerHeight: 40,
     rowHeight: 45,
     animateRows: false,
@@ -78,33 +79,31 @@ export class InventoryStockTabComponent implements OnInit, OnChanges {
 
   constructor() {
     this.columnDefs = [
-      { field: 'itemId', headerName: 'ITEM ID', flex: 1, minWidth: 80 },
+      {
+        field: 'itemId',
+        headerName: 'ITEM ID',
+        flex: 1,
+        minWidth: 80,
+        cellClass: 'ellipsis-cell',
+        tooltipValueGetter: (params) => params.value || ''
+      },
       {
         field: 'itemName',
         headerName: 'ITEM NAME',
         flex: 2,
         minWidth: 200,
-        cellRenderer: (params: ICellRendererParams) => {
-          const wrapper = document.createElement('div');
-          wrapper.style.display = 'flex';
-          wrapper.style.alignItems = 'center';
-          wrapper.style.height = '100%';
-          wrapper.style.width = '100%';
-          wrapper.style.overflow = 'hidden';
-
-          const name = document.createElement('span');
+        cellClass: 'ellipsis-cell',
+        valueGetter: (params) => {
           const make = params.data?.make || '';
           const model = params.data?.model || '';
           const suffix = [make, model].filter(Boolean).join(' - ');
-          name.innerText = suffix ? `${params.value || ''} - ${suffix}` : (params.value || '');
-          name.style.overflow = 'hidden';
-          name.style.textOverflow = 'ellipsis';
-          name.style.whiteSpace = 'nowrap';
-          name.style.width = '100%';
-          name.style.fontSize = '13px';
-          wrapper.appendChild(name);
-
-          return wrapper;
+          return suffix ? `${params.data?.itemName || ''} - ${suffix}` : (params.data?.itemName || '');
+        },
+        tooltipValueGetter: (params) => {
+          const make = params.data?.make || '';
+          const model = params.data?.model || '';
+          const suffix = [make, model].filter(Boolean).join(' - ');
+          return suffix ? `${params.data?.itemName || ''} - ${suffix}` : (params.data?.itemName || '');
         }
       },
       {
@@ -112,18 +111,25 @@ export class InventoryStockTabComponent implements OnInit, OnChanges {
         headerName: 'ITEM CODE',
         flex: 1.5,
         minWidth: 160,
-        cellRenderer: (params: ICellRendererParams) => {
-          const span = document.createElement('span');
-          span.innerText = params.value || '';
-          span.style.overflow = 'hidden';
-          span.style.textOverflow = 'ellipsis';
-          span.style.whiteSpace = 'nowrap';
-          span.style.display = 'block';
-          span.style.width = '100%';
-          return span;
-        }
+        cellClass: 'ellipsis-cell',
+        tooltipValueGetter: (params) => params.value || '',
       },
-      { field: 'unitsName', headerName: 'UNITS', flex: 0.7, minWidth: 70 },
+      {
+        field: 'unitsName',
+        headerName: 'UNITS',
+        flex: 0.7,
+        minWidth: 70,
+        cellClass: 'ellipsis-cell',
+        tooltipValueGetter: (params) => params.value || ''
+      },
+      {
+        field: 'usedFor',
+        headerName: 'USED FOR',
+        flex: 0.7,
+        minWidth: 70,
+        tooltipValueGetter: (params) => params.value || '',
+        cellClass: 'ellipsis-cell'
+      },
       { field: 'opening', headerName: 'OPENING', flex: 0.8, minWidth: 80 },
       { field: 'purchase', headerName: 'PURCHASE', flex: 0.8, minWidth: 80 },
       { field: 'used', headerName: 'Used', flex: 0.8, minWidth: 80 },

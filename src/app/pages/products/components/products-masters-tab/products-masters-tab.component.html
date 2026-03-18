@@ -12,7 +12,7 @@
 
 <div class="dashboard-content-section m-t-20">
     <div class="table-wrapper">
-        <ag-grid-angular class="ag-theme-custom" [theme]="'legacy'" [columnDefs]="mastersColumnDefs"
+        <ag-grid-angular class="ag-theme-custom products-masters-grid" [theme]="'legacy'" [columnDefs]="mastersColumnDefs"
             [rowData]="paginatedData" [defaultColDef]="defaultColDef" [gridOptions]="gridOptions" [domLayout]="'normal'"
             (gridReady)="onGridReady($event)">
         </ag-grid-angular>

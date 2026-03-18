@@ -67,6 +67,7 @@ export class ProductsModalComponent implements OnInit {
     domain: [],
     partcodes: [],
     made: [],
+    productStatus: [],
     usedFor: [],
   };
 
@@ -129,9 +130,7 @@ export class ProductsModalComponent implements OnInit {
       }
     }
     else if (this.mode === "listitem") {
-      this.loadStores();
-      this.loadDropdowns();
-      if (this.product?.productId || this.product?.id) {
+      if (this.product?.id) {
         this.fetchAllProductDetails(this.product.productId || this.product.id);
       }
     }
@@ -536,7 +535,13 @@ export class ProductsModalComponent implements OnInit {
 
   loadDropdowns(call: string = "ALL") {
     this.isLoading = true;
-    this.metadataService.getAllItemDropdowns().subscribe({
+    const request$ = call === "ALL"
+      ? this.metadataService.getAllItemDropdowns()
+      : this.metadataService.getDropdownByTypeName(
+        call === "productStatus" ? "Inv_productStatus" : call === "usedFor" ? "Inv_UsedFor" : call
+      );
+
+    request$.subscribe({
       next: (response: any) => {
         let keys = [];
         if (call === "ALL") {
@@ -546,20 +551,29 @@ export class ProductsModalComponent implements OnInit {
             "domain",
             "partcodes",
             "made",
+            "usedFor",
             "productStatus",
           ];
         }
         else {
           keys = [call];
+          response = {
+            [call]: response
+          };
         }
 
 
         keys.forEach((key) => {
-          if (response[key] && Array.isArray(response[key]) && response[key].length > 0) {
-            const metadataArray = response[key][0].metadata;
-            if (metadataArray && Array.isArray(metadataArray)) {
-              this.dropdownArrays[key] = this.processMetadata(metadataArray, key);
-            }
+          const rawResponse = response[key];
+          const metadataArray =
+            Array.isArray(rawResponse?.[0]?.metadata) ? rawResponse[0].metadata :
+              Array.isArray(rawResponse?.data) ? rawResponse.data :
+                Array.isArray(rawResponse?.metadata) ? rawResponse.metadata :
+                  Array.isArray(rawResponse) ? rawResponse :
+                    [];
+
+          if (metadataArray.length > 0) {
+            this.dropdownArrays[key] = this.processMetadata(metadataArray, key);
           }
         });
 
@@ -577,7 +591,7 @@ export class ProductsModalComponent implements OnInit {
   processMetadata(metadata: any[], key: string): any[] {
     let processed = metadata.map((item) => {
       let idValue;
-      if (key === 'units' || key === 'productStatus') {
+      if (key === 'units' || key === 'productStatus' || key === 'usedFor') {
         idValue = item.keyId;
       } else {
         idValue = item.value;
@@ -635,6 +649,11 @@ export class ProductsModalComponent implements OnInit {
 
   enableEdit() {
     this.isEditing = true;
+    if (this.mode === "listitem" && (!this.dropdownArrays.productStatus || this.dropdownArrays.productStatus.length === 0)) {
+      this.loadDropdowns("productStatus");
+      return;
+    }
+    this.patchListItemForm();
   }
 
   getFieldError(fieldName: string): string {
@@ -1152,7 +1171,6 @@ export class ProductsModalComponent implements OnInit {
 
   patchListItemForm() {
     if (this.mode !== "listitem" || !this.allDetails || !this.allDetails.productDetails) return;
-    if (!this.dropdownArrays.productStatus || this.dropdownArrays.productStatus.length === 0) return;
 
     const details = this.allDetails.productDetails;
     let storeId = null;
@@ -1162,11 +1180,11 @@ export class ProductsModalComponent implements OnInit {
     }
 
     const usedForNames = details.usedFor ? details.usedFor.split(',').map((s: string) => s.trim().toLowerCase()) : [];
-    const usedForIds = this.dropdownArrays.productStatus
+    const usedForIds = (this.dropdownArrays.productStatus || [])
       .filter((item: any) => usedForNames.includes(item.name.toLowerCase()))
       .map((item: any) => item.id);
 
-    const statusObj = this.dropdownArrays.productStatus.find((s: any) => s.name.toLowerCase() === details.status?.toLowerCase());
+    const statusObj = (this.dropdownArrays.productStatus || []).find((s: any) => s.name.toLowerCase() === details.status?.toLowerCase());
 
     let pubDate = null;
 

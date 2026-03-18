@@ -7,6 +7,5 @@ export const environment = {
   meteDataUrl: "https://usstaging.ivisecurity.com/metadata",
   eventDataUrl: "https://usstaging.ivisecurity.com/events_data",
   guard_monitoring_url: `https://usstaging.ivisecurity.com/guard_monitoring`,
-  
   loggingEnabled: true,
 };

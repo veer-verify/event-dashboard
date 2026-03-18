@@ -19,7 +19,7 @@
 
 <div class="dashboard-content-section m-t-20">
     <div class="table-wrapper">
-        <ag-grid-angular class="ag-theme-custom" [theme]="'legacy'" [columnDefs]="allColumnDefs"
+        <ag-grid-angular class="ag-theme-custom products-all-grid" [theme]="'legacy'" [columnDefs]="allColumnDefs"
             [rowData]="allProductsData" [defaultColDef]="defaultColDef" [gridOptions]="gridOptions"
             [domLayout]="'normal'" (gridReady)="onGridReady($event)">
         </ag-grid-angular>
