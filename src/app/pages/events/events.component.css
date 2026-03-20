@@ -2058,8 +2058,6 @@ input:checked + .slider:before {
   padding: 10px;
 }
 
-
-
 /* .email-container {
   max-width: 900px;
 
@@ -2070,7 +2068,6 @@ input:checked + .slider:before {
   background: #fff;
   border: 1px solid #dcdcdc;
 } */
-
 
 /* LOGO */
 .email-logo {
@@ -2115,7 +2112,6 @@ input:checked + .slider:before {
 .email-table {
   width: 100%;
   border-collapse: collapse;
-  
 }
 
 .email-table .label {
@@ -2123,14 +2119,13 @@ input:checked + .slider:before {
   font-weight: bold;
   color: #555;
   padding: 8px;
- vertical-align: top; 
-
+  vertical-align: top;
 }
 
 .email-table .value {
   font-weight: bold;
   padding: 8px;
- vertical-align: top; 
+  vertical-align: top;
 }
 
 .divider {
@@ -2312,8 +2307,6 @@ input:checked + .slider:before {
   position: relative;
 }
 
-
-
 /* ===== ATTACHMENTS ===== */
 .gmail-attachments {
   margin-top: 20px;
@@ -2354,11 +2347,6 @@ input:checked + .slider:before {
   justify-content: end;
 }
 
-
-
-
-
-
 .custom-select-wrapper {
   display: flex;
   flex-direction: column;
@@ -2397,5 +2385,14 @@ input:checked + .slider:before {
 .custom-select1:focus {
   outline: none;
   border-color: #d21919;
+}
 
+.email-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font-weight: 700;
+  opacity: 0.8;
 }
