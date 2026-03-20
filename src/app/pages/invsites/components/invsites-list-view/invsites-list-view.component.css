@@ -56,8 +56,8 @@
   outline-offset: 2px;
 }
 
-:host ::ng-deep .ag-theme-custom .invsites-more-btn svg {
+:host ::ng-deep .ag-theme-custom .invsites-more-icon {
   width: 18px;
   height: 18px;
-  fill: currentColor;
+  display: block;
 }

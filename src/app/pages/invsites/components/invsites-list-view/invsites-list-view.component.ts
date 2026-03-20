@@ -93,11 +93,11 @@ export class InvsitesListViewComponent implements OnInit, OnChanges {
           button.className = 'invsites-more-btn';
           button.title = 'View details';
           button.setAttribute('aria-label', 'View details');
-          button.innerHTML = `
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 15.2a1.2 1.2 0 1 1 1.2-1.2 1.2 1.2 0 0 1-1.2 1.2Zm1.4-4.7v.4h-2.3v-.7c0-2.1 2.6-2.2 2.6-4a1.7 1.7 0 0 0-1.9-1.6 2.1 2.1 0 0 0-2 1.3l-2-.9A4.2 4.2 0 0 1 12 4.8c2.5 0 4.3 1.4 4.3 3.5 0 2.7-2.9 3.1-2.9 4.2Z"></path>
-            </svg>
-          `;
+
+          const img = document.createElement('img');
+          img.src = 'assets/icons/information-icon.svg';
+          img.alt = 'View details';
+          img.className = 'invsites-more-icon';
 
           const emitDetails = (event: Event) => {
             event.preventDefault();
@@ -113,6 +113,7 @@ export class InvsitesListViewComponent implements OnInit, OnChanges {
           });
           button.addEventListener('click', emitDetails);
 
+          button.appendChild(img);
           container.appendChild(button);
           return container;
         }
