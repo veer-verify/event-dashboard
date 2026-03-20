@@ -506,7 +506,7 @@ export class ProductsModalComponent implements OnInit {
     } else if (this.mode === "listitem") {
       this.productForm = this.fb.group({
         currentLocationId: [null], // Removed required validation
-        statusId: [null, Validators.required],
+        statusId: [null],
         remarks: [""],
         publishedDate: [null],
         usedFor: [[]],

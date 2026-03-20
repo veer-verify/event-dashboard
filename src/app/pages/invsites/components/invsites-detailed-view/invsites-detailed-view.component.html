@@ -30,8 +30,8 @@
                         <td>{{ item.sNo }}</td>
                         <td>
                             <div class="product-name-cell">
-                                <div class="product-name-main">{{ item.itemProductName }}</div>
-                                <div class="product-name-desc" *ngIf="item.itemProductDesc">{{ item.itemProductDesc }}</div>
+                                <div class="product-name-main" [title]="item.itemProductName">{{ item.itemProductName }}</div>
+                                <div class="product-name-desc" *ngIf="item.itemProductDesc" [title]="item.itemProductDesc">{{ item.itemProductDesc }}</div>
                             </div>
                         </td>
                         <td>{{ item.store }}</td>

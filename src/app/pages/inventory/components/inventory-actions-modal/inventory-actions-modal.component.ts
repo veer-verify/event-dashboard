@@ -2472,7 +2472,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
       const formData = new FormData();
       formData.append('purchase', JSON.stringify(purchasePayload));
-      if (this.invoiceFile?.file) formData.append('InvoiceFiles', this.invoiceFile.file);
+      if (this.invoiceFile?.file) formData.append('invoiceFiles', this.invoiceFile.file);
       if (this.otherFiles && this.otherFiles.length > 0) {
         this.otherFiles.forEach((f: any) => {
           if (f.file) formData.append('otherFiles', f.file);

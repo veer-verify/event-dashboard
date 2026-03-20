@@ -55,41 +55,65 @@ export class InvsitesListViewComponent implements OnInit, OnChanges {
   }
 
   constructor() {
+    const textCol = (
+      field: keyof SiteInventoryNormalItem,
+      headerName: string,
+      minWidth: number,
+      flex: number
+    ): ColDef => ({
+      field,
+      headerName,
+      minWidth,
+      flex,
+      tooltipValueGetter: (params) => params.value != null ? String(params.value) : '',
+      cellClass: 'invsites-ellipsis-cell'
+    });
+
     this.columnDefs = [
-      { field: 'id', headerName: 'ID', minWidth: 90, flex: 0.8 },
-      { field: 'name', headerName: 'PRODUCT / ITEM', minWidth: 200, flex: 2 },
-      { field: 'type', headerName: 'TYPE', minWidth: 100, flex: 1 },
-      { field: 'make', headerName: 'MAKE', minWidth: 120, flex: 1 },
-      { field: 'model', headerName: 'MODEL', minWidth: 150, flex: 1.5 },
-      { field: 'delivered', headerName: 'DELIVERED', minWidth: 100, flex: 1 },
-      { field: 'returned', headerName: 'RETURN', minWidth: 100, flex: 1 },
+      textCol('id', 'ID', 90, 0.8),
+      textCol('name', 'PRODUCT / ITEM', 200, 2),
+      textCol('type', 'TYPE', 100, 1),
+      textCol('make', 'MAKE', 120, 1),
+      textCol('model', 'MODEL', 150, 1.5),
+      textCol('delivered', 'DELIVERED', 100, 1),
+      textCol('returned', 'RETURN', 100, 1),
       {
         headerName: 'MORE',
         minWidth: 80,
         flex: 0.6,
         sortable: false,
+        suppressMovable: true,
+        cellClass: 'invsites-more-cell',
         cellRenderer: (params: ICellRendererParams) => {
-          const container = document.createElement("div");
-          container.style.display = "flex";
-          container.style.alignItems = "center";
-          container.style.justifyContent = "center";
-          container.style.height = "100%";
+          const container = document.createElement('div');
+          container.className = 'invsites-more-action';
 
-          const img = document.createElement("img");
-          img.src = "assets/icons/information-icon.svg";
-          img.alt = "View";
-          img.style.width = "18px";
-          img.style.height = "18px";
-          img.style.cursor = "pointer";
-          img.style.opacity = "0.7";
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'invsites-more-btn';
+          button.title = 'View details';
+          button.setAttribute('aria-label', 'View details');
+          button.innerHTML = `
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 15.2a1.2 1.2 0 1 1 1.2-1.2 1.2 1.2 0 0 1-1.2 1.2Zm1.4-4.7v.4h-2.3v-.7c0-2.1 2.6-2.2 2.6-4a1.7 1.7 0 0 0-1.9-1.6 2.1 2.1 0 0 0-2 1.3l-2-.9A4.2 4.2 0 0 1 12 4.8c2.5 0 4.3 1.4 4.3 3.5 0 2.7-2.9 3.1-2.9 4.2Z"></path>
+            </svg>
+          `;
 
-          img.addEventListener("click", () => {
+          const emitDetails = (event: Event) => {
+            event.preventDefault();
+            event.stopPropagation();
             this.ngZone.run(() => {
               this.viewDetails.emit(params.data);
             });
-          });
+          };
 
-          container.appendChild(img);
+          button.addEventListener('mousedown', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          });
+          button.addEventListener('click', emitDetails);
+
+          container.appendChild(button);
           return container;
         }
       }

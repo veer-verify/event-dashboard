@@ -55,8 +55,8 @@ export class InvSitesComponent implements OnInit {
     this.inventoryService.getPurchaseSources().subscribe({
       next: (res: any) => {
         if (res?.status === 'Success' && res?.data) {
-          const storeSites = res.data.filter((s: any) => s.sourceType === 'Store' || s.sourceType === 'Site');
-          this.sites = storeSites.map((s: any) => ({
+          const onlySites = res.data.filter((s: any) => s.sourceType === 'Site');
+          this.sites = onlySites.map((s: any) => ({
             id: s.sourceId,
             name: s.sourceName,
             isActive: false
