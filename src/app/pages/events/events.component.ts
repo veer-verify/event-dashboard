@@ -1521,6 +1521,7 @@ alertSubTypes: any = [];
   }
 
   isSubmitting = false;
+  
   submitResolution() {
     if (
       !this.emailData?.recipientEmails?.length || !this.action?.trim() || 
@@ -1647,6 +1648,8 @@ alertSubTypes: any = [];
 
   mailselectitem: any;
   openMailTooltip(event: MouseEvent, params: any) {
+
+  
   
     this.mailselectitem = params.data;
 
@@ -2790,6 +2793,11 @@ alertSubTypes: any = [];
             // disableClick = 'onclick="event.stopPropagation(); return false;"';
           } else if (params.data?.mailColour === 0) {
             color = "#2ea321";
+          }
+          else if (params.data?.mailColour === 2) {
+             tooltip = "One time";
+            color = "#f3d23e";
+            // disableClick = 'onclick="event.stopPropagation(); return false;"';
           }
 
           return `

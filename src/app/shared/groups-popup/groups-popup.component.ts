@@ -146,7 +146,7 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
     if (!this.data || !this.data.id) return;
 
     this.notificationService
-      .confirm(`This action will disable all queues and remove queue access for users.`,{acceptLabel:"Disable",rejectLabel:"Cancel"}
+      .confirm(`This action will disable all queues and remove queue access for users.`,{acceptLabel:"Yes",rejectLabel:"No"}
       )
       .then((res: any) => {
         const input = event.target as HTMLInputElement;

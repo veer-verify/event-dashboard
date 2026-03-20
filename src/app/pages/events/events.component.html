@@ -689,11 +689,16 @@
 
 
 
-  <ng-container *ngIf="isMediaLoading" >
+  <ng-container *ngIf="isMediaLoading && mailselectitem?.mailColour!=2" >
     <div class="spinner" style="position: absolute; top: 40%; left: 40%"></div>
   </ng-container>
+
+
+  <ng-container *ngIf="mailselectitem?.mailColour==2">
+    <p>Email usage for one-time tags is no longer permitted</p>
+  </ng-container>
   
-  <ng-container *ngIf="!isMediaLoading && !emailData" >
+  <ng-container *ngIf="!isMediaLoading && !emailData && mailselectitem?.mailColour!=2" >
     <p>No Data</p>
   </ng-container>
 
@@ -701,7 +706,7 @@
   <div class="email-wrapper">
     <div style="overflow-y: auto; height: 50vh;width: 50vw;">
       
-      <ng-container *ngIf="!isMediaLoading && emailData">
+      <ng-container *ngIf="!isMediaLoading && emailData && mailselectitem?.mailColour!=2">
         
         <!-- ================= EMAIL PREVIEW ================= -->
         <div class="email-logo">
