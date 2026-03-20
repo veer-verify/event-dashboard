@@ -32,6 +32,7 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
   gridOptions: GridOptions = {
     suppressCellFocus: true,
     suppressRowHoverHighlight: false,
+    enableBrowserTooltips: true,
     headerHeight: 40,
     rowHeight: 45,
     animateRows: false,
@@ -57,10 +58,23 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
   constructor() {
     this.allColumnDefs = [
       {
+        field: "id",
+        headerName: "ID",
+        flex: 0.7,
+        minWidth: 80,
+        tooltipValueGetter: (params) => params.value || ''
+      },
+      {
         field: "productName",
         headerName: "PRODUCT",
         flex: 2,
         minWidth: 250,
+        tooltipValueGetter: (params) => {
+          const productName = params.data?.productName || '';
+          const make = params.data?.make || '';
+          const model = params.data?.model || '';
+          return make && model ? `${productName} | ${make} - ${model}` : productName;
+        },
         cellRenderer: (params: ICellRendererParams) => {
           const container = document.createElement("div");
           container.style.display = "flex";
@@ -68,6 +82,7 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
           container.style.gap = "12px";
           container.style.width = "100%";
           container.style.height = "100%";
+          container.style.minWidth = "0";
 
           const imgContainer = document.createElement("div");
           imgContainer.style.width = "35px";
@@ -106,37 +121,24 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
           nameSpan.style.textOverflow = "ellipsis";
           nameSpan.style.whiteSpace = "nowrap";
           nameSpan.style.flex = "1";
+          nameSpan.style.minWidth = "0";
+          nameSpan.title = nameSpan.textContent || '';
 
           container.appendChild(imgContainer);
           container.appendChild(nameSpan);
           return container;
         },
       },
-      { field: "serialNumber", headerName: "SERIAL NUMBER", flex: 1.3, minWidth: 150 },
-      { field: "barCode", headerName: "BARCODE NO.", flex: 1.2, minWidth: 140 },
-      { field: "quantity", headerName: "QTY", flex: 0.6, minWidth: 70 },
-      { field: "publishedDate", headerName: "PUBLISHED DATE", flex: 1.2, minWidth: 130 },
+      { field: "serialNumber", headerName: "SERIAL NUMBER", flex: 1.3, minWidth: 150, tooltipValueGetter: (params) => params.value || '' },
+      { field: "barCode", headerName: "BARCODE NO.", flex: 1.2, minWidth: 140, tooltipValueGetter: (params) => params.value || '' },
+      { field: "quantity", headerName: "QTY", flex: 0.6, minWidth: 70, tooltipValueGetter: (params) => params.value || '' },
+      { field: "publishedDate", headerName: "PUBLISHED DATE", flex: 1.2, minWidth: 130, tooltipValueGetter: (params) => params.value || '' },
       {
         field: "currentLocation",
         headerName: "CURRENT LOCATION",
         flex: 1.8,
         minWidth: 200,
-        cellRenderer: (params: ICellRendererParams) => {
-          const container = document.createElement("div");
-          container.style.width = "100%";
-          container.style.overflow = "hidden";
-
-          const span = document.createElement("span");
-          span.textContent = params.value || '-';
-          span.style.display = "block";
-          span.style.width = "100%";
-          span.style.whiteSpace = "nowrap";
-          span.style.overflow = "hidden";
-          span.style.textOverflow = "ellipsis";
-
-          container.appendChild(span);
-          return container;
-        }
+        tooltipValueGetter: (params) => params.value || '-'
       },
       {
         field: "status",
@@ -165,7 +167,6 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
           const container = document.createElement("div");
           container.style.display = "flex";
           container.style.alignItems = "center";
-          container.style.justifyContent = "center";
           container.style.height = "100%";
 
           const img = document.createElement("img");
@@ -175,7 +176,9 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
           img.style.width = "20px";
           img.style.height = "20px";
 
-          img.addEventListener("click", () => {
+          img.addEventListener("click", (event: MouseEvent) => {
+            event.stopPropagation();
+            event.preventDefault();
             this.ngZone.run(() => {
               this.viewProduct.emit(params.data);
             });

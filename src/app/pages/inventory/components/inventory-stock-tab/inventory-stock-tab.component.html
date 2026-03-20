@@ -20,7 +20,7 @@
 
 <div class="dashboard-content-section m-t-20">
     <div class="table-wrapper">
-        <ag-grid-angular class="ag-theme-custom" [theme]="'legacy'" [rowData]="stockData" [columnDefs]="columnDefs"
+        <ag-grid-angular class="ag-theme-custom inventory-stock-grid" [theme]="'legacy'" [rowData]="stockData" [columnDefs]="columnDefs"
             [gridOptions]="gridOptions" [domLayout]="'normal'" (gridReady)="onGridReady($event)">
         </ag-grid-angular>
     </div>

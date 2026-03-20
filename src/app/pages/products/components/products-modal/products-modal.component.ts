@@ -67,6 +67,7 @@ export class ProductsModalComponent implements OnInit {
     domain: [],
     partcodes: [],
     made: [],
+    productStatus: [],
     usedFor: [],
   };
 
@@ -129,9 +130,7 @@ export class ProductsModalComponent implements OnInit {
       }
     }
     else if (this.mode === "listitem") {
-      this.loadStores();
-      this.loadDropdowns();
-      if (this.product?.productId || this.product?.id) {
+      if (this.product?.id) {
         this.fetchAllProductDetails(this.product.productId || this.product.id);
       }
     }
@@ -244,31 +243,7 @@ export class ProductsModalComponent implements OnInit {
           this.allDetails = data;
 
           if (this.mode === "listitem") {
-            const details = data.productDetails;
-            const usedForNames = details.usedFor ? details.usedFor.split(',').map((s: string) => s.trim()) : [];
-            const usedForIds = this.dropdownArrays.productStatus
-              .filter((item: any) => usedForNames.includes(item.name))
-              .map((item: any) => item.id);
-
-            const store = this.storesDropdown.find(s => s.label === details.location);
-            const status = this.dropdownArrays.productStatus.find((s: any) => s.name === details.status);
-
-            let pubDate = null;
-            if (details.publishedDate && details.publishedDate !== '-') {
-              // Try to parse the date dd/mm/yyyy
-              const parts = details.publishedDate.split('/');
-              if (parts.length === 3) {
-                pubDate = new Date(+parts[2], +parts[1] - 1, +parts[0]);
-              }
-            }
-
-            this.productForm.patchValue({
-              currentLocationId: store ? store.value : null,
-              statusId: status ? status.id : null,
-              remarks: details.remarks || "", // Assuming remarks might be in allDetails or details
-              publishedDate: pubDate,
-              usedFor: usedForIds
-            });
+            this.patchListItemForm();
           }
 
         }
@@ -530,8 +505,8 @@ export class ProductsModalComponent implements OnInit {
       });
     } else if (this.mode === "listitem") {
       this.productForm = this.fb.group({
-        currentLocationId: [null, Validators.required],
-        statusId: [null, Validators.required],
+        currentLocationId: [null], // Removed required validation
+        statusId: [null],
         remarks: [""],
         publishedDate: [null],
         usedFor: [[]],
@@ -558,28 +533,53 @@ export class ProductsModalComponent implements OnInit {
     this.submitted = false;
   }
 
-  loadDropdowns() {
+  loadDropdowns(call: string = "ALL") {
     this.isLoading = true;
-    this.metadataService.getAllItemDropdowns().subscribe({
+    const request$ = call === "ALL"
+      ? this.metadataService.getAllItemDropdowns()
+      : this.metadataService.getDropdownByTypeName(
+        call === "productStatus" ? "Inv_productStatus" : call === "usedFor" ? "Inv_UsedFor" : call
+      );
+
+    request$.subscribe({
       next: (response: any) => {
-        const keys = [
-          "units",
-          "nature",
-          "domain",
-          "partcodes",
-          "made",
-          "productStatus",
-        ];
+        let keys = [];
+        if (call === "ALL") {
+          keys = [
+            "units",
+            "nature",
+            "domain",
+            "partcodes",
+            "made",
+            "usedFor",
+            "productStatus",
+          ];
+        }
+        else {
+          keys = [call];
+          response = {
+            [call]: response
+          };
+        }
+
 
         keys.forEach((key) => {
-          if (response[key] && Array.isArray(response[key]) && response[key].length > 0) {
-            const metadataArray = response[key][0].metadata;
-            if (metadataArray && Array.isArray(metadataArray)) {
-              this.dropdownArrays[key] = this.processMetadata(metadataArray, key);
-            }
+          const rawResponse = response[key];
+          const metadataArray =
+            Array.isArray(rawResponse?.[0]?.metadata) ? rawResponse[0].metadata :
+              Array.isArray(rawResponse?.data) ? rawResponse.data :
+                Array.isArray(rawResponse?.metadata) ? rawResponse.metadata :
+                  Array.isArray(rawResponse) ? rawResponse :
+                    [];
+
+          if (metadataArray.length > 0) {
+            this.dropdownArrays[key] = this.processMetadata(metadataArray, key);
           }
         });
 
+        if (this.mode === 'listitem') {
+          this.patchListItemForm();
+        }
         this.isLoading = false;
       },
       error: (err) => {
@@ -591,7 +591,7 @@ export class ProductsModalComponent implements OnInit {
   processMetadata(metadata: any[], key: string): any[] {
     let processed = metadata.map((item) => {
       let idValue;
-      if (key === 'units' || key === 'productStatus') {
+      if (key === 'units' || key === 'productStatus' || key === 'usedFor') {
         idValue = item.keyId;
       } else {
         idValue = item.value;
@@ -620,6 +620,9 @@ export class ProductsModalComponent implements OnInit {
             label: s.sourceName
           }));
         }
+        if (this.mode === 'listitem') {
+          this.patchListItemForm();
+        }
       },
       error: (err) => console.error("Error fetching stores:", err),
     });
@@ -646,6 +649,11 @@ export class ProductsModalComponent implements OnInit {
 
   enableEdit() {
     this.isEditing = true;
+    if (this.mode === "listitem" && (!this.dropdownArrays.productStatus || this.dropdownArrays.productStatus.length === 0)) {
+      this.loadDropdowns("productStatus");
+      return;
+    }
+    this.patchListItemForm();
   }
 
   getFieldError(fieldName: string): string {
@@ -851,8 +859,8 @@ export class ProductsModalComponent implements OnInit {
 
       const updatePayload = {
         productDetailId: this.product.productId || this.product.id,
-        currentLocationId: formValue.currentLocationId ? Number(formValue.currentLocationId) : 0,
-        statusId: formValue.statusId ? Number(formValue.statusId) : 0,
+        // currentLocationId: formValue.currentLocationId ? Number(formValue.currentLocationId) : 0,
+        // statusId: formValue.statusId ? Number(formValue.statusId) : 0,
         remarks: formValue.remarks || "",
         publishedDate: pubDate,
         usedFor: Array.isArray(formValue.usedFor) ? formValue.usedFor.map((id: any) => Number(id)) : [],
@@ -1159,5 +1167,38 @@ export class ProductsModalComponent implements OnInit {
     if (['-', '+', 'e', 'E'].includes(event.key)) {
       event.preventDefault();
     }
+  }
+
+  patchListItemForm() {
+    if (this.mode !== "listitem" || !this.allDetails || !this.allDetails.productDetails) return;
+
+    const details = this.allDetails.productDetails;
+    let storeId = null;
+    if (this.storesDropdown && this.storesDropdown.length > 0) {
+      const store = this.storesDropdown.find(s => s.label.toLowerCase() === details.location?.toLowerCase());
+      if (store) storeId = store.value;
+    }
+
+    const usedForNames = details.usedFor ? details.usedFor.split(',').map((s: string) => s.trim().toLowerCase()) : [];
+    const usedForIds = (this.dropdownArrays.productStatus || [])
+      .filter((item: any) => usedForNames.includes(item.name.toLowerCase()))
+      .map((item: any) => item.id);
+
+    const statusObj = (this.dropdownArrays.productStatus || []).find((s: any) => s.name.toLowerCase() === details.status?.toLowerCase());
+
+    let pubDate = null;
+
+    if (details.publishedDate && details.publishedDate !== '-') {
+      const [year, month, day] = details.publishedDate.split('-');
+      pubDate = new Date(+year, +month - 1, +day);
+    }
+
+    this.productForm.patchValue({
+      currentLocationId: storeId,
+      statusId: statusObj ? statusObj.id : null,
+      remarks: details.remarks || "",
+      publishedDate: pubDate,
+      usedFor: usedForIds
+    }, { emitEvent: false }); // Prevents triggering unnecessary changes if listeners exist
   }
 }

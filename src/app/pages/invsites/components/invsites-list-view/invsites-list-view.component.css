@@ -1,0 +1,63 @@
+:host ::ng-deep .ag-theme-custom .ag-cell {
+  overflow: hidden !important;
+}
+
+:host ::ng-deep .ag-theme-custom .ag-cell-wrapper {
+  overflow: hidden !important;
+  width: 100%;
+  min-width: 0;
+}
+
+:host ::ng-deep .ag-theme-custom .ag-cell-value {
+  min-width: 0;
+}
+
+:host ::ng-deep .ag-theme-custom .invsites-ellipsis-cell .ag-cell-value {
+  display: block !important;
+  width: 100%;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+:host ::ng-deep .ag-theme-custom .invsites-more-cell .ag-cell-value {
+  width: 100%;
+}
+
+:host ::ng-deep .ag-theme-custom .invsites-more-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+:host ::ng-deep .ag-theme-custom .invsites-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #5f6368;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+:host ::ng-deep .ag-theme-custom .invsites-more-btn:hover {
+  background: rgba(237, 50, 55, 0.08);
+  color: #ed3237;
+}
+
+:host ::ng-deep .ag-theme-custom .invsites-more-btn:focus-visible {
+  outline: 2px solid rgba(237, 50, 55, 0.35);
+  outline-offset: 2px;
+}
+
+:host ::ng-deep .ag-theme-custom .invsites-more-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}

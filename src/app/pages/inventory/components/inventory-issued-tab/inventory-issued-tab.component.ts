@@ -18,6 +18,7 @@ import { UnifiedFilterPanelComponent, FilterField } from '../../../../shared/uni
 })
 export class InventoryIssuedTabComponent implements OnInit, OnChanges {
   @Input() reloadTrigger: number = 0;
+  @Input() selectedStore: any;
   searchText: string = '';
   fromDate?: string;
   toDate?: string;
@@ -146,8 +147,10 @@ export class InventoryIssuedTabComponent implements OnInit, OnChanges {
             span.style.color = '#53BF8B';
           } else if (lowerStatus === 'issued') {
             span.style.color = '#000000';
-          } else if (lowerStatus === 'returned' || lowerStatus === 'defect') {
+          } else if (lowerStatus === 'in_transit' || lowerStatus === 'in transit') {
             span.style.color = '#F44336';
+          } else if (lowerStatus === 'returned') {
+            span.style.color = '#53BF8B';
           } else if (lowerStatus === 'pre-ordered') {
             span.style.color = '#FF9800';
           } else if (lowerStatus === 'scrap') {
@@ -195,6 +198,10 @@ export class InventoryIssuedTabComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['reloadTrigger'] && !changes['reloadTrigger'].firstChange) {
+      this.loadIssuedList();
+    }
+    if (changes['selectedStore'] && !changes['selectedStore'].firstChange) {
+      this.currentPage = 1;
       this.loadIssuedList();
     }
   }
@@ -312,6 +319,10 @@ export class InventoryIssuedTabComponent implements OnInit, OnChanges {
     if (this.searchText) params.search = this.searchText;
     if (this.fromDate) params.fromDate = this.fromDate;
     if (this.toDate) params.toDate = this.toDate;
+ 
+    if (this.selectedStore && this.selectedStore.code && this.selectedStore.code !== 'all') {
+      params.storeId = this.selectedStore.code;
+    }
 
     this.inventoryService.getIssuedList(params).subscribe({
       next: (response) => {

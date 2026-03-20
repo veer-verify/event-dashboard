@@ -10,7 +10,8 @@ import {
   ReturnDetailsResponse,
   UpdateReturnPayload,
   SiteInventoryResponse,
-  ClosingStatementResponse
+  ClosingStatementResponse,
+  SiteInventoryItemDetailsResponse
 } from '../models/inventory.models';
 import { PurchaseDetailsResponse } from '../models/purchase.models';
 
@@ -27,6 +28,14 @@ export class InventoryService {
       .set('siteId', siteId.toString())
       .set('viewType', viewType);
     return this.http.get<SiteInventoryResponse>(`${this.baseUrl}/getSiteInventory_1_0`, { params });
+  }
+
+  getSiteInventoryItemDetails_1_0(siteId: number, itemId: number, type: string): Observable<SiteInventoryItemDetailsResponse> {
+    const params = new HttpParams()
+      .set('siteId', siteId.toString())
+      .set('itemId', itemId.toString())
+      .set('type', type);
+    return this.http.get<SiteInventoryItemDetailsResponse>(`${this.baseUrl}/getSiteInventoryItemDetails_1_0`, { params });
   }
 
   getPurchaseSources(country?: string, entityType?: string): Observable<any> {
@@ -83,6 +92,13 @@ export class InventoryService {
 
   updatePurchase_1_0(payload: any): Observable<any> {
     return this.http.put<any>(`${this.baseUrl}/updatePurchase_1_0`, payload).pipe(
+      catchError((error) => throwError(() => error))
+    );
+  }
+
+  saveBulkStatus(payload: any): Observable<any> {
+    // Note: Assuming endpoint name based on context or similar pattern
+    return this.http.put<any>(`${this.baseUrl}/saveBulkStatus_1_0`, payload).pipe(
       catchError((error) => throwError(() => error))
     );
   }
@@ -150,6 +166,14 @@ export class InventoryService {
     return this.http.get<ReturnableStockResponse>(`${this.baseUrl}/getReturnableStock_1_0`, { params }).pipe(
       catchError((error) => throwError(() => error))
     );
+  }
+
+  getReturnableStockItems(siteId?: number): Observable<any> {
+    return siteId ? this.getReturnableStock(siteId) : new Observable(obs => obs.next({ data: { items: [] } }));
+  }
+
+  getReturnableStockProducts(siteId?: number): Observable<any> {
+    return siteId ? this.getReturnableStock(siteId) : new Observable(obs => obs.next({ data: { products: [] } }));
   }
 
   getItemsForIssue(storeId?: number): Observable<ItemsForIssueResponse> {

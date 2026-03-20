@@ -81,8 +81,8 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   border: 1px solid #f2f2f2;
   display: grid;
-  grid-template-columns: 1fr 1fr 1.2fr 100px 100px;
-  gap: 15px;
+  grid-template-columns: 1.2fr 1.2fr 1.2fr 1fr 110px;
+  gap: 20px;
   align-items: center;
 }
 
@@ -100,9 +100,9 @@
 }
 
 .trans-entry-val {
-  font-size: 12px;
-  font-weight: 500;
-  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+  color: #000;
 }
 
 .trans-badge-col {
@@ -127,7 +127,7 @@
 }
 
 .badge-returned {
-  background-color: #53BF8B; /* Same as Purchased in XD? Let's check. XD shows teal-ish for both */
+  background-color: #ED3237; /* Consistent Red */
   opacity: 0.9;
 }
 

@@ -1487,10 +1487,6 @@ body {
         margin-left: 0 !important;
     }
 
-    .hide-on-mobile {
-        display: none !important;
-    }
-
     .custom-modal-container {
         width: 100% !important;
     }

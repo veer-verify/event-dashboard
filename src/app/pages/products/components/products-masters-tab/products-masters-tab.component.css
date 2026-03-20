@@ -1,0 +1,18 @@
+:host ::ng-deep .products-masters-grid .ag-cell {
+  overflow: hidden !important;
+}
+
+:host ::ng-deep .products-masters-grid .ag-cell-wrapper {
+  overflow: hidden !important;
+  width: 100%;
+  min-width: 0;
+}
+
+:host ::ng-deep .products-masters-grid .ag-cell-value {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  display: block !important;
+  width: 100%;
+  min-width: 0;
+}

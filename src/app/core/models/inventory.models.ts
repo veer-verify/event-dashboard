@@ -132,6 +132,8 @@ export interface IssuedHardware {
   itemName: string;
   itemsQuantity: number;
   units: string;
+  make: string;
+  model: string;
 }
 
 export interface IssuedDetailProduct {
@@ -202,6 +204,7 @@ export interface ItemForIssue {
   serialNumberFlag: string;
   barcodeFlag: string;
   quantity: number;
+  availableQty?: number;
 }
 
 export interface ItemsForIssueResponse {
@@ -222,6 +225,7 @@ export interface ProductForIssue {
   make: string;
   model: string;
   units: string;
+  availableQty?: number;
 }
 
 export interface ProductsForIssueResponse {
@@ -281,9 +285,11 @@ export interface AddReturnPayload {
   returnFromId: number;
   returnToId: number;
   remarks: string;
+  status: string;
   items: AddReturnItemPayload[];
   products: AddReturnProductPayload[];
   createdBy: number;
+  createdTime: string;
 }
 
 export interface ReturnListItem {
@@ -320,6 +326,7 @@ export interface ReturnListResponse {
 export interface ReturnDetailsHeader {
   id: number;
   returnDate: string;
+  returnDateObj?: Date;
   returnFrom: string;
   returnTo: string;
   status: string;
@@ -328,16 +335,20 @@ export interface ReturnDetailsHeader {
 
 export interface ReturnDetailsItem {
   id: number;
+  returnItemId?: number;
   itemName: string;
   serialNumber: string;
   barcode: string;
   quantity: number;
   conditionType: string;
   billingType: string;
+  make?: string;
+  model?: string;
 }
 
 export interface ReturnDetailsProduct {
   id: number;
+  returnProductId?: number;
   productName: string;
   serialNumber: string;
   barCode: string;
@@ -391,7 +402,15 @@ export interface SiteInventoryDetailedItem {
   activityDate: string;
   name: string;
   action: string;
-  quantity: number;
+  totalQty: number;
+  storeQty: number;
+  onlineQty: number;
+  units: string;
+  make?: string;
+  model?: string;
+  serialNumber?: string;
+  barcode?: string;
+  barCode?: string;
 }
 
 export interface SiteInventoryResponse {
@@ -426,4 +445,30 @@ export interface ClosingStatementResponse {
   status: string;
   statusCode: number;
   data: ClosingStatementData;
+}
+
+export interface SiteItemDetailsHeader {
+  siteName: string;
+  itemName: string;
+  make: string;
+  model: string;
+}
+
+export interface SiteItemDetailsRecord {
+  date: string;
+  deliveredFromStore: number;
+  deliveredFromOnline: number;
+  returnedToStore: number;
+  returnedToOnline: number;
+}
+
+export interface SiteInventoryItemDetailsData {
+  header: SiteItemDetailsHeader;
+  details: SiteItemDetailsRecord[];
+}
+
+export interface SiteInventoryItemDetailsResponse {
+  status: string;
+  statusCode: number;
+  data: SiteInventoryItemDetailsData;
 }

@@ -40,13 +40,26 @@ export class InvsitesDetailedViewComponent implements OnInit, OnChanges {
       }
 
       const group = grouped.get(key)!;
+
+      // Extract details and build the description string dynamically
+      const descParts: string[] = [];
+      if (item.make) descParts.push(item.make);
+      if (item.model) descParts.push(item.model);
+      const sn = item.serialNumber;
+      if (sn) descParts.push(`SN: ${sn}`);
+      const bc = item.barcode || item.barCode;
+      if (bc) descParts.push(`BC: ${bc}`);
+
+      const description = descParts.length > 0 ? descParts.join(' | ') : undefined;
+
       group.items.push({
         sNo: group.items.length + 1,
         itemProductName: item.name,
-        totalQty: item.quantity,
-        store: 0,
-        online: 0,
-        units: "No's"
+        itemProductDesc: description,
+        totalQty: item.totalQty,
+        store: item.storeQty,
+        online: item.onlineQty,
+        units: item.units
       });
     });
 

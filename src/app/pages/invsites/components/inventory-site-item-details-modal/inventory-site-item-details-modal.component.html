@@ -1,0 +1,68 @@
+<div class="custom-modal-overlay" *ngIf="visible">
+    <div class="custom-modal-container">
+        <!-- Red Header -->
+        <div class="modal-custom-header">
+            <div class="header-left-content">
+                <span class="text-header-md">{{ itemData?.header?.siteName || '---' }} - {{ itemData?.header?.itemName }}</span>
+            </div>
+            <button class="modal-close-btn" (click)="onClose()">
+                <img src="assets/close-filled.svg" alt="x" class="modal-close-icon" />
+            </button>
+        </div>
+
+        <div class="modal-custom-body custom-scrollbar">
+            <!-- Header Grid Info -->
+            <div class="info-grid-header">
+                <div class="info-row">
+                    <div class="info-item">
+                        <label class="info-label">Site Name</label>
+                        <span class="info-value">{{ itemData?.header?.siteName || '---' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">Make</label>
+                        <span class="info-value">{{ itemData?.header?.make || '---' }}</span>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <div class="info-item">
+                        <label class="info-label">Item Name</label>
+                        <span class="info-value">{{ itemData?.header?.itemName || '---' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">Model</label>
+                        <span class="info-value">{{ itemData?.header?.model || '---' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="details-section-title">DETAILS</div>
+
+            <!-- Details Table -->
+            <div class="table-container">
+                <table class="details-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Delivered from Store</th>
+                            <th>Delivered from Online</th>
+                            <th>Returned to Store</th>
+                            <th>Returned to Online</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let record of itemData?.details">
+                            <td class="col-date">{{ record.date | date:'dd/MM/yyyy' }}</td>
+                            <td class="col-val">{{ record.deliveredFromStore }}</td>
+                            <td class="col-val">{{ record.deliveredFromOnline }}</td>
+                            <td class="col-val">{{ record.returnedToStore }}</td>
+                            <td class="col-val">{{ record.returnedToOnline }}</td>
+                        </tr>
+                        <tr *ngIf="!itemData?.details?.length">
+                            <td colspan="5" class="no-data">No data available</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

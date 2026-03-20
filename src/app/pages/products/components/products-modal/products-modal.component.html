@@ -444,7 +444,6 @@
                                 <div class="view-field">
                                     <label class="field-label">Make</label>
                                     <span class="field-value">{{ product?.make || "-" }}</span>
-                                    <!-- API Response doesn't provide Make/Model at top level, using product prop from list row -->
                                 </div>
                                 <div class="view-field">
                                     <label class="field-label">Use for</label>
@@ -460,21 +459,7 @@
                                         </p-multiSelect>
                                     </ng-container>
                                 </div>
-
-                                <div class="view-field">
-                                    <label class="field-label">Current Location</label>
-                                    <ng-container *ngIf="!isEditing">
-                                        <span class="field-value">{{ allDetails?.productDetails?.location || "-"
-                                            }}</span>
-                                    </ng-container>
-                                    <ng-container *ngIf="isEditing">
-                                        <p-dropdown appendTo="body" [overlayOptions]="customOverlayOptions"
-                                            [options]="storesDropdown" formControlName="currentLocationId"
-                                            optionLabel="label" optionValue="value" placeholder="Select" [filter]="true"
-                                            styleClass="w-full">
-                                        </p-dropdown>
-                                    </ng-container>
-                                </div>
+                                <div class="view-field"></div>
 
                                 <!-- Row 4 -->
                                 <div class="view-field">
@@ -499,40 +484,27 @@
                                         </div>
                                     </ng-container>
                                 </div>
-
-                                <div class="view-field">
-                                    <label class="field-label">Remarks</label>
-                                    <ng-container *ngIf="!isEditing">
-                                        <span class="field-value">{{ allDetails?.productDetails?.remarks || "-"
-                                            }}</span>
-                                    </ng-container>
-                                    <ng-container *ngIf="isEditing">
-                                        <input type="text" class="field-input-text" formControlName="remarks"
-                                            placeholder="Enter" />
-                                    </ng-container>
-                                </div>
-
-                                <!-- Row 5 -->
+                                <div class="view-field"></div>
                                 <div class="view-field"></div>
                                 <div class="view-field">
                                     <label class="field-label">Status</label>
-                                    <ng-container *ngIf="!isEditing">
+                                    <ng-container>
                                         <span class="status-badge" [ngClass]="{
-                                            'status-bg-sale': allDetails?.productDetails?.status === 'Sale',
-                                            'status-bg-new': allDetails?.productDetails?.status === 'New',
-                                            'status-bg-lease': allDetails?.productDetails?.status === 'Lease',
-                                            'status-bg-used': allDetails?.productDetails?.status === 'Used',
-                                            'status-bg-scrap': allDetails?.productDetails?.status === 'Scrap'
+                                            'status-bg-sale': allDetails?.productDetails?.status?.toUpperCase() === 'SALE' || allDetails?.productDetails?.status?.toUpperCase() === 'SALE DELIVERED',
+                                            'status-bg-new': allDetails?.productDetails?.status?.toUpperCase() === 'NEW',
+                                            'status-bg-lease': allDetails?.productDetails?.status?.toUpperCase() === 'LEASE',
+                                            'status-bg-used': allDetails?.productDetails?.status?.toUpperCase() === 'USED',
+                                            'status-bg-scrap': allDetails?.productDetails?.status?.toUpperCase() === 'SCRAP'
                                         }">
                                             {{ (allDetails?.productDetails?.status || "-") | uppercase }}
                                         </span>
                                     </ng-container>
-                                    <ng-container *ngIf="isEditing">
+                                    <!-- <ng-container *ngIf="isEditing">
                                         <p-dropdown appendTo="body" [overlayOptions]="customOverlayOptions"
                                             [options]="dropdownArrays.productStatus" formControlName="statusId"
                                             optionLabel="name" optionValue="id" placeholder="Select" [showClear]="false"
                                             [filter]="true" filterBy="name" styleClass="w-full"></p-dropdown>
-                                    </ng-container>
+                                    </ng-container> -->
                                 </div>
                             </div>
 
@@ -658,7 +630,7 @@
                                             <div class="prog-col prog-col-status">
                                                 <span class="prog-label">Status</span>
                                                 <span class="status-badge" [ngClass]="{
-                                                    'status-bg-sale': prog.action === 'Sale',
+                                                    'status-bg-sale': prog.action === 'Sale' || prog.action === 'SALE DELIVERED' || prog.action === 'Sale Delivered' || prog.action === 'RETURNED Delivered' || prog.action === 'Sale Issued',
                                                     'status-bg-new': prog.action === 'Published' || prog.action === 'New',
                                                     'status-bg-lease': prog.action === 'Lease',
                                                     'status-bg-used': prog.action === 'Used',

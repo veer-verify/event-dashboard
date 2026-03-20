@@ -45,6 +45,7 @@ export class ProductsMastersTabComponent implements OnInit, OnChanges {
   gridOptions: GridOptions = {
     suppressCellFocus: true,
     suppressRowHoverHighlight: false,
+    enableBrowserTooltips: true,
     headerHeight: 40,
     rowHeight: 45,
     animateRows: false,
@@ -68,14 +69,14 @@ export class ProductsMastersTabComponent implements OnInit, OnChanges {
 
   constructor() {
     this.mastersColumnDefs = [
-      { field: "productId", headerName: "ID", flex: 0.7, minWidth: 80 },
-      { field: "productName", headerName: "PRODUCT NAME", flex: 1.8, minWidth: 200 },
-      { field: "units", headerName: "UNITS", flex: 0.8, minWidth: 90 },
-      { field: "make", headerName: "MAKE", flex: 1, minWidth: 130 },
-      { field: "model", headerName: "MODEL", flex: 1.5, minWidth: 200 },
-      { field: "productCode", headerName: "PRODUCT CODE", flex: 1.2, minWidth: 150 },
-      { field: "publishedDate", headerName: "PUBLISHED DATE", flex: 1.2, minWidth: 140 },
-      { field: "useFor", headerName: "USE FOR", flex: 1.2, minWidth: 150 },
+      { field: "productId", headerName: "ID", flex: 0.7, minWidth: 80, tooltipValueGetter: (params) => params.value || '' },
+      { field: "productName", headerName: "PRODUCT NAME", flex: 1.8, minWidth: 200, tooltipValueGetter: (params) => params.value || '' },
+      { field: "units", headerName: "UNITS", flex: 0.8, minWidth: 90, tooltipValueGetter: (params) => params.value || '' },
+      { field: "make", headerName: "MAKE", flex: 1, minWidth: 130, tooltipValueGetter: (params) => params.value || '' },
+      { field: "model", headerName: "MODEL", flex: 1.5, minWidth: 200, tooltipValueGetter: (params) => params.value || '' },
+      { field: "productCode", headerName: "PRODUCT CODE", flex: 1.2, minWidth: 150, tooltipValueGetter: (params) => params.value || '' },
+      { field: "publishedDate", headerName: "PUBLISHED DATE", flex: 1.2, minWidth: 140, tooltipValueGetter: (params) => params.value || '' },
+      { field: "useFor", headerName: "USE FOR", flex: 1.2, minWidth: 150, tooltipValueGetter: (params) => params.value || '' },
       {
         field: "action",
         headerName: "ACTION",

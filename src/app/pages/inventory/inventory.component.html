@@ -59,15 +59,16 @@
     </app-inventory-stock-tab>
 
     <app-inventory-purchase-tab *ngIf="activeTab === 'purchase'" [reloadTrigger]="reloadTrigger"
-      (viewPurchase)="openPurchaseViewModal($event)" (loadingChange)="onLoadingChange($event)">
+      [selectedStore]="selectedStore" (viewPurchase)="openPurchaseViewModal($event)"
+      (loadingChange)="onLoadingChange($event)">
     </app-inventory-purchase-tab>
 
     <app-inventory-issued-tab *ngIf="activeTab === 'issued'" [reloadTrigger]="reloadTrigger"
-      (viewStockSend)="openStockSendViewModal($event)">
+      [selectedStore]="selectedStore" (viewStockSend)="openStockSendViewModal($event)">
     </app-inventory-issued-tab>
 
     <app-inventory-return-tab *ngIf="activeTab === 'return'" [reloadTrigger]="reloadTrigger"
-      (viewReturn)="openReturnViewModal($event)">
+      [selectedStore]="selectedStore" (viewReturn)="openReturnViewModal($event)">
     </app-inventory-return-tab>
 
   </div>

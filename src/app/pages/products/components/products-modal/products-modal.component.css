@@ -543,13 +543,13 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    flex: 1;
+    flex: 1 1 0; /* Changed from flex: 1 to ensure equal width distribution */
+    min-width: 0; /* Prevent content from breaking flex basis */
 }
 
 .prog-col-status {
-    flex: 0 0 auto;
-    align-items: center;
-    /* Center align the Status column content */
+    flex: 0 0 120px; /* Fixed width for status to prevent it from squishing */
+    align-items: flex-end; /* Align status to the right */
 }
 
 .prog-label {

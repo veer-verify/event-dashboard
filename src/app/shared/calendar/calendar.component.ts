@@ -87,7 +87,7 @@ export class CalendarComponent implements OnInit {
   today: Date = new Date();
   currentMonth: Date = new Date();
 
-  startDate: Date = new Date(new Date().setHours(0,0,0,0));
+  startDate: Date = new Date(new Date().setHours(0, 0, 0, 0));
   endDate: Date = new Date();
   startTime: string = '00:00:00';
   endTime: string = '';
@@ -188,7 +188,7 @@ export class CalendarComponent implements OnInit {
         this.endTime = '23:59:59';
       }
     } else {
-      this.startTime = this.formatTime24(this.startDate);   
+      this.startTime = this.formatTime24(this.startDate);
       this.endTime = this.formatTime24(this.endDate);
 
       if (this.endDate < this.startDate) return this.notification.error("Please select valid date range");
@@ -671,38 +671,68 @@ export class CalendarComponent implements OnInit {
   // inline calendar date selection
   onInlineDateSelect(date: Date) {
 
-   
+
     if (this.isFutureDate(date)) return; // just in case
-    
+
     const today = new Date();
-  const todayOnly = new Date(today); // new logic for time
-  todayOnly.setHours(0,0,0,0);
+    const todayOnly = new Date(today); // new logic for time
+    todayOnly.setHours(0, 0, 0, 0);
 
-  const selected = new Date(date);
-  selected.setHours(0,0,0,0);
+    const selected = new Date(date);
+    selected.setHours(0, 0, 0, 0);
 
+    // if (this.activeInput === 'start') {
+    //   const copy = new Date(this.startDate);
+    //   copy.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+    //   this.startDate = copy;
+    // }
     if (this.activeInput === 'start') {
-      const copy = new Date(this.startDate);
-      copy.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-      this.startDate = copy;
+      const selected = new Date(date);
+      selected.setHours(0, 0, 0, 0);
+
+      const today = new Date();
+      const todayOnly = new Date(today);
+      todayOnly.setHours(0, 0, 0, 0);
+
+      //! change  start Date
+      this.startDate = new Date(selected);
+
+      //! change  SYNC END DATE
+      const endCopy = new Date(selected);
+
+      if (selected.getTime() === todayOnly.getTime()) {
+        //! change today → end = now
+        endCopy.setHours(
+          today.getHours(),
+          today.getMinutes(),
+          today.getSeconds(),
+          today.getMilliseconds()
+        );
+      } else {
+        //! change past day → full day
+        endCopy.setHours(23, 59, 59, 999);
+      }
+
+      this.endDate = endCopy;
+      this.activeInput = 'end';
     } else {
       const copy = new Date(this.endDate);
       copy.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
 
-        // Compare only dates
-    if (selected < todayOnly) {
-      // past date
-      copy.setHours(23, 59, 59, 999);
+      // Compare only dates
+      if (selected < todayOnly) {
+        // past date
+        copy.setHours(23, 59, 59, 999);
 
-    } else if (selected.getTime() === todayOnly.getTime()) {
-      // today
-      copy.setHours(
-        today.getHours(),
-        today.getMinutes(),
-        today.getSeconds(),
-        today.getMilliseconds()
-      );
-    }
+      } else if (selected.getTime() === todayOnly.getTime()) {
+        // today
+        copy.setHours(
+          today.getHours(),
+          today.getMinutes(),
+          today.getSeconds(),
+          today.getMilliseconds()
+        );
+      }
 
       this.endDate = copy;
     }

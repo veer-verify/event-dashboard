@@ -9,7 +9,7 @@ import { ItemsService } from '../../../../core/services/items.service';
 import { InventoryService } from '../../../../core/services/inventory.service';
 import { MetadataService } from '../../../../core/services/metadata.service';
 import {
-  ItemForIssue, ProductForIssue, MetadataResponse, MetadataItem, ReturnableStockItem, ReturnableStockProduct, ReturnableStockResponse,
+  ItemForIssue, ProductForIssue, MetadataResponse, MetadataItem, ReturnableStockItem, ReturnableStockProduct, AddReturnPayload, AddReturnItemPayload, AddReturnProductPayload, ReturnableStockResponse,
   ReturnDetailsData, ClosingStatementResponse, ClosingStatementDetail
 } from '../../../../core/models/inventory.models';
 import { OverlayOptions, MessageService } from 'primeng/api';
@@ -17,6 +17,8 @@ import { FileUploadComponent } from '../../../../shared/file-upload/file-upload.
 import { ImagePipe } from '../../../../shared/image.pipe';
 import { AuthService } from '../../../../login/login.service';
 import { PurchaseItem } from '../../../../core/models/purchase.models';
+import { InventoryActionsPurchaseEditSectionComponent } from './sections/inventory-actions-purchase-edit-section.component';
+import { InventoryActionsClosingStatementSectionComponent } from './sections/inventory-actions-closing-statement-section.component';
 
 export interface ViewPurchaseItem extends PurchaseItem {
   id?: number;
@@ -34,6 +36,8 @@ export interface ViewPurchaseItem extends PurchaseItem {
   code?: string;
   totalPrice?: number | string;
   isModified?: boolean;
+  originalStatus?: string;
+  originalReturnReason?: string;
   serialNumberFlag?: string;
   barcodeFlag?: string;
   serial_number_flag?: string;
@@ -45,7 +49,18 @@ export interface ViewPurchaseItem extends PurchaseItem {
 @Component({
   selector: 'app-inventory-actions-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, DropdownModule, CalendarModule, InputSwitchModule, FileUploadComponent, ImagePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    DropdownModule,
+    CalendarModule,
+    InputSwitchModule,
+    FileUploadComponent,
+    ImagePipe,
+    InventoryActionsPurchaseEditSectionComponent,
+    InventoryActionsClosingStatementSectionComponent
+  ],
   templateUrl: './inventory-actions-modal.component.html',
   styleUrls: ['./inventory-actions-modal.component.css']
 })
@@ -80,13 +95,13 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   hasMissingBarcodes: boolean = false;
 
   get isPreorderUpdate(): boolean {
-    return this.mode === 'update-purchase' &&
-      (this.data?.status === 'pre-order' || this.data?.purchase?.status === 'pre-order');
+    const s = String(this.data?.status || this.data?.purchase?.status || '').toUpperCase().replace(/[_\s-]/g, '');
+    return this.mode === 'update-purchase' && (s === 'PREORDER' || s === 'PREORDERED');
   }
 
   get isDeliveredUpdate(): boolean {
-    return this.mode === 'update-purchase' &&
-      (this.data?.status?.toLowerCase() === 'delivered' || this.data?.purchase?.status?.toLowerCase() === 'delivered');
+    const s = String(this.data?.status || this.data?.purchase?.status || '').toUpperCase().replace(/[_\s-]/g, '');
+    return this.mode === 'update-purchase' && s === 'DELIVERED';
   }
 
   countries: string[] = ['India', 'USA', 'UK'];
@@ -124,8 +139,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   ];
 
   get isPreorderInvoice(): boolean {
-    const status = this.data?.purchase?.status || this.data?.status || this.data?.purchase?.invoiceType || this.data?.invoiceType || '';
-    return String(status).toUpperCase() === 'PREORDER' || String(status).toUpperCase() === 'PRE-ORDERED';
+    const status = String(this.data?.purchase?.status || this.data?.status || this.data?.purchase?.invoiceType || this.data?.invoiceType || '').toUpperCase().replace(/[_\s-]/g, '');
+    return status === 'PREORDER' || status === 'PREORDERED';
   }
 
   // STOCK SEND MODE STATE
@@ -203,7 +218,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
   addedReturnItems: any[] = [];
 
-  returnConditions: string[] = ['USED', 'SCRAP', 'NEW', 'DEFECTIVE'];
+  returnConditions: string[] = ['USED', 'SCRAP'];
 
   // File Upload State
   invoiceFile: any = null;
@@ -290,7 +305,6 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     }
     if (this.mode === 'view-stock-send') {
       this.initViewStockSendData();
-      this.loadStockSendDropdowns();
     }
     if (this.mode === 'view-purchase') {
       this.initViewItems();
@@ -304,6 +318,23 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         next: (res) => {
           if (res.statusCode === 200 && res.data) {
             this.viewReturnData = res.data;
+            if (this.viewReturnData.header.returnDate) {
+              const dateStr = this.viewReturnData.header.returnDate;
+              let parsedDate: Date | null = null;
+              if (dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                  parsedDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                }
+              } else {
+                // Try standard parsing for "14 Mar, 2026" etc.
+                const d = new Date(dateStr.replace(',', ''));
+                if (!isNaN(d.getTime())) {
+                  parsedDate = d;
+                }
+              }
+              this.viewReturnData.header.returnDateObj = parsedDate || undefined;
+            }
             this.isEditingReturnStatus = false;
           }
         },
@@ -384,6 +415,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       returnTo: ['Store', Validators.required],
       status: [null, Validators.required],
       returnDate: [null],
+      remarks: [''],
       stockReturnItems: this.fb.array([]),
       stockReturnProducts: this.fb.array([])
     });
@@ -431,7 +463,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   }
 
   loadStockSendDropdowns() {
-    if (this.mode === 'stock-send' || this.mode === 'view-stock-send') {
+    if (this.mode === 'stock-send') {
       // Load Inv_Category
       this.metadataService.getDropdownByTypeName('Inv_Category').subscribe({
         next: (res: MetadataResponse[]) => {
@@ -496,7 +528,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         error: (err: any) => console.error('Failed to load site sources', err)
       });
 
-    } else if (this.mode === 'stock-send' || this.mode === 'view-stock-send') {
+    } else if (this.mode === 'stock-send') {
       // Send From (Stores)
       this.inventoryService.getPurchaseSources(undefined, 'Store').subscribe({
         next: (res: any) => {
@@ -1168,6 +1200,42 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   viewStockSendData: any = {};
   isEditingIssueStatus: boolean = false;
 
+  onEditIssueStatus() {
+    this.isEditingIssueStatus = true;
+    this.loadStockSendDropdownsForEdit();
+  }
+
+  loadStockSendDropdownsForEdit() {
+    // Only load if not already loaded
+    if (this.shippingPlatforms.length === 0) {
+      this.metadataService.getDropdownByTypeName('Inv_ShippingFlatform').subscribe({
+        next: (res: MetadataResponse[]) => {
+          const metadataArray: MetadataItem[] = res?.[0]?.metadata || [];
+          this.shippingPlatforms = metadataArray.map((item: MetadataItem) => ({
+            label: item.value,
+            value: item.keyId
+          }));
+
+          // Link the selected platform ID based on the string value if necessary
+          if (this.viewStockSendData && !this.viewStockSendData.transportationPlatform && this.viewStockSendData.transportation) {
+            const match = this.shippingPlatforms.find(p => p.label.toLowerCase() === this.viewStockSendData.transportation.toLowerCase());
+            if (match) {
+              this.viewStockSendData.transportationPlatform = match.value;
+            }
+          }
+        }
+      });
+    }
+
+    if (this.issueStatusOptions.length === 0) {
+      // These are static, but good to ensure they are available
+      this.issueStatusOptions = [
+        { label: 'Issued', value: 'ISSUED' },
+        { label: 'Delivered', value: 'DELIVERED' }
+      ];
+    }
+  }
+
   updateIssueStatus() {
     const shipmentDateStr = this.formatDateForPayload(this.viewStockSendData.shipmentDateObj);
     const deliveredDateStr = this.formatDateForPayload(this.viewStockSendData.deliveredDateObj);
@@ -1184,13 +1252,18 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       }
     }
 
+    const now = new Date();
+    const pad = (n: number) => n < 10 ? '0' + n : n;
+    const modifiedTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
     const updatePayload = {
       status: this.viewStockSendData.status,
       transportationId: this.viewStockSendData.transportationPlatform,
       trackingId: this.viewStockSendData.trackingId,
       shipmentDate: shipmentDateStr,
       deliveredDate: deliveredDateStr,
-      modifiedBy: this.userId
+      modifiedBy: this.userId,
+      modifiedTime: modifiedTime
     };
 
     const issueId = this.data?.header?.id || this.data?.id;
@@ -1207,13 +1280,13 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       payload: updatePayload
     });
 
-    this.isEditingIssueStatus = false;
+    // this.isEditingIssueStatus = false;
   }
 
   private formatDateForPayload(date: Date | null | string): string {
     if (!date) return '';
-    if (typeof date === 'string') return date;
     const d = new Date(date);
+    if (isNaN(d.getTime())) return typeof date === 'string' ? date : '';
     const pad = (n: number) => n < 10 ? '0' + n : n;
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
@@ -1240,11 +1313,12 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       if (isBulk) {
         // Bulk items (F & F) — group by status
         const groups: { [key: string]: any[] } = {};
-        
+
         for (const sd of serialDetails) {
-          const status = String(sd.status || item.status || (this.isPreorderInvoice ? 'PREORDER' : 'DELIVERED')).toUpperCase();
-          if (!groups[status]) groups[status] = [];
-          groups[status].push(sd);
+          const status = String(sd.status || item.status || (this.isPreorderInvoice ? 'PREORDER' : 'DELIVERED')).toUpperCase().replace(/[_\s-]/g, '');
+          const normalizedStatus = status === 'PREORDER' || status === 'PREORDERED' ? 'PREORDER' : status;
+          if (!groups[normalizedStatus]) groups[normalizedStatus] = [];
+          groups[normalizedStatus].push(sd);
         }
 
         const statuses = Object.keys(groups);
@@ -1263,7 +1337,9 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
             requiresSerial: false,
             requiresBarcode: false,
             status: String(item.status || (this.isPreorderInvoice ? 'PREORDER' : 'DELIVERED')).toUpperCase(),
-            returnReason: item.returnReason || ''
+            originalStatus: String(item.status || (this.isPreorderInvoice ? 'PREORDER' : 'DELIVERED')).toUpperCase(),
+            returnReason: item.returnReason || '',
+            originalReturnReason: item.returnReason || ''
           });
         } else {
           for (const status of statuses) {
@@ -1282,7 +1358,9 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
               requiresSerial: false,
               requiresBarcode: false,
               status: status,
-              returnReason: groupDetails[0].returnReason || item.returnReason || ''
+              originalStatus: status,
+              returnReason: groupDetails[0].returnReason || item.returnReason || '',
+              originalReturnReason: groupDetails[0].returnReason || item.returnReason || ''
             });
           }
         }
@@ -1300,7 +1378,9 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
             requiresSerial: requiresSerial,
             requiresBarcode: requiresBarcode,
             status: sd.status !== undefined && sd.status !== null ? String(sd.status).toUpperCase() : String(item.status || 'DELIVERED').toUpperCase(),
-            returnReason: sd.returnReason || item.returnReason || ''
+            originalStatus: sd.status !== undefined && sd.status !== null ? String(sd.status).toUpperCase() : String(item.status || 'DELIVERED').toUpperCase(),
+            returnReason: sd.returnReason || item.returnReason || '',
+            originalReturnReason: sd.returnReason || item.returnReason || ''
           });
         }
 
@@ -1327,7 +1407,9 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
               requiresSerial: requiresSerial,
               requiresBarcode: requiresBarcode,
               status: String(item.status || (this.isPreorderInvoice ? 'PREORDER' : 'DELIVERED')).toUpperCase(),
-              returnReason: item.returnReason || ''
+              originalStatus: String(item.status || (this.isPreorderInvoice ? 'PREORDER' : 'DELIVERED')).toUpperCase(),
+              returnReason: item.returnReason || '',
+              originalReturnReason: item.returnReason || ''
             });
           }
         }
@@ -1336,11 +1418,29 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   }
 
   getItemStatusColor(status: string): string {
-    const s = (status || '').toLowerCase().replace(/[_\s-]/g, '');
-    if (s === 'delivered') return '#53BF8B';
-    if (s === 'returned') return '#ED3237';
-    if (s === 'preorder' || s === 'preordered' || s === 'preorder') return '#000000';
+    const s = this.getNormalizedPurchaseDisplayStatus(status).toLowerCase().replace(/[_\s-]/g, '');
+    if (s === 'delivered') return '#53BF8B'; // Green
+    if (s === 'returned') return '#ED3237'; // Red
+    if (s === 'intransit') return '#ED3237';
+    if (s === 'preorder' || s === 'preordered') return '#000000'; // Black
     return '#FF9800';
+  }
+
+  getNormalizedPurchaseDisplayStatus(status: string | undefined | null): string {
+    const normalized = String(status || '').toUpperCase().replace(/[_\s-]/g, '');
+    if (normalized === 'RETURNED') return 'RETURNED';
+    if (normalized === 'USED' || normalized === 'ISSUED' || normalized === 'DELIVERED') return 'DELIVERED';
+    if (normalized === 'PREORDER' || normalized === 'PREORDERED') return 'PREORDER';
+    return String(status || 'DELIVERED').toUpperCase();
+  }
+
+  get canEditPurchaseStatus(): boolean {
+    if (!this.viewPurchaseItems || this.viewPurchaseItems.length === 0) return true;
+
+    return this.viewPurchaseItems.some(item => {
+      const normalized = String(item.status || '').toUpperCase().replace(/[_\s-]/g, '');
+      return !['USED', 'ISSUED', 'DELIVERED', 'RETURNED'].includes(normalized);
+    });
   }
 
   enableBulkEdit() {
@@ -1357,7 +1457,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       item.newStatus = String(item.status).toUpperCase();
       item.newSerialNumber = item.serialNo !== '-' && item.serialNo !== null ? item.serialNo : '';
       item.newBarcode = item.barcodeNo !== '-' && item.barcodeNo !== null ? item.barcodeNo : '';
-      item.returnReason = item.returnReason || undefined;
+      item.returnReason = item.returnReason || '';
       item.actionQty = 0;
     }
   }
@@ -1380,15 +1480,15 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
   onTrackingInfoChange(item: ViewPurchaseItem): void {
     const hasTrackingInfo = !!(item.newSerialNumber?.trim() || item.newBarcode?.trim());
-    const originalStatus = String(item.status).toUpperCase();
+    const originalStatus = String(item.status).toUpperCase().replace(/[_\s-]/g, '');
 
     if (hasTrackingInfo) {
-      if (item.newStatus === 'PREORDER') {
+      if (originalStatus === 'PREORDER' || originalStatus === 'PREORDERED') {
         item.newStatus = 'DELIVERED';
       }
     } else {
       // Revert to PREORDER only if it was originally a PREORDER and not currently RETURNED
-      if (originalStatus === 'PREORDER' && item.newStatus !== 'RETURNED') {
+      if ((originalStatus === 'PREORDER' || originalStatus === 'PREORDERED') && item.newStatus !== 'RETURNED') {
         item.newStatus = 'PREORDER';
       }
     }
@@ -1419,20 +1519,34 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     const missingReasons = itemsBeingReturned.some(i => !i.returnReason || !i.returnReason.trim());
     if (missingReasons) hasErrors = true;
 
-    const invalidBulkQty = itemsBeingReturned.some(i => {
+    const itemsBeingFulfilled = this.viewPurchaseItems.filter(i => {
+      const curStatus = String(i.status || '').toUpperCase().replace(/[_\s-]/g, '');
+      const nextStatus = String(i.newStatus || '').toUpperCase().replace(/[_\s-]/g, '');
+      return (curStatus === 'PREORDER' || curStatus === 'PREORDERED') && nextStatus === 'DELIVERED';
+    });
+
+    const invalidReturnQty = itemsBeingReturned.some(i => {
       const isBulk = i.serialNumberFlag === 'F' && i.barcodeFlag === 'F';
       return isBulk && (i.actionQty === undefined || i.actionQty < 1 || i.actionQty > (i.count || 0));
     });
-    if (invalidBulkQty) hasErrors = true;
+    if (invalidReturnQty) hasErrors = true;
+
+    const invalidFulfillQty = itemsBeingFulfilled.some(i => {
+      const isBulk = i.serialNumberFlag === 'F' && i.barcodeFlag === 'F';
+      return isBulk && (i.actionQty === undefined || i.actionQty < 1 || i.actionQty > (i.count || 0));
+    });
+    if (invalidFulfillQty) hasErrors = true;
 
     // 3. Validate Serial/Barcode updates (for preorders OR existing item edits)
     // Only validate if user actually touched these fields or is marking them delivered
     const itemsWithTrackingChanges = this.viewPurchaseItems.filter(i => {
       const oldSerial = (i.serialNo !== '-' && i.serialNo !== null) ? i.serialNo : '';
       const oldBarcode = (i.barcodeNo !== '-' && i.barcodeNo !== null) ? i.barcodeNo : '';
-      return (i.newSerialNumber !== undefined && i.newSerialNumber !== oldSerial) || 
-             (i.newBarcode !== undefined && i.newBarcode !== oldBarcode) ||
-             (i.status?.toString().toUpperCase() === 'PREORDER' && i.newStatus?.toString().toUpperCase() === 'DELIVERED');
+      const curStatus = String(i.status || '').toUpperCase().replace(/[_\s-]/g, '');
+      const nextStatus = String(i.newStatus || '').toUpperCase().replace(/[_\s-]/g, '');
+      return (i.newSerialNumber !== undefined && i.newSerialNumber !== oldSerial) ||
+        (i.newBarcode !== undefined && i.newBarcode !== oldBarcode) ||
+        ((curStatus === 'PREORDER' || curStatus === 'PREORDERED') && nextStatus === 'DELIVERED');
     });
 
     const missingSerials = itemsWithTrackingChanges.some(i => i.requiresSerial && (!i.newSerialNumber || !i.newSerialNumber.trim()));
@@ -1450,18 +1564,24 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
     const modifiedItems = this.viewPurchaseItems.filter(item => {
       const isBulk = item.serialNumberFlag === 'F' && item.barcodeFlag === 'F';
-      const statusChanged = item.newStatus && item.newStatus !== String(item.status).toUpperCase();
+      const statusChanged = item.newStatus && item.newStatus !== item.originalStatus;
+      const reasonChanged = item.returnReason !== item.originalReturnReason;
 
-      if (isBulk && !this.isPreorderInvoice && item.newStatus === 'RETURNED') {
+      if (isBulk && !this.isPreorderInvoice && item.newStatus === 'RETURNED' && item.originalStatus !== 'RETURNED') {
         return (item.actionQty || 0) > 0;
       }
       if (isBulk && this.isPreorderInvoice) {
-        return (item.actionQty || 0) > 0;
+        // If transitioning from PREORDER to DELIVERED, we need actionQty > 0
+        const curStatus = String(item.status || '').toUpperCase().replace(/[_\s-]/g, '');
+        const nextStatus = String(item.newStatus || '').toUpperCase().replace(/[_\s-]/g, '');
+        if ((curStatus === 'PREORDER' || curStatus === 'PREORDERED') && nextStatus === 'DELIVERED') {
+          return (item.actionQty || 0) > 0;
+        }
+        return statusChanged || reasonChanged;
       }
 
       let serialChanged = false;
       let barcodeChanged = false;
-      let reasonChanged = false;
 
       const oldSerial = (item.serialNo !== '-' && item.serialNo !== null) ? item.serialNo : '';
       const newSerial = item.newSerialNumber || '';
@@ -1470,10 +1590,6 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       const oldBarcode = (item.barcodeNo !== '-' && item.barcodeNo !== null) ? item.barcodeNo : '';
       const newBarcode = item.newBarcode || '';
       barcodeChanged = oldBarcode !== newBarcode && !!newBarcode;
-
-      if (!this.isPreorderInvoice) {
-        reasonChanged = item.newStatus === 'RETURNED' && !!item.returnReason;
-      }
 
       const isModified = statusChanged || serialChanged || barcodeChanged || reasonChanged;
       if (isModified) {
@@ -1515,25 +1631,49 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
       const isBulk = item.serialNumberFlag === 'F' && item.barcodeFlag === 'F';
 
       if (this.isPreorderInvoice) {
-        // Preorder update: Move only filled units to DELIVERED
+        // Preorder update: allow RETURNED transitions, otherwise move fulfilled units to DELIVERED
         if (isBulk) {
-          const qtyToDeliver = item.actionQty || 0;
-          const idsToDeliver = (item.allPurchaseItemIds || []).slice(0, qtyToDeliver);
-          idsToDeliver.forEach(id => {
-            payloadItems.push({
-              purchaseItemId: id,
-              status: 'DELIVERED',
-              serialNumber: null,
-              barcode: null
+          if (String(item.newStatus).toUpperCase() === 'RETURNED') {
+            const qtyToReturn = item.actionQty || 0;
+            const idsToReturn = (item.allPurchaseItemIds || []).slice(0, qtyToReturn);
+            idsToReturn.forEach(id => {
+              payloadItems.push({
+                purchaseItemId: id,
+                status: 'RETURNED',
+                returnReason: item.returnReason || '',
+                serialNumber: null,
+                barcode: null
+              });
             });
-          });
+          } else {
+            const qtyToDeliver = item.actionQty || 0;
+            const idsToDeliver = (item.allPurchaseItemIds || []).slice(0, qtyToDeliver);
+            idsToDeliver.forEach(id => {
+              payloadItems.push({
+                purchaseItemId: id,
+                status: 'DELIVERED',
+                serialNumber: null,
+                barcode: null
+              });
+            });
+          }
         } else {
-          payloadItems.push({
-            purchaseItemId: item.purchaseItemId || item.id,
-            status: 'DELIVERED',
-            serialNumber: item.newSerialNumber || null,
-            barcode: item.newBarcode || null
-          });
+          if (String(item.newStatus).toUpperCase() === 'RETURNED') {
+            payloadItems.push({
+              purchaseItemId: item.purchaseItemId || item.id,
+              status: 'RETURNED',
+              returnReason: item.returnReason || '',
+              serialNumber: item.newSerialNumber || null,
+              barcode: item.newBarcode || null
+            });
+          } else {
+            payloadItems.push({
+              purchaseItemId: item.purchaseItemId || item.id,
+              status: 'DELIVERED',
+              serialNumber: item.newSerialNumber || null,
+              barcode: item.newBarcode || null
+            });
+          }
         }
       } else {
         // Delivered update
@@ -1553,7 +1693,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           ids.forEach(id => {
             payloadItems.push({
               purchaseItemId: id,
-              status: item.newStatus === 'PREORDER' ? 'DELIVERED' : item.newStatus,
+              status: (String(item.newStatus).toUpperCase().replace(/[_\s-]/g, '') === 'PREORDER') ? 'DELIVERED' : item.newStatus,
               serialNumber: null,
               barcode: null
             });
@@ -1562,7 +1702,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           // Serialized unit update
           payloadItems.push({
             purchaseItemId: item.purchaseItemId || item.id,
-            status: item.newStatus === 'PREORDER' ? 'DELIVERED' : item.newStatus,
+            status: (String(item.newStatus).toUpperCase().replace(/[_\s-]/g, '') === 'PREORDER') ? 'DELIVERED' : item.newStatus,
             serialNumber: (item.newSerialNumber || item.serialNo !== '-' ? item.newSerialNumber || item.serialNo : null),
             barcode: (item.newBarcode || item.barcodeNo !== '-' ? item.newBarcode || item.barcodeNo : null),
             returnReason: item.newStatus === 'RETURNED' ? (item.returnReason || '') : undefined
@@ -1629,31 +1769,79 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
   getStatusClass(status: string): string {
     if (!status) return '';
-    const lower = status.toLowerCase();
-    if (lower === 'delivered' || lower === 'working') return 'status-badge-green';
-    if (lower === 'returned' || lower === 'defect') return 'status-badge-red';
+    const lower = status.toLowerCase().replace(/[_\s-]/g, '');
+    if (lower === 'delivered') return 'status-badge-green';
+    if (lower === 'returned') return 'status-badge-red';
     if (lower === 'issued') return 'status-badge-black';
-    if (lower === 'pre-order') return 'status-badge-black';
+    if (lower === 'preorder' || lower === 'preordered') return 'status-badge-black';
     return 'status-badge-gray';
   }
 
   // CLOSING STATEMENT STATE
   closingStatementData: any = {
-    itemName: 'IP Bullet 1.3 MP Camera-IVIS-IPC-EJ5313PL-IR2',
-    availableCount: 8,
-    startDate: '07/30/2025',
-    endDate: '13/01/2026',
+    itemName: '',
+    availableCount: 0,
+    startDate: '',
+    endDate: '',
     transactions: []
   };
 
   fetchClosingStatement() {
-    const itemId = this.data.itemId || this.data.id || 4; // Fallback to 4 from screenshot if sample
+    const itemId = this.data.itemId;
+    const formatStrictDate = (dString: string | undefined | null): string => {
+      if (!dString) return '';
 
-    const startDate = this.data.startDate;
-    const endDate = this.data.endDate;
+      let year = '2000', month = '01', day = '01';
+
+      if (typeof dString === 'string') {
+        const trimmed = dString.trim();
+
+        // Match YYYY-MM-DD HH:mm:ss exactly (Stock tab uses this)
+        const fullMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+        if (fullMatch) {
+          return trimmed;
+        }
+
+        // Match YYYY-MM-DD
+        const ymdMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (ymdMatch) {
+          year = ymdMatch[1];
+          month = ymdMatch[2];
+          day = ymdMatch[3];
+        } else {
+          // Handle DD/MM/YYYY or MM/DD/YYYY formats
+          const parts = trimmed.split(' ')[0].split('/');
+          if (parts.length === 3) {
+            const p0 = parts[0].padStart(2, '0');
+            const p1 = parts[1].padStart(2, '0');
+            const p2 = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+
+            if (parseInt(p1, 10) > 12) {
+              year = p2; month = p0; day = p1;
+            } else {
+              year = p2; month = p1; day = p0;
+            }
+          } else {
+            const d = new Date(dString);
+            if (!isNaN(d.getTime())) {
+              year = String(d.getFullYear());
+              month = String(d.getMonth() + 1).padStart(2, '0');
+              day = String(d.getDate()).padStart(2, '0');
+            }
+          }
+        }
+      }
+
+      // Construct strict datetime format (YYYY-MM-DD HH:mm:ss) required by the API
+      return `${year}-${month}-${day} 00:00:00`;
+    };
+
+    const formattedStartDate = formatStrictDate(this.data.startDate);
+    const formattedEndDate = formatStrictDate(this.data.endDate);
+
     const storeId = this.data.storeId;
 
-    this.inventoryService.getClosingStatement(itemId, startDate, endDate, storeId).subscribe({
+    this.inventoryService.getClosingStatement(itemId, formattedStartDate, formattedEndDate, storeId).subscribe({
       next: (res: ClosingStatementResponse) => {
         if (res?.status === 'Success' && res?.data) {
           const header = res.data.header;
@@ -1687,7 +1875,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
             switch (item.action?.toUpperCase()) {
               case 'PURCHASE': mappedType = 'Purchased'; break;
               case 'ISSUE': mappedType = 'Issued'; break;
-              case 'USED': mappedType = 'Returned'; break;
+              case 'RETURN': mappedType = 'Returned'; break;
+              case 'USE': mappedType = 'Used'; break;
               default: mappedType = item.action || '';
             }
 
@@ -2075,14 +2264,10 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
         };
 
-        // Format createdTime as YYYY-MM-DD
+        // Format createdTime as YYYY-MM-DD HH:mm:ss
         const now = new Date();
-
         const pad = (n: number) => n < 10 ? '0' + n : n;
-
-        const createdTimeStr =
-          `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ` +
-          `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        const createdTimeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
         // Validate at least one item or product is selected
         if (sendFormValue.stockSendItems.length === 0 && sendFormValue.stockSendProducts.length === 0) {
@@ -2094,13 +2279,12 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         const mappedItems = sendFormValue.stockSendItems.map((item: any) => {
           const itm: any = {
             itemId: Number(item.itemId),
+            quantity: Number(item.qty),
             billingTypeId: Number(item.billingStatus) || 1
           };
           if (item.serialNumber || item.barcode) {
             itm.serialNumber = item.serialNumber || '';
             itm.barcode = item.barcode || '';
-          } else {
-            itm.quantity = Number(item.qty);
           }
           return itm;
         });
@@ -2108,6 +2292,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
         const mappedProducts = sendFormValue.stockSendProducts.map((prod: any) => ({
           productDetailsId: Number(prod.productDetailsId),
           productStatus: prod.productStatus || 'SALE',
+          quantity: Number(prod.qty) || 1,
           billingTypeId: Number(prod.billingStatus) || 1
         }));
 
@@ -2124,7 +2309,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           deliveredDate: sendFormValue.status === 'DELIVERED' ? formatYYYYMMDD(sendFormValue.deliveredDate) : null,
           items: mappedItems,
           products: mappedProducts,
-          createdBy: this.userId
+          createdBy: this.userId,
+          createdTime: createdTimeStr
         };
 
         // Wrap in isStockSend so the inventory list captures it
@@ -2153,11 +2339,15 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
           return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
         };
 
-        const returnPayload = {
-          returnDate: returnFormValue.status === 'RETURNED' ? formatReturnDate(returnFormValue.returnDate) : formatReturnDate(new Date()),
+        const nowReturn = new Date();
+        const padReturn = (n: number) => n < 10 ? '0' + n : n;
+        const createdTimeReturnStr = `${nowReturn.getFullYear()}-${padReturn(nowReturn.getMonth() + 1)}-${padReturn(nowReturn.getDate())} ${padReturn(nowReturn.getHours())}:${padReturn(nowReturn.getMinutes())}:${padReturn(nowReturn.getSeconds())}`;
+
+        const returnPayload: AddReturnPayload = {
+          returnDate: returnFormValue.status === 'RETURNED' ? (formatReturnDate(returnFormValue.returnDate) || formatReturnDate(new Date())!) : formatReturnDate(new Date())!,
           returnFromId: Number(returnFormValue.returnFrom) || 0,
           returnToId: Number(returnFormValue.returnTo) || 0,
-          remarks: returnFormValue.status === 'RETURNED' ? "Items returned to store" : "Items in transit from site",
+          remarks: returnFormValue.remarks || (returnFormValue.status === 'RETURNED' ? "Items returned to store" : "Items in transit from site"),
           status: returnFormValue.status || "IN_TRANSIT",
           items: returnFormValue.stockReturnItems.map((item: any) => ({
             issueItemId: item.issueItemId,
@@ -2169,7 +2359,8 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
             productDetailsId: prod.productDetailsId,
             conditionType: String(prod.condition).toUpperCase()
           })),
-          createdBy: this.userId
+          createdBy: this.userId,
+          createdTime: createdTimeReturnStr
         };
 
         payload = { isStockReturn: true, payload: returnPayload };
@@ -2213,10 +2404,16 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
     this.submitted = true;
 
+    const now = new Date();
+    const pad = (n: number) => n < 10 ? '0' + n : n;
+    const modifiedTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
     const returnPayload: any = {
+      returnDate: this.formatDateForPayload(this.viewReturnData.header.returnDateObj || this.viewReturnData.header.returnDate),
       status: this.viewReturnData.header.status,
       remarks: this.viewReturnData.header.remarks,
       modifiedBy: this.userId,
+      modifiedTime: modifiedTime,
       items: (this.viewReturnData.items || []).map(item => ({
         returnItemId: item.id,
         conditionType: item.conditionType
@@ -2275,7 +2472,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
       const formData = new FormData();
       formData.append('purchase', JSON.stringify(purchasePayload));
-      if (this.invoiceFile?.file) formData.append('InvoiceFiles', this.invoiceFile.file);
+      if (this.invoiceFile?.file) formData.append('invoiceFiles', this.invoiceFile.file);
       if (this.otherFiles && this.otherFiles.length > 0) {
         this.otherFiles.forEach((f: any) => {
           if (f.file) formData.append('otherFiles', f.file);
@@ -2287,13 +2484,12 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
     } else if (this.mode === 'update-purchase') {
       const now = new Date();
-      const modifiedTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const pad = (n: number) => n < 10 ? '0' + n : n;
+      const modifiedTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
-      // Assemble specific items payload format for the Bulk Status / Edit API which expects:
-      // { purchaseItemId, serialNumbers: [], barcodes: [], status }
       const updatePayloadItems = (formValue.purchaseItems || []).map((item: any) => {
         const updateItem: any = {
-          purchaseItemId: item.purchaseItemId || item.id, // the ID of the line item
+          purchaseItemId: item.purchaseItemId || item.id,
           status: statusString === 'preorder' ? 'PREORDER' : 'DELIVERED',
         };
 
@@ -2378,11 +2574,36 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
 
   getStatusColor(status: string | undefined | null): any {
     if (!status) return { background: '#999999', color: '#ffffff' };
-    const s = status.toLowerCase();
-    if (s === 'returned' || s === 'delivered' || s === 'success') return { background: '#53BF8B', color: '#ffffff' };
-    if (s === 'in transit' || s === 'issued') return { background: '#000000', color: '#ffffff' };
-    if (s === 'scraped' || s === 'scrap' || s === 'defective') return { background: '#F44336', color: '#ffffff' };
-    return { background: '#999999', color: '#ffffff' };
+    const s = status.toLowerCase().replace(/[_\s-]/g, '');
+
+    // Default styles
+    let bg = '#999999';
+    let text = '#ffffff';
+
+    if (this.mode === 'view-stock-send') {
+      // ISSUED TAB CONTEXT
+      if (s === 'delivered') bg = '#53BF8B';
+      else if (s === 'issued') bg = '#000000';
+      else if (s === 'intransit') bg = '#F44336';
+      else if (s === 'returned') bg = '#53BF8B'; // Issued tab uses green/teal for return
+    } else if (this.mode === 'view-purchase') {
+      // PURCHASE TAB CONTEXT
+      if (s === 'delivered') bg = '#53BF8B';
+      else if (s === 'preorder' || s === 'preordered') bg = '#000000';
+      else if (s === 'returned') bg = '#ED3237'; // Purchase tab uses red for return
+    } else if (this.mode === 'view-return') {
+      // RETURN TAB CONTEXT
+      if (s === 'returned' || s === 'success') bg = '#53BF8B';
+      else if (s === 'intransit' || s === 'intransit') bg = '#F44336';
+    } else {
+      // FALLBACK
+      if (s === 'delivered' || s === 'success') bg = '#53BF8B';
+      else if (s === 'issued' || s === 'preorder' || s === 'preordered') bg = '#000000';
+      else if (s === 'returned' || s === 'returned') bg = '#ED3237';
+      else if (s === 'intransit') bg = '#F44336';
+    }
+
+    return { background: bg, color: text };
   }
 
   getConditionColor(condition: string | undefined | null): any {
@@ -2390,7 +2611,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     const c = condition.toLowerCase();
     if (c === 'new') return { background: '#53BF8B', color: '#ffffff' };
     if (c === 'used') return { background: '#FF9800', color: '#ffffff' };
-    if (c === 'defective' || c === 'scrap') return { background: '#F44336', color: '#ffffff' };
+    if (c === 'scrap') return { background: '#F44336', color: '#ffffff' };
     return { background: '#999999', color: '#ffffff' };
   }
 

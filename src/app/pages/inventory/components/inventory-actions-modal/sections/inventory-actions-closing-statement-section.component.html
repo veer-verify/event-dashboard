@@ -1,0 +1,65 @@
+<div class="closing-statement-container closing-statement-wrapper">
+  <!-- Redesigned Header -->
+  <div class="grid-closing-header">
+    <div class="closing-header-col">
+      <span class="closing-header-label">ITEM Name</span>
+      <span class="closing-header-val">{{ ctx.closingStatementData.itemName }}</span>
+    </div>
+    <div class="closing-header-col">
+      <span class="closing-header-label">Available Count</span>
+      <span class="closing-header-val">{{ ctx.closingStatementData.availableCount }}</span>
+    </div>
+    <div class="closing-header-col">
+      <span class="closing-header-label">Start Date</span>
+      <span class="closing-header-val">{{ ctx.closingStatementData.startDate }}</span>
+    </div>
+    <div class="closing-header-col">
+      <span class="closing-header-label">End Date</span>
+      <span class="closing-header-val">{{ ctx.closingStatementData.endDate }}</span>
+    </div>
+  </div>
+
+  <!-- Redesigned Transaction Timeline -->
+  <div class="transaction-timeline mt-20">
+    <div class="transaction-group-item" *ngFor="let group of ctx.closingStatementData.transactions">
+      <!-- Date Header -->
+      <div class="trans-date-header">
+        <span class="date-text">{{ group.date }}</span>
+        <span class="avail-count-text">Available Count : {{ group.availableCount }}</span>
+      </div>
+
+      <!-- Transaction Cards -->
+      <div class="timeline-card" *ngFor="let record of group.records">
+        <!-- From -->
+        <div class="trans-entry-col">
+          <span class="trans-entry-label">From</span>
+          <span class="trans-entry-val">{{ record.from }}</span>
+        </div>
+        <!-- To -->
+        <div class="trans-entry-col">
+          <span class="trans-entry-label">To</span>
+          <span class="trans-entry-val">{{ record.to }}</span>
+        </div>
+        <!-- Status -->
+        <div class="trans-entry-col">
+          <span class="trans-entry-label">Status</span>
+          <span class="trans-entry-val">{{ record.status }}</span>
+        </div>
+        <!-- Count -->
+        <div class="trans-entry-col">
+          <span class="trans-entry-label">Count</span>
+          <span class="trans-entry-val">{{ record.count }}</span>
+        </div>
+        <!-- Type Badge -->
+        <div class="trans-badge-col">
+          <span class="status-badge-sm" [ngClass]="{
+            'badge-returned': record.type === 'Returned',
+            'badge-issued': record.type === 'Issued',
+            'badge-purchased': record.type === 'Purchased'
+          }">{{ record.type }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
