@@ -720,14 +720,18 @@
 
   <ng-container *ngIf="mailselectitem?.mailColour == 2">
     <p class="email-text">
-      Email usage for one-time tags is no longer permitted
+      <span class="warning-icon">⚠️</span>
+  <span class="message">
+    Email usage for <span class="highlight">"one-time"</span> tags is no longer permitted
+  </span>
+
     </p>
   </ng-container>
 
   <ng-container
     *ngIf="!isMediaLoading && !emailData && mailselectitem?.mailColour != 2"
   >
-    <p>No Data</p>
+    <p class="email-text">No Data</p>
   </ng-container>
 
   <div class="email-wrapper">

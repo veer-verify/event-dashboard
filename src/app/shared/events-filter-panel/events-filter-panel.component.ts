@@ -135,6 +135,7 @@ export class EventsFilterPanelComponent {
   };
 
   onCriteriaChanged(): void {
+    console.log(this.model)
     this.criteriaChange.emit({ ...this.model });
   }
 
