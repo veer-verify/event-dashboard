@@ -89,13 +89,14 @@
   display: flex;
   flex-direction: column;
   overflow: scroll;
-  padding: 20px;
+  padding: 0 20px;
 }
 
 .section-header {
   font-family: "Neometric Alt Bold";
   display: flex;
   justify-content: space-between;
+  margin-bottom: 10px;
 }
 
 .section-header h2 {

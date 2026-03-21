@@ -153,6 +153,8 @@ h2 {
   opacity: 0.15;
   font-size: 20px;
   line-height: 20px;
+  padding-top: 5px;
+  margin-bottom: 10px;
 }
 
 /* Dashboard Content */
@@ -190,6 +192,7 @@ h2 {
   display: flex;
   justify-content: flex-start;
   align-items: center;
+  margin-bottom: 15px;
   gap: 20px;
 }
 
@@ -200,10 +203,9 @@ h2 {
   margin-top: 20px;
   flex-wrap: wrap; */
   display: grid;
- grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
- gap: 10px;
-   margin-top: 5px;
-
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 5px;
 }
 
 /* .card {
@@ -337,7 +339,7 @@ h2 {
 .dots-column {
   display: flex;
   flex-direction: column;
-  
+
   gap: 6px;
   height: 70px;
 }
@@ -593,7 +595,6 @@ circle.progress {
 }
 
 /* Hover & focus states */
-
 
 .custom-select:focus {
   outline: none;
