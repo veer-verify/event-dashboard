@@ -198,6 +198,7 @@ export class EventsComponent {
   }
 
   onFilterApply(criteria: EventsFilterCriteria) {
+    console.log(criteria)
     this.preloadClosedCounts();
     const base =
       this.selectedFilter === "PENDING" ? this.pendingRowData : this.rowData;
@@ -1653,9 +1654,13 @@ alertSubTypes: any = [];
   
     this.mailselectitem = params.data;
 
-    this.getCurrentSiteAlerts();
+    if(this.mailselectitem?.mailColour!=2){
 
-    this.getEmailDataForVMSEvents();
+      this.getCurrentSiteAlerts();
+  
+      this.getEmailDataForVMSEvents();
+    }
+
     this.mailoverlay.show(event);
   }
 
@@ -2796,7 +2801,7 @@ alertSubTypes: any = [];
           }
           else if (params.data?.mailColour === 2) {
              tooltip = "One time";
-            color = "#f3d23e";
+            color = "#FFC400";
             // disableClick = 'onclick="event.stopPropagation(); return false;"';
           }
 

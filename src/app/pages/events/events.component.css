@@ -2393,6 +2393,24 @@ input:checked + .slider:before {
   left: 50%;
   transform: translate(-50%, -50%);
   white-space: nowrap;
-  font-weight: 700;
   opacity: 0.8;
+}
+
+.warning-icon {
+  display: block;
+  font-size: 30px; /* bigger icon */
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.message {
+  display: block;
+  font-size: 18px;
+}
+
+.highlight {
+  font-weight: 700;
+  /* text-decoration: underline; */
+  color: #d32f2f;
+  text-transform: uppercase;
 }

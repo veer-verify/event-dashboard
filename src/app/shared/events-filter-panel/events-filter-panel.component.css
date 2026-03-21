@@ -63,7 +63,7 @@
   border-radius: 5px;
   font-family: "Neometric Medium";
   z-index: 1500;
-  padding: 10px;
+ 
 }
 
 :host ::ng-deep .events-filter-calendar .p-inputtext {
@@ -82,6 +82,11 @@
   font-family: "Neometric Alt Bold";
   font-size: 12px;
   margin-bottom: 12px;
+  position: sticky;
+  top: 0;
+  background-color: #ffffff;
+  z-index: 1501;
+   padding: 10px;
 }
 
 .events-filter-title {

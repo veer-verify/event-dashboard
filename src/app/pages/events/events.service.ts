@@ -92,7 +92,10 @@ export class EventsService {
       filter.timeZone !== "All" &&
       filter.timeZone !== ""
     ) {
-      params = params.set("timezone", filter.timeZone.timezoneCode);
+
+      const cleanTz = filter.timeZone.match(/\((.*?)\)/)?.[1] || '';
+
+      params = params.set("timezone", cleanTz);
     }
 
     if (filter.site !== null) {
