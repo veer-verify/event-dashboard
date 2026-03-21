@@ -541,11 +541,10 @@ body {
     color: #fff !important;
 }
 
-.status-used {
+/* .status-used {
     background-color: #FFC107;
-    /* Yellow/Gold */
     color: #000 !important;
-}
+} */
 
 /* Icons */
 .modal-close-icon {
@@ -1035,8 +1034,8 @@ body {
 }
 
 .status-badge.status-used {
-    background-color: #FFF8E1;
-    color: #F9A825;
+    background-color: #F9A825;
+    color: #FFF8E1;
 }
 
 .status-badge.status-new {

@@ -1435,12 +1435,7 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
   }
 
   get canEditPurchaseStatus(): boolean {
-    if (!this.viewPurchaseItems || this.viewPurchaseItems.length === 0) return true;
-
-    return this.viewPurchaseItems.some(item => {
-      const normalized = String(item.status || '').toUpperCase().replace(/[_\s-]/g, '');
-      return !['USED', 'ISSUED', 'DELIVERED', 'RETURNED'].includes(normalized);
-    });
+    return true;
   }
 
   enableBulkEdit() {
@@ -1466,6 +1461,19 @@ export class InventoryActionsModalComponent implements OnInit, OnChanges {
     const isBulk = item.serialNumberFlag === 'F' && item.barcodeFlag === 'F';
     if (isBulk) return (item.actionQty || 0) > 0;
     return !!(item.newSerialNumber?.trim() || item.newBarcode?.trim());
+  }
+
+  isPurchaseItemStatusLocked(item: ViewPurchaseItem): boolean {
+    const normalized = String(item.status || '').toUpperCase().replace(/[_\s-]/g, '');
+    return normalized === 'ISSUED' || normalized === 'USED';
+  }
+
+  getPurchaseItemStatusLockReason(item: ViewPurchaseItem): string {
+    const normalized = String(item.status || '').toUpperCase().replace(/[_\s-]/g, '');
+    if (normalized === 'ISSUED' || normalized === 'USED') {
+      return 'This item is used somewhere else, so its status cannot be changed.';
+    }
+    return '';
   }
 
   getFilteredStatusOptions(item: ViewPurchaseItem): any[] {

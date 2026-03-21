@@ -353,9 +353,9 @@
               <div class="view-field">
                 <label class="field-label">Status</label>
                 <span class="status-badge" [ngClass]="{
-                            'status-new': (inventoryItemDetails?.itemDetails?.status || item?.status) === 'New',
-                            'status-used': (inventoryItemDetails?.itemDetails?.status || item?.status) === 'Used' || (inventoryItemDetails?.itemDetails?.status || item?.status) === 'Working',
-                            'status-scrap': (inventoryItemDetails?.itemDetails?.status || item?.status) === 'Scrap'
+                            'status-new': ((inventoryItemDetails?.itemDetails?.status || item?.status || '').toUpperCase()) === 'NEW',
+                            'status-used': ['USED', 'ISSUED', 'ISSUE'].includes((inventoryItemDetails?.itemDetails?.status || item?.status || '').toUpperCase()),
+                            'status-scrap': ((inventoryItemDetails?.itemDetails?.status || item?.status || '').toUpperCase()) === 'SCRAP'
                         }">
                   {{ inventoryItemDetails?.itemDetails?.status || item?.status || "-" }}
                 </span>
@@ -412,8 +412,8 @@
                     <!-- Action Badge -->
                     <div class="progress-action">
                       <span class="action-badge" [ngClass]="{
-                          'action-purchased': step.action === 'Purchased' || step.action === 'Returned',
-                          'action-issued': step.action === 'Issued'
+                          'action-purchased': ['PURCHASED', 'RETURNED'].includes((step.action || '').toUpperCase()),
+                          'action-issued': ['ISSUED', 'USED'].includes((step.action || '').toUpperCase())
                       }">{{ step.action }}</span>
                     </div>
 

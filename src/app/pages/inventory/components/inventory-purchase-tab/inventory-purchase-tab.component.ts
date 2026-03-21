@@ -151,11 +151,20 @@ export class InventoryPurchaseTabComponent implements OnInit, OnChanges {
 
           const infoImg = document.createElement('img');
           infoImg.src = 'assets/icons/information-icon.svg';
+          infoImg.draggable = false;
           infoImg.style.cursor = 'pointer';
           infoImg.style.width = '20px';
           infoImg.style.height = '20px';
+          infoImg.style.display = 'block';
+          infoImg.style.flexShrink = '0';
 
-          infoImg.addEventListener('click', () => {
+          infoImg.addEventListener('mousedown', (event: MouseEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+          });
+          infoImg.addEventListener('click', (event: MouseEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
             this.ngZone.run(() => {
               this.viewPurchase.emit(params.data);
             });

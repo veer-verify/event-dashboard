@@ -110,14 +110,27 @@ export class ItemsMastersTabComponent implements OnInit, OnChanges {
         suppressSizeToFit: false,
         cellRenderer: (params: ICellRendererParams) => {
           const container = document.createElement("div");
-          container.classList.add('ag-cell-centered-flex');
+          container.style.display = "flex";
+          container.style.alignItems = "center";
+          container.style.justifyContent = "center";
+          container.style.height = "100%";
 
           const img = document.createElement("img");
           img.src = "assets/icons/information-icon.svg";
           img.alt = "View";
-          img.classList.add('ag-cell-action-icon');
-
-          img.addEventListener("click", () => {
+          img.draggable = false;
+          img.style.cursor = "pointer";
+          img.style.width = "20px";
+          img.style.height = "20px";
+          img.style.display = "block";
+          img.style.flexShrink = "0";
+          img.addEventListener("mousedown", (event: MouseEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+          });
+          img.addEventListener("click", (event: MouseEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
             this.ngZone.run(() => {
               this.viewItem.emit(params.data);
             });

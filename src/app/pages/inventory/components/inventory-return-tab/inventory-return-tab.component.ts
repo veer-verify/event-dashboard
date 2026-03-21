@@ -148,11 +148,20 @@ export class InventoryReturnTabComponent implements OnInit, OnChanges {
 
           const img = document.createElement('img');
           img.src = 'assets/icons/information-icon.svg';
+          img.draggable = false;
           img.style.cursor = 'pointer';
           img.style.width = '20px';
           img.style.height = '20px';
+          img.style.display = 'block';
+          img.style.flexShrink = '0';
 
-          img.addEventListener('click', () => {
+          img.addEventListener('mousedown', (event: MouseEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+          });
+          img.addEventListener('click', (event: MouseEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
             this.ngZone.run(() => {
               this.viewReturn.emit(params.data);
             });
