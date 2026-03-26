@@ -2412,7 +2412,7 @@ alertSubTypes: any = [];
           if (e?.eventType === "Manual_Wall") alertColor = "#FFC400";
           else if (e?.eventType === "Event_Wall") alertColor = "#53BF8B";
           else if (e?.eventType === "Manual_Event") alertColor = "#353636ff";
-          // else if (e?.eventType === "Custom_Event") alertColor = "#ED3237";
+          else if (e?.eventType === "Custom_Event") alertColor = "magenta";
 
           const empName = e?.userName ?? e?.user ?? "";
           const empLevel = e?.userLevels ?? "N/A";
