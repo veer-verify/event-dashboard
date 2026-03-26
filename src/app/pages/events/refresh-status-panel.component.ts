@@ -14,6 +14,7 @@ import { CommonModule } from "@angular/common";
         (change)="onChange($event)"
         style="height:24px;"
       >
+        <option [value]="0">None</option>                  <!-- changed-->
         <option [value]="1">1 min</option>
         <option [value]="2">2 min</option>
         <option [value]="5">5 min</option>
@@ -24,16 +25,17 @@ import { CommonModule } from "@angular/common";
 })
 export class RefreshStatusPanelComponent {
   private params: any;
-  interval = 1;
+  interval = 0; // Default: None (no auto-refresh)        //change
 
   agInit(params: any): void {
     this.params = params;
-    this.interval = Number(params.getInterval?.() ?? 1);
+    // Get the current interval from parent, default to 0 if not provided     //change
+    this.interval = Number(params.getInterval?.() ?? 0);
   }
 
   refresh(params: any): boolean {
-    this.params = params;
-    this.interval = Number(params.getInterval?.() ?? 1);
+    this.params = params; 
+    this.interval = Number(params.getInterval?.() ?? 0);    // change
     return true;
   }
 
@@ -41,6 +43,7 @@ export class RefreshStatusPanelComponent {
     const v = Number((ev.target as HTMLSelectElement).value);
     this.interval = v;
     console.log("Status bar dropdown selected:", v);
+    // Notify parent of the change (parent may choose to apply it or not)    // change
     this.params?.onIntervalChange?.(v);
   }
 }

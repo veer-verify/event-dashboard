@@ -178,7 +178,7 @@
 </div>
 
 <!-- POPUP -->
-<p-overlayPanel #op [dismissable]="true" [showCloseIcon]="false">
+<p-overlayPanel #op (onHide)="onPanelHide()" [dismissable]="true" [showCloseIcon]="false">       <!-- change add (onHide)="onPanelHide()"-->
   <ng-template pTemplate>
     <div class="range-popup">
       <!-- TOGGLE ROW -->
@@ -270,6 +270,16 @@
             (onSelect)="onInlineDateSelect($event)"
           >
           </p-calendar>
+
+          <!-- 7-day range warning -->                                                  <!-- changed -->
+          <div *ngIf="showRangeWarning" class="range-warning-banner">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>
+              Only <strong>7 days</strong> of data can be viewed at a time.
+              For larger date ranges, please
+              <strong>download the Excel report</strong>.
+            </span>
+          </div>
         </div>
 
         <div class="time-col">

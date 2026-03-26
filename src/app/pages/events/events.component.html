@@ -107,13 +107,14 @@
             <!-- ===================== Search + Filter Panel ===================== -->
 
             <div class="search-wrapper">
-              <input
-                type="text"
-                placeholder="Search here"
-                [(ngModel)]="searchTerm"
-                class="search-input"
-                (input)="onFilterTextBoxChanged()"
-              />
+             <div class="search-input-container">
+                <div class="search-chip" *ngFor="let term of searchTerms; let i = index">
+                  {{ term }}
+                  <span class="chip-remove" (click)="removeSearchTerm(i)">&#x2715;</span>
+                </div>
+                <input type="text" placeholder="Search here" [(ngModel)]="searchTerm" class="search-input"
+                  (input)="onFilterTextBoxChanged()" (keydown.enter)="addSearchTerm()" />
+              </div>
 
               <button
                 type="button"
@@ -233,6 +234,8 @@
           [consolesChecked]="consolesChecked"
           [queuesChecked]="queuesChecked"
           [filter]="currentFilter"
+          [minDateStr]="mainStartDateStr"
+          [maxDateStr]="mainEndDateStr"
           (close)="onFilterClose()"
           (reset)="onFilterReset()"
           (apply)="onFilterApply($event)"
@@ -551,7 +554,7 @@
               [defaultColDef]="defaultColDef"
               [pagination]="true"
               [paginationPageSize]="15"
-              [rowHeight]="40"
+              [rowHeight]="35"
               [headerHeight]="30"
               [enableCellTextSelection]="true"
               [enableRangeSelection]="true"
@@ -593,7 +596,7 @@
               [enableRangeSelection]="true"
               [copyHeadersToClipboard]="true"
               [paginationPageSize]="15"
-              [rowHeight]="40"
+              [rowHeight]="35"
               [paginationPageSizeSelector]="[15, 20, 50, 100]"
               [localeText]="localeText"
               [quickFilterMatcher]="closedQuickFilterMatcher"
@@ -621,6 +624,8 @@
           <label class="event-wall-label">Event Console</label>
           <div class="dot-manualwall"></div>
           <label class="manual-wall-label">Manual Console</label>
+          <div class="dot-customevent"></div>                                            <!-- changed-->
+          <label class="manual-wall-label">Custom Event</label>
           <!-- Timed-Out only for PENDING; we'll hide via TS for CLOSED -->
 
           @if (selectedFilter === "CLOSED") {
@@ -644,6 +649,7 @@
             Refresh
           </button>
           <select class="refresh-interval-select">
+            <option value="0">None</option>              <!-- changed-->
             <option value="1">1 min</option>
             <option value="5">5 min</option>
             <option value="10">10 min</option>

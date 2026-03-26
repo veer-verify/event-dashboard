@@ -28,7 +28,8 @@
           type="date"
           class="events-filter-input"
           [(ngModel)]="model.startDate"
-          [max]="today"
+          [min]="minDateStr"
+          [max]="model.endDate || maxDateStr || today"
           (ngModelChange)="onCriteriaChanged()"
         />
       </div>
@@ -60,8 +61,8 @@
           type="date"
           class="events-filter-input"
           [(ngModel)]="model.endDate"
-          [min]="model.startDate"
-          [max]="today"
+          [min]="model.startDate || minDateStr"
+          [max]="maxDateStr || today"
           (ngModelChange)="onCriteriaChanged()"
         />
       </div>

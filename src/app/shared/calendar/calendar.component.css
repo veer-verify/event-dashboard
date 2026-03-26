@@ -418,3 +418,26 @@
   cursor: default;
   pointer-events: none;
 }
+/* 7-day range warning banner */
+.range-warning-banner {
+  display: flex;
+  align-items: flex-start;
+  width: 300px;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  background: #fff8e1;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  font-family: "Neometric Regular";
+  font-size: 11px;
+  color: #5d4037;
+  line-height: 1.4;
+}
+
+.range-warning-banner .pi {
+  color: #f59e0b;
+  font-size: 13px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}

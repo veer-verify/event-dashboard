@@ -1,6 +1,7 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CalendarModule } from 'primeng/calendar';
 import { EventsService } from 'src/app/pages/events/events.service';
 
 /** 👉 Shared between EventsComponent and this panel */
@@ -42,11 +43,11 @@ export interface Timezoneoption {
 @Component({
   selector: 'app-events-filter-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CalendarModule],
   templateUrl: './events-filter-panel.component.html',
   styleUrls: ['./events-filter-panel.component.css'],
 })
-export class EventsFilterPanelComponent {
+export class EventsFilterPanelComponent implements OnChanges {
   @Input() showDateRange = true;
 
   @Input() cities: string[] = [];
@@ -62,6 +63,22 @@ export class EventsFilterPanelComponent {
   @Input() consoleTypes: string[] = [];
 
   @Input() timezones: any[] = [];
+
+  @Input() minDateStr: string | null = null;
+  @Input() maxDateStr: string | null = null;
+
+  minDate: Date | null = null;
+  maxDate: Date | null = null;
+  todayDate: Date = new Date();
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['minDateStr'] && this.minDateStr) {
+      this.minDate = new Date(this.minDateStr);
+    }
+    if (changes['maxDateStr'] && this.maxDateStr) {
+      this.maxDate = new Date(this.maxDateStr);
+    }
+  }
 
   /** PENDING tab toggles */
   @Input() consolesChecked = true;
@@ -86,7 +103,7 @@ export class EventsFilterPanelComponent {
 
   /** Local working model */
   model: EventsFilterCriteria = {
-    startDate: null,
+    startDate: null, // will be initialized correctly in ngOnInit
     startTime: '00:00',
     endDate: null,
     endTime: '23:59',
@@ -192,9 +209,9 @@ export class EventsFilterPanelComponent {
 
   onReset() {
     this.model = {
-      startDate: null,
+      startDate: this.minDateStr || null,
       startTime: '00:00',
-      endDate: null,
+      endDate: this.maxDateStr || null,
       endTime: '23:59',
       minDuration: 0,
       maxDuration: 1440,
