@@ -88,47 +88,48 @@ export class ItemsMastersTabComponent implements OnInit, OnChanges {
 
   constructor() {
     this.mastersColumnDefs = [
-      { field: "id", headerName: "ITEM ID", flex: 0.8, minWidth: 100 },
-      { field: "itemName", headerName: "ITEM NAME", flex: 1.8, minWidth: 200, cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
-      { field: "itemCode", headerName: "ITEM CODE", flex: 1.2, minWidth: 150, cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
-      { field: "units", headerName: "UNITS", flex: 0.8, minWidth: 90 },
-      { field: "make", headerName: "MAKE", flex: 1, minWidth: 130, cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
-      { field: "model", headerName: "MODEL", flex: 1.5, minWidth: 200, cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+      { field: "id", headerName: "ITEM ID", width: 90, minWidth: 80, maxWidth: 100, suppressSizeToFit: true },
+      { field: "itemName", headerName: "ITEM NAME", flex: 2.2, minWidth: 240, cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+      { field: "itemCode", headerName: "ITEM CODE", flex: 1, minWidth: 120, cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+      { field: "units", headerName: "UNITS", width: 90, minWidth: 75, maxWidth: 100, suppressSizeToFit: true },
+      { field: "make", headerName: "MAKE", flex: 0.85, minWidth: 110, cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+      { field: "model", headerName: "MODEL", flex: 1.6, minWidth: 180, cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
       {
         field: "usedFor",
         headerName: "USE FOR",
-        flex: 1.2,
-        minWidth: 150,
+        flex: 1.1,
+        minWidth: 130,
         cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
       },
       {
         field: "action",
         headerName: "ACTION",
         sortable: false,
-        flex: 0.6,
-        minWidth: 90,
-        suppressSizeToFit: false,
+        width: 80,
+        minWidth: 72,
+        maxWidth: 90,
+        suppressSizeToFit: true,
+        cellClass: 'items-masters-action-cell',
         cellRenderer: (params: ICellRendererParams) => {
           const container = document.createElement("div");
-          container.style.display = "flex";
-          container.style.alignItems = "center";
-          container.style.justifyContent = "center";
-          container.style.height = "100%";
+          container.className = 'items-masters-action';
+
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = 'items-masters-action-btn';
+          button.title = "View details";
+          button.setAttribute("aria-label", "View details");
 
           const img = document.createElement("img");
           img.src = "assets/icons/information-icon.svg";
-          img.alt = "View";
+          img.alt = "View details";
           img.draggable = false;
-          img.style.cursor = "pointer";
-          img.style.width = "20px";
-          img.style.height = "20px";
-          img.style.display = "block";
-          img.style.flexShrink = "0";
-          img.addEventListener("mousedown", (event: MouseEvent) => {
+          img.className = 'items-masters-action-icon';
+          button.addEventListener("mousedown", (event: MouseEvent) => {
             event.preventDefault();
             event.stopPropagation();
           });
-          img.addEventListener("click", (event: MouseEvent) => {
+          button.addEventListener("click", (event: MouseEvent) => {
             event.preventDefault();
             event.stopPropagation();
             this.ngZone.run(() => {
@@ -136,7 +137,8 @@ export class ItemsMastersTabComponent implements OnInit, OnChanges {
             });
           });
 
-          container.appendChild(img);
+          button.appendChild(img);
+          container.appendChild(button);
           return container;
         },
       },

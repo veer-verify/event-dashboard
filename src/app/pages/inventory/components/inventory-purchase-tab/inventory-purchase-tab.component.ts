@@ -81,14 +81,14 @@ export class InventoryPurchaseTabComponent implements OnInit, OnChanges {
 
   constructor() {
     this.columnDefs = [
-      { field: 'purchase_id', headerName: 'ID', flex: 0.8, minWidth: 90 },
-      { field: 'invoiceDate', headerName: 'DATE', flex: 1, minWidth: 100 },
-      { field: 'invoiceNumber', headerName: 'INVOICE NO.', flex: 1.2, minWidth: 140 },
+      { field: 'purchase_id', headerName: 'ID', width: 70, minWidth: 65, maxWidth: 80, suppressSizeToFit: true },
+      { field: 'invoiceDate', headerName: 'DATE', width: 100, minWidth: 90, maxWidth: 110, suppressSizeToFit: true },
+      { field: 'invoiceNumber', headerName: 'INVOICE NO.', flex: 0.9, minWidth: 115 },
       {
         field: 'purchaseFrom',
         headerName: 'PURCHASE FROM',
-        flex: 1.5,
-        minWidth: 150,
+        flex: 1.8,
+        minWidth: 180,
         cellRenderer: (params: ICellRendererParams) => {
           const span = document.createElement('span');
           span.innerText = params.value;
@@ -103,8 +103,8 @@ export class InventoryPurchaseTabComponent implements OnInit, OnChanges {
       {
         field: 'deliveredToName',
         headerName: 'DELIVERED TO',
-        flex: 1.2,
-        minWidth: 130,
+        flex: 1.4,
+        minWidth: 150,
         cellRenderer: (params: ICellRendererParams) => {
           const span = document.createElement('span');
           span.innerText = params.value;
@@ -116,13 +116,15 @@ export class InventoryPurchaseTabComponent implements OnInit, OnChanges {
           return span;
         }
       },
-      { field: 'purchaseType', headerName: 'TYPE', flex: 0.8, minWidth: 90 },
-      { field: 'totalItems', headerName: 'ITEMS', flex: 0.6, minWidth: 70 },
+      { field: 'purchaseType', headerName: 'TYPE', width: 85, minWidth: 80, maxWidth: 95, suppressSizeToFit: true },
+      { field: 'totalItems', headerName: 'ITEMS', width: 65, minWidth: 60, maxWidth: 75, suppressSizeToFit: true },
       {
         field: 'status',
         headerName: 'STATUS',
-        flex: 1,
-        minWidth: 110,
+        width: 95,
+        minWidth: 90,
+        maxWidth: 105,
+        suppressSizeToFit: true,
         cellRenderer: (params: ICellRendererParams) => {
           const span = document.createElement('span');
           span.innerText = params.value;
@@ -139,30 +141,32 @@ export class InventoryPurchaseTabComponent implements OnInit, OnChanges {
       {
         headerName: 'ACTION',
         field: 'action',
-        flex: 0.7,
-        minWidth: 80,
+        width: 75,
+        minWidth: 70,
+        maxWidth: 85,
+        suppressSizeToFit: true,
+        cellClass: 'inventory-purchase-action-cell',
         cellRenderer: (params: ICellRendererParams) => {
           const container = document.createElement('div');
-          container.style.display = 'flex';
-          container.style.alignItems = 'center';
-          container.style.justifyContent = 'center';
-          container.style.height = '100%';
-          container.style.gap = '10px';
+          container.className = 'inventory-purchase-action';
+
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'inventory-purchase-action-btn';
+          button.title = 'View details';
+          button.setAttribute('aria-label', 'View details');
 
           const infoImg = document.createElement('img');
           infoImg.src = 'assets/icons/information-icon.svg';
+          infoImg.alt = 'View details';
           infoImg.draggable = false;
-          infoImg.style.cursor = 'pointer';
-          infoImg.style.width = '20px';
-          infoImg.style.height = '20px';
-          infoImg.style.display = 'block';
-          infoImg.style.flexShrink = '0';
+          infoImg.className = 'inventory-purchase-action-icon';
 
-          infoImg.addEventListener('mousedown', (event: MouseEvent) => {
+          button.addEventListener('mousedown', (event: MouseEvent) => {
             event.preventDefault();
             event.stopPropagation();
           });
-          infoImg.addEventListener('click', (event: MouseEvent) => {
+          button.addEventListener('click', (event: MouseEvent) => {
             event.preventDefault();
             event.stopPropagation();
             this.ngZone.run(() => {
@@ -170,7 +174,8 @@ export class InventoryPurchaseTabComponent implements OnInit, OnChanges {
             });
           });
 
-          container.appendChild(infoImg);
+          button.appendChild(infoImg);
+          container.appendChild(button);
           return container;
         },
       }

@@ -188,9 +188,13 @@ export class EventsComponent {
   pendingDisplayRows: any[] = []; // what PENDING grid sees
 
   onFilterReset() {
+    this.currentFilter = { ...this.getDefaultFilter() };                   // changes clear filter
+    this.searchTerm = "";                                                 // changes clear search input
+    this.searchTerms = [];                                               // changed clear search terms
     this.pendingDisplayRows = [...this.pendingRowData];
     setTimeout(() => this.autoSizeAllColumns(), 0);
     this.closedDisplayRows = [...this.rowData];
+    this.onFilterTextBoxChanged();                                      // changes clear search input
   }
 
   onFirstDataRendered() {
@@ -490,7 +494,15 @@ export class EventsComponent {
   lastStartDateTime?: string;
   lastEndDateTime?: string;
 
+  get mainStartDateStr(): string {
+    return this.selectedStartDate ? this.formatDate(this.selectedStartDate) : '';        // changes clear filter
+  }
+  get mainEndDateStr(): string {
+    return this.selectedEndDate ? this.formatDate(this.selectedEndDate) : '';
+  }
+
   /** -------------------- Filters & toggles -------------------- */
+  rangeTooLarge = false;                                                                 // CHANGE 
   selectedFilter: "CLOSED" | "PENDING" = "CLOSED";
   selectedpendingFilter: "CONSOLES" | "QUEUES" = "CONSOLES";
 
@@ -500,8 +512,22 @@ export class EventsComponent {
   falseChecked = false;
 
   searchTerm = "";
+  searchTerms: string[] = [];                                                        // ! changed
   showMore = false;
 
+  addSearchTerm(): void {                                                             // ! changed 
+    const term = this.searchTerm.trim();
+    if (term && !this.searchTerms.includes(term)) {
+      this.searchTerms.push(term);
+    }
+    this.searchTerm = '';
+    this.onFilterTextBoxChanged();
+  }
+
+  removeSearchTerm(index: number): void {
+    this.searchTerms.splice(index, 1);
+    this.onFilterTextBoxChanged();
+  }
   /** Loading flag for top-level data fetches */
   // isLoading = false;
   _loader!: Observable<any>;
@@ -560,11 +586,13 @@ export class EventsComponent {
   };
 
   /** -------------------- Auto-refresh state -------------------- */
+    refreshInterval = 0;                                                          // change applied interval
+  pendingRefreshInterval = 0;
   // ✅ interval actually being used for auto refresh timer
-  refreshInterval = 1; // minutes; applied interval
+  //refreshInterval = 1; // minutes; applied interval                             //  CHANGE removed
 
   // ✅ dropdown selection (NOT applied until Refresh click)
-  pendingRefreshInterval = 1;
+  //pendingRefreshInterval = 1;                                                    // CHANGE removed 
 
   private refreshSub?: Subscription;
 
@@ -726,6 +754,7 @@ export class EventsComponent {
   /** ✅ Preload CLOSED counts cards (without needing MORE click) */
   private preloadClosedCounts(): void {
     if (this.selectedFilter !== "CLOSED") return;
+    if (this.rangeTooLarge) return;                                       // change
 
     if (!this.selectedStartDate || !this.selectedEndDate) {
       this.EscalatedDetailCombined = [];
@@ -956,6 +985,7 @@ export class EventsComponent {
   setFilter(filter: "CLOSED" | "PENDING"): void {
     this.selectedFilter = filter;
     this.searchTerm = "";
+    this.searchTerms = [];                                   // changes clear search terms
     this.clearFiltersAndResults(); // ✅ clears filters when changing main tabs
 
     if (filter === "CLOSED") {
@@ -1042,19 +1072,42 @@ export class EventsComponent {
   }
 
   /** -------------------- ✅ REFRESH button handler (called from status bar) -------------------- */
-  /** ✅ Refresh button click (APPLY interval + call API + start/restart timer) */
-  refreshData(): void {
-    // ✅ Apply the selection only when Refresh is clicked
+  /** ✅ Refresh button click (APPLY interval + call API + start/restart timer) */            ///! change removed
+  // refreshData(): void {
+  //   // ✅ Apply the selection only when Refresh is clicked
+  //   this.refreshInterval = this.pendingRefreshInterval;
+
+  //   console.log(
+  //     "[REFRESH CLICK] Applied interval(min):",
+  //     this.refreshInterval,
+  //     "selectedFilter:",
+  //     this.selectedFilter,
+  //   );
+
+  //   // ✅ Call API only on refresh click
+  //   if (this.selectedFilter === "PENDING") {
+  //     this.loadPendingEvents({ silent: false });
+  //     this.preloadPendingCounts();
+  //   } else {
+  //     this.loadClosedAndEscalatedDetails({ silent: false });
+  //     this.preloadClosedCounts();
+  //   }
+
+  //   // ✅ Start/restart timer after manual refresh
+  //   this.scheduleAutoRefresh(this.refreshInterval);
+  //   this.hasStartedAutoRefresh = true;
+
+  //   // Optional toast
+  //   this.notification.info(
+  //     "Refresh Applied",
+  //     `Now refreshing every ${this.refreshInterval} minute(s).`,
+  //   );
+  // }
+  refreshData(): void {                                                                    ///! change added
     this.refreshInterval = this.pendingRefreshInterval;
+    console.log("[REFRESH CLICK] Applied interval:", this.refreshInterval);
 
-    console.log(
-      "[REFRESH CLICK] Applied interval(min):",
-      this.refreshInterval,
-      "selectedFilter:",
-      this.selectedFilter,
-    );
-
-    // ✅ Call API only on refresh click
+    // call API
     if (this.selectedFilter === "PENDING") {
       this.loadPendingEvents({ silent: false });
       this.preloadPendingCounts();
@@ -1063,15 +1116,11 @@ export class EventsComponent {
       this.preloadClosedCounts();
     }
 
-    // ✅ Start/restart timer after manual refresh
+    // start timer (if interval > 0)
     this.scheduleAutoRefresh(this.refreshInterval);
     this.hasStartedAutoRefresh = true;
 
-    // Optional toast
-    this.notification.info(
-      "Refresh Applied",
-      `Now refreshing every ${this.refreshInterval} minute(s).`,
-    );
+    this.notification.info("Refresh Applied", `Now refreshing every ${this.refreshInterval} minute(s).`);
   }
 
   /** -------------------- ✅ Timer scheduler -------------------- */
@@ -1102,17 +1151,22 @@ export class EventsComponent {
   }
 
   /** -------------------- ✅ Interval dropdown handler (called from status bar) -------------------- */
-  /** ✅ Dropdown change (ONLY select, do NOT apply / do NOT call API / do NOT restart timer) */
-  onIntervalChange(newInterval: number): void {
-    this.pendingRefreshInterval = Number(newInterval) || 1;
+  // /** ✅ Dropdown change (ONLY select, do NOT apply / do NOT call API / do NOT restart timer) */    // change removed
+  // onIntervalChange(newInterval: number): void {
+  //   this.pendingRefreshInterval = Number(newInterval) || 1;
 
-    console.log(
-      "[INTERVAL SELECTED - NOT APPLIED YET] pendingRefreshInterval:",
-      this.pendingRefreshInterval,
-    );
+  //   console.log(
+  //     "[INTERVAL SELECTED - NOT APPLIED YET] pendingRefreshInterval:",
+  //     this.pendingRefreshInterval,
+  //   );
 
-    // Optional toast (purely informational)
-    // this.notification.info("Interval selected", `Click Refresh to apply ${this.pendingRefreshInterval} min`);
+  //   // Optional toast (purely informational)
+  //   // this.notification.info("Interval selected", `Click Refresh to apply ${this.pendingRefreshInterval} min`);
+  // }
+    onIntervalChange(newInterval: number): void {                                                ///! change added
+    this.pendingRefreshInterval = Number(newInterval) || 0;
+    console.log("[INTERVAL SELECTED] pendingRefreshInterval:", this.pendingRefreshInterval);
+    // no API call, no timer restart – only when Refresh is clicked
   }
 
   /** -------------------- AG Grid setup -------------------- */
@@ -1180,8 +1234,10 @@ export class EventsComponent {
   }
 
   onFilterTextBoxChanged(): void {
-
-    this.gridApi?.setGridOption("quickFilterText", this.searchTerm);
+    const combinedSearch = [...this.searchTerms, this.searchTerm.trim()]
+      .filter(t => t)
+      .join(' ');
+    this.gridApi?.setGridOption("quickFilterText", combinedSearch);
   }
 
   closedQuickFilterMatcher = (quickFilterParts: string[], rowText: string) =>
@@ -2213,6 +2269,10 @@ export class EventsComponent {
   }
 
   /** -------------------- CLOSED fetch -------------------- */
+    private daysBetween(start: Date, end: Date): number {                    // CHANGE 
+  const diffMs = end.getTime() - start.getTime();
+  return diffMs / (1000 * 60 * 60 * 24);
+}
   event: any;
   onDateRangeSelected(event: {
     startDate: Date;
@@ -2227,18 +2287,47 @@ export class EventsComponent {
     const startStr = this.formatDateTimeFull(newStart);
     const endStr = this.formatDateTimeFull(newEnd);
 
-    if (
-      this.lastStartDateTime === startStr &&
-      this.lastEndDateTime === endStr
-    ) {
-      return;
-    }
+    // if (                                                                               //change removed
+    //   this.lastStartDateTime === startStr &&
+    //   this.lastEndDateTime === endStr
+    // ) {
+    //   return;
+    // }
 
     this.lastStartDateTime = startStr;
     this.lastEndDateTime = endStr;
 
     this.selectedStartDate = newStart;
     this.selectedEndDate = newEnd;
+
+    this.currentFilter = {
+      ...this.currentFilter,
+      startDate: this.formatDate(newStart),                              // changes
+      endDate: this.formatDate(newEnd),
+    };
+
+        const diffDays = this.daysBetween(newStart, newEnd);                             //  change
+    if (diffDays > 7) {
+      // Clear table data
+      this.rowData = [];
+      this.closedDisplayRows = [];
+      this.EscalatedDetailCombined = [];
+      this.secondEscalatedDetails = [];
+      
+      this.rangeTooLarge = true;
+
+      // Optional: show a warning
+      // this.showToast(
+      //   'warn',
+      //   'Range too large',
+      //   'Only up to 7 days can be displayed. Use Excel download for larger ranges.'
+      // );
+      return;
+    }
+
+    this.rangeTooLarge = false;
+
+    // Existing logic: load data
 
     if (this.selectedFilter === "CLOSED") {
       this.loadClosedAndEscalatedDetails();
@@ -2247,7 +2336,11 @@ export class EventsComponent {
   }
 
   loadClosedAndEscalatedDetails(opts: { silent?: boolean } = {}): void {
-    const { silent = false } = opts;
+    const { silent = false } = opts; 
+      if (this.rangeTooLarge) {                                                 // change
+      if (!silent) this.idelService.isLoading.next(false);    
+      return;
+    }
     if (!this.selectedStartDate || !this.selectedEndDate) {
       if (!silent) {
         this.showToast(
@@ -2317,6 +2410,7 @@ export class EventsComponent {
           if (e?.eventType === "Manual_Wall") alertColor = "#FFC400";
           else if (e?.eventType === "Event_Wall") alertColor = "#53BF8B";
           else if (e?.eventType === "Manual_Event") alertColor = "#353636ff";
+          else if (e?.eventType === "Custom_Event") alertColor = "magenta";
 
           const empName = e?.userName ?? e?.user ?? "";
           const empLevel = e?.userLevels ?? "N/A";
@@ -2347,7 +2441,7 @@ export class EventsComponent {
         });
 
         this.closedDisplayRows = [...this.rowData];
-
+    //this.updateDisplayRows();                                         //CHANGE not added
         const sum = (arr: number[]) =>
           arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
 
@@ -2371,7 +2465,9 @@ export class EventsComponent {
         const manualEvent = sum(
           countsList.map((c) => Number(c?.Manual_Event) || 0),
         );
-
+          const customEvent = sum(                                            // change
+          countsList.map((c) => Number(c?.Custom_Event) || 0),
+        );
         this.secondEscalatedDetails = [
           { label: "TOTAL", value: totalEventsCount || 0, color: "#ED3237" },
           {
@@ -2387,6 +2483,7 @@ export class EventsComponent {
           { iconcolor: "#53BF8B", value: eventWall, color: "#ED3237" },
           { iconcolor: "#FFC400", value: manualWall, color: "#ED3237" },
           { iconcolor: "#353636ff", value: manualEvent, color: "#ED3237" },
+          { iconcolor: "magenta", value: customEvent, color: "#ED3237" },     // changed
         ];
 
         this.refreshDropdownListsFromClosed();
@@ -2495,8 +2592,8 @@ export class EventsComponent {
 
   private getDefaultFilter(): EventsFilterCriteria {
     return {
-      startDate: null,
-      endDate: null,
+      startDate: this.selectedStartDate ? this.formatDate(this.selectedStartDate) : null,       // changed
+      endDate: this.selectedEndDate ? this.formatDate(this.selectedEndDate) : null,               // changed
       startTime: "00:00",
       endTime: "23:59",
       minDuration: 0,
@@ -2619,15 +2716,15 @@ export class EventsComponent {
         cellStyle: { opacity: "0.5" },
         suppressHeaderMenuButton: true,
       },
-      {
-        headerName: "SITE ID",
-        field: "siteId",
-        headerClass: "custom-header",
-        cellClass: "custom-cell",
-        cellStyle: { opacity: "0.5" },
-        suppressHeaderMenuButton: true,
-        cellRenderer: CopyCellRendererComponent,  // copy cell element
-      },
+      // {
+      //   headerName: "SITE ID",                                                      // change
+      //   field: "siteId",
+      //   headerClass: "custom-header",
+      //   cellClass: "custom-cell",
+      //   cellStyle: { opacity: "0.5" },
+      //   suppressHeaderMenuButton: true,
+      //   cellRenderer: CopyCellRendererComponent,  // copy cell element
+      // },
       {
         headerName: "SITE",
         field: "siteName",

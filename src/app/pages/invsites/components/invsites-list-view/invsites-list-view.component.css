@@ -43,12 +43,18 @@
   color: #5f6368;
   cursor: pointer;
   padding: 0;
-  transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+  line-height: 1;
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transition: none;
 }
 
 :host ::ng-deep .ag-theme-custom .invsites-more-btn:hover {
-  background: rgba(237, 50, 55, 0.08);
-  color: #ed3237;
+  background: transparent;
+  color: #5f6368;
 }
 
 :host ::ng-deep .ag-theme-custom .invsites-more-btn:focus-visible {
@@ -60,4 +66,9 @@
   width: 18px;
   height: 18px;
   display: block;
+  opacity: 1;
+  pointer-events: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
 }

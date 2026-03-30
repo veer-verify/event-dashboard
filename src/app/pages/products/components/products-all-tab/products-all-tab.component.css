@@ -16,3 +16,54 @@
   width: 100%;
   min-width: 0;
 }
+
+:host ::ng-deep .products-all-grid .products-all-action-cell .ag-cell-value {
+  width: 100%;
+}
+
+:host ::ng-deep .products-all-grid .products-all-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+:host ::ng-deep .products-all-grid .products-all-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+:host ::ng-deep .products-all-grid .products-all-action-btn:hover {
+  background: rgba(237, 50, 55, 0.08);
+}
+
+:host ::ng-deep .products-all-grid .products-all-action-btn:focus-visible {
+  outline: 2px solid rgba(237, 50, 55, 0.35);
+  outline-offset: 2px;
+}
+
+:host ::ng-deep .products-all-grid .products-all-action-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+  pointer-events: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}

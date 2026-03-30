@@ -55,6 +55,14 @@ export class CalendarComponent implements OnInit {
   @Output() dateRangeSelected = new EventEmitter<DateRangePayload>();
 
   private readonly autoEmit: boolean = false;
+  private readonly DEFAULT_LAST_HOURS = 24;           //change last 24 hours by default
+  private readonly MAX_FUTURE_HOURS = 5.5;            // change allow up to 5.5 hours in the future
+  private readonly MAX_RANGE_DAYS = 7;                // change maximum allowed date range in days
+
+  /** change Maximum selectable end-date (startDate + 7 days, capped at today) */
+  maxEndDate: Date = new Date();
+  /** change Whether to show the 7-day limit warning below the calendar */
+  showRangeWarning: boolean = false;
 
   constructor(
     public dashboard_service: DashboardService,
@@ -81,7 +89,7 @@ export class CalendarComponent implements OnInit {
   viewOptions = [
     { label: 'DAY', value: 'day' },
     { label: 'WEEK', value: 'week' },
-    { label: 'MONTH', value: 'month' },
+    // { label: 'MONTH', value: 'month' },
   ];
 
   today: Date = new Date();
@@ -123,7 +131,8 @@ export class CalendarComponent implements OnInit {
     this.generateAllISOWeeks(currentYear - 5, currentYear + 5);
     this.generateMonths(currentYear - 5, currentYear + 5);
 
-    // default seed: today 00:00 → now
+     // Set initial range to last 24 hours 
+    this.setDefaultRange();   // changed
 
 
     // emit ONCE on load
@@ -192,11 +201,13 @@ export class CalendarComponent implements OnInit {
       this.endTime = this.formatTime24(this.endDate);
 
       if (this.endDate < this.startDate) return this.notification.error("Please select valid date range");
-      // extra guard: never allow future end
-      if (this.endDate > now) {
-        this.endDate = now;
-        this.endTime = this.formatTime24(now);
-      }
+     
+      // Enforce 7-day max range
+      const diffMs = this.endDate.getTime() - this.startDate.getTime();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+     if (diffDays > this.MAX_RANGE_DAYS) {
+  this.notification.warn('Range exceeds 7 days', 'Data will not be displayed. Use Excel download for larger ranges.');
+}
     }
 
     const key = this.buildKey();
@@ -220,7 +231,13 @@ export class CalendarComponent implements OnInit {
   private isFutureDate(date: Date): boolean {
     return date > this.today;
   }
-
+  private setDefaultRange(): void {    // changed
+    const now = new Date();
+    this.startDate = new Date(now.getTime() - this.DEFAULT_LAST_HOURS * 60 * 60 * 1000);
+    this.endDate = new Date(now);
+    this.startTime = this.formatTime24(this.startDate);
+    this.endTime = this.formatTime24(this.endDate);
+  }
   private formatTime24(date: Date): string {
     return date.toTimeString().split(' ')[0];
   }
@@ -252,6 +269,9 @@ export class CalendarComponent implements OnInit {
     }
   }
 
+  private get maxFutureTime(): Date {
+    return new Date(Date.now() + this.MAX_FUTURE_HOURS * 60 * 60 * 1000);
+  }
   // ---------------------------------------------------------------------------
   // VIEW MODE (DAY/WEEK/MONTH)
   // ---------------------------------------------------------------------------
@@ -614,38 +634,39 @@ export class CalendarComponent implements OnInit {
 
   goToday() {
     this.dashboard_service.isTimeSelected = true;
-    const now = new Date();
+     this.setDefaultRange();       // changed
     this.viewMode = 'day';
-    this.currentMonth = new Date(now);
+    this.currentMonth = new Date(this.endDate);
+     this.inlineDate = new Date(this.startDate);
 
     // Start of today
-    const dayStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      0,
-      0,
-      0,
-      0
-    );
+    // const dayStart = new Date(
+    //   now.getFullYear(),
+    //   now.getMonth(),
+    //   now.getDate(),
+    //   0,
+    //   0,
+    //   0,
+    //   0
+    // );
 
-    // End of today (23:59:59)
-    const dayEnd = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      23,
-      59,
-      59,
-      999
-    );
+    // // End of today (23:59:59)
+    // const dayEnd = new Date(
+    //   now.getFullYear(),
+    //   now.getMonth(),
+    //   now.getDate(),
+    //   23,
+    //   59,
+    //   59,
+    //   999
+    // );
 
-    this.startDate = dayStart;
-    // this.endDate = new Date(this.dashboard_service.getTimeByTimezone(this.timezone?.timezoneValue))
-    this.endDate = dayEnd;
-    this.startTime = '00:00:00';
-    this.endTime = '23:59:59';
-    this.inlineDate = new Date(this.startDate);
+    // this.startDate = dayStart;
+    // // this.endDate = new Date(this.dashboard_service.getTimeByTimezone(this.timezone?.timezoneValue))
+    // this.endDate = dayEnd;
+    // this.startTime = '00:00:00';
+    // this.endTime = '23:59:59';
+    // this.inlineDate = new Date(this.startDate);
 
     this.forceEmit();
   }
@@ -654,6 +675,11 @@ export class CalendarComponent implements OnInit {
   // ---------------------------------------------------------------------------
   // TOGGLES & POPUP HANDLERS
   // ---------------------------------------------------------------------------
+    onPanelHide() {    // changed
+    // Reset focus to start date when popup closes
+    this.activeInput = 'start';
+    this.inlineDate = new Date(this.startDate);
+  }
   toggleDateRange() {
     this.mode = 'range';
     this.dateRange = true;
@@ -696,7 +722,16 @@ export class CalendarComponent implements OnInit {
 
       //! change  start Date
       this.startDate = new Date(selected);
+    // Compute max allowed end date = startDate + 7 days, capped at today
+      const maxEnd = new Date(selected);
+      maxEnd.setDate(maxEnd.getDate() + this.MAX_RANGE_DAYS);
+      const todayCap = new Date(this.today);
+      this.maxEndDate = maxEnd < todayCap ? maxEnd : todayCap;
 
+      // Show warning that range is capped to 7 days
+      this.showRangeWarning = true;
+
+      // Sync end date automatically: clamp if already beyond 7 days
       //! change  SYNC END DATE
       const endCopy = new Date(selected);
 
@@ -709,7 +744,11 @@ export class CalendarComponent implements OnInit {
           today.getMilliseconds()
         );
       } else {
-        //! change past day → full day
+        
+        // past day → full day (but max 7 days)
+        const sevenDaysLater = new Date(selected);
+        sevenDaysLater.setDate(sevenDaysLater.getDate() + this.MAX_RANGE_DAYS);
+        sevenDaysLater.setHours(23, 59, 59, 999);
         endCopy.setHours(23, 59, 59, 999);
       }
 
@@ -758,18 +797,25 @@ export class CalendarComponent implements OnInit {
 
     const now = new Date();
 
-    // If day is in the past → nothing disabled
-    if (!this.isSameDay(candidate, now) && candidate < now) {
-      return false;
-    }
+    // // If day is in the past → nothing disabled
+    // if (!this.isSameDay(candidate, now) && candidate < now) {
+    //   return false;
+    // }
 
-    // Same day → disable times after now
-    if (this.isSameDay(candidate, now)) {
-      return candidate > now;
-    }
+    // // Same day → disable times after now
+    // if (this.isSameDay(candidate, now)) {
+    //   return candidate > now;
+    // }
 
-    // Future dates shouldn't be possible, but if so, everything is disabled
-    return candidate > now;
+    // // Future dates shouldn't be possible, but if so, everything is disabled
+    // return candidate > now;
+     const maxAllowed = this.maxFutureTime;
+
+    // Past times are always allowed
+    if (candidate <= now) return false;
+
+    // Future times: allowed only within the 5.5h window
+    return candidate > maxAllowed;
   }
 
 
@@ -788,9 +834,10 @@ export class CalendarComponent implements OnInit {
     candidate.setHours(hh, mm, 0, 0);
 
     const now = new Date();
+    const maxAllowed = this.maxFutureTime;
 
-    // If the selected day is in the past → always allowed
-    if (!this.isSameDay(candidate, now) && candidate < now) {
+     // Past times always allowed
+    if (candidate <= now) {
       // past day (yesterday/earlier)
       if (this.activeInput === 'start') {
         this.startDate = candidate;
@@ -801,16 +848,23 @@ export class CalendarComponent implements OnInit {
     }
 
     // Same day as today → allow only times <= now
-    if (this.isSameDay(candidate, now)) {
-      if (candidate > now) {
-        return; // ⛔ future time today
-      }
+    // if (this.isSameDay(candidate, now)) {
+    //   if (candidate > now) {
+    //     return; // ⛔ future time today
+    //   }
+    //   if (this.activeInput === 'start') {
+    //     this.startDate = candidate;
+    //   } else {
+    //     this.endDate = candidate;
+    //   }
+    //   return;
+    // }
+     if (candidate <= maxAllowed) {
       if (this.activeInput === 'start') {
         this.startDate = candidate;
       } else {
         this.endDate = candidate;
       }
-      return;
     }
 
     // Any other case (shouldn't happen if dates are limited) – still guard
