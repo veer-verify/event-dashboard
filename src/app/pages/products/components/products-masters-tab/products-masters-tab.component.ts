@@ -69,42 +69,44 @@ export class ProductsMastersTabComponent implements OnInit, OnChanges {
 
   constructor() {
     this.mastersColumnDefs = [
-      { field: "productId", headerName: "ID", flex: 0.7, minWidth: 80, tooltipValueGetter: (params) => params.value || '' },
-      { field: "productName", headerName: "PRODUCT NAME", flex: 1.8, minWidth: 200, tooltipValueGetter: (params) => params.value || '' },
-      { field: "units", headerName: "UNITS", flex: 0.8, minWidth: 90, tooltipValueGetter: (params) => params.value || '' },
-      { field: "make", headerName: "MAKE", flex: 1, minWidth: 130, tooltipValueGetter: (params) => params.value || '' },
-      { field: "model", headerName: "MODEL", flex: 1.5, minWidth: 200, tooltipValueGetter: (params) => params.value || '' },
-      { field: "productCode", headerName: "PRODUCT CODE", flex: 1.2, minWidth: 150, tooltipValueGetter: (params) => params.value || '' },
-      { field: "publishedDate", headerName: "PUBLISHED DATE", flex: 1.2, minWidth: 140, tooltipValueGetter: (params) => params.value || '' },
-      { field: "useFor", headerName: "USE FOR", flex: 1.2, minWidth: 150, tooltipValueGetter: (params) => params.value || '' },
+      { field: "productId", headerName: "ID", width: 70, minWidth: 65, maxWidth: 80, suppressSizeToFit: true, tooltipValueGetter: (params) => params.value || '' },
+      { field: "productName", headerName: "PRODUCT NAME", flex: 2.2, minWidth: 240, tooltipValueGetter: (params) => params.value || '' },
+      { field: "units", headerName: "UNITS", width: 90, minWidth: 75, maxWidth: 100, suppressSizeToFit: true, tooltipValueGetter: (params) => params.value || '' },
+      { field: "make", headerName: "MAKE", flex: 0.85, minWidth: 110, tooltipValueGetter: (params) => params.value || '' },
+      { field: "model", headerName: "MODEL", flex: 1.5, minWidth: 180, tooltipValueGetter: (params) => params.value || '' },
+      { field: "productCode", headerName: "PRODUCT CODE", flex: 1, minWidth: 120, tooltipValueGetter: (params) => params.value || '' },
+      { field: "publishedDate", headerName: "PUBLISHED DATE", flex: 0.9, minWidth: 120, tooltipValueGetter: (params) => params.value || '' },
+      { field: "useFor", headerName: "USE FOR", flex: 1.1, minWidth: 130, tooltipValueGetter: (params) => params.value || '' },
       {
         field: "action",
         headerName: "ACTION",
         sortable: false,
-        flex: 0.6,
-        minWidth: 80,
+        width: 80,
+        minWidth: 72,
+        maxWidth: 90,
+        suppressSizeToFit: true,
+        cellClass: 'products-masters-action-cell',
         cellRenderer: (params: ICellRendererParams) => {
           const container = document.createElement("div");
-          container.style.display = "flex";
-          container.style.alignItems = "center";
-          container.style.justifyContent = "center";
-          container.style.height = "100%";
+          container.className = 'products-masters-action';
+
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = 'products-masters-action-btn';
+          button.title = "View details";
+          button.setAttribute("aria-label", "View details");
 
           const img = document.createElement("img");
           img.src = "assets/icons/information-icon.svg";
-          img.alt = "View";
+          img.alt = "View details";
           img.draggable = false;
-          img.style.cursor = "pointer";
-          img.style.width = "20px";
-          img.style.height = "20px";
-          img.style.display = "block";
-          img.style.flexShrink = "0";
+          img.className = 'products-masters-action-icon';
 
-          img.addEventListener("mousedown", (event: MouseEvent) => {
+          button.addEventListener("mousedown", (event: MouseEvent) => {
             event.preventDefault();
             event.stopPropagation();
           });
-          img.addEventListener("click", (event: MouseEvent) => {
+          button.addEventListener("click", (event: MouseEvent) => {
             event.preventDefault();
             event.stopPropagation();
             this.ngZone.run(() => {
@@ -112,7 +114,8 @@ export class ProductsMastersTabComponent implements OnInit, OnChanges {
             });
           });
 
-          container.appendChild(img);
+          button.appendChild(img);
+          container.appendChild(button);
           return container;
         }
       }

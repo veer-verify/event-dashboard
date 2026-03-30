@@ -60,15 +60,17 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
       {
         field: "id",
         headerName: "ID",
-        flex: 0.7,
-        minWidth: 80,
+        width: 70,
+        minWidth: 65,
+        maxWidth: 80,
+        suppressSizeToFit: true,
         tooltipValueGetter: (params) => params.value || ''
       },
       {
         field: "productName",
         headerName: "PRODUCT",
-        flex: 2,
-        minWidth: 250,
+        flex: 2.5,
+        minWidth: 290,
         tooltipValueGetter: (params) => {
           const productName = params.data?.productName || '';
           const make = params.data?.make || '';
@@ -129,22 +131,24 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
           return container;
         },
       },
-      { field: "serialNumber", headerName: "SERIAL NUMBER", flex: 1.3, minWidth: 150, tooltipValueGetter: (params) => params.value || '' },
-      { field: "barCode", headerName: "BARCODE NO.", flex: 1.2, minWidth: 140, tooltipValueGetter: (params) => params.value || '' },
-      { field: "quantity", headerName: "QTY", flex: 0.6, minWidth: 70, tooltipValueGetter: (params) => params.value || '' },
-      { field: "publishedDate", headerName: "PUBLISHED DATE", flex: 1.2, minWidth: 130, tooltipValueGetter: (params) => params.value || '' },
+      { field: "serialNumber", headerName: "SERIAL NUMBER", flex: 1.05, minWidth: 130, tooltipValueGetter: (params) => params.value || '' },
+      { field: "barCode", headerName: "BARCODE NO.", flex: 0.95, minWidth: 120, tooltipValueGetter: (params) => params.value || '' },
+      { field: "quantity", headerName: "QTY", width: 65, minWidth: 55, maxWidth: 75, suppressSizeToFit: true, tooltipValueGetter: (params) => params.value || '' },
+      { field: "publishedDate", headerName: "PUBLISHED DATE", flex: 0.9, minWidth: 115, tooltipValueGetter: (params) => params.value || '' },
       {
         field: "currentLocation",
         headerName: "CURRENT LOCATION",
-        flex: 1.8,
-        minWidth: 200,
+        flex: 1.9,
+        minWidth: 220,
         tooltipValueGetter: (params) => params.value || '-'
       },
       {
         field: "status",
         headerName: "STATUS",
-        flex: 0.2,
-        minWidth: 100,
+        width: 90,
+        minWidth: 80,
+        maxWidth: 100,
+        suppressSizeToFit: true,
         cellRenderer: (params: ICellRendererParams) => {
           const span = document.createElement("span");
           span.textContent = params.value;
@@ -161,29 +165,32 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
         field: "action",
         headerName: "MORE",
         sortable: false,
-        flex: 0.6,
-        minWidth: 80,
+        width: 75,
+        minWidth: 70,
+        maxWidth: 85,
+        suppressSizeToFit: true,
+        cellClass: 'products-all-action-cell',
         cellRenderer: (params: ICellRendererParams) => {
           const container = document.createElement("div");
-          container.style.display = "flex";
-          container.style.alignItems = "center";
-          container.style.height = "100%";
+          container.className = 'products-all-action';
+
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = 'products-all-action-btn';
+          button.title = "View details";
+          button.setAttribute("aria-label", "View details");
 
           const img = document.createElement("img");
           img.src = "assets/icons/information-icon.svg";
-          img.alt = "View";
+          img.alt = "View details";
           img.draggable = false;
-          img.style.cursor = "pointer";
-          img.style.width = "20px";
-          img.style.height = "20px";
-          img.style.display = "block";
-          img.style.flexShrink = "0";
+          img.className = 'products-all-action-icon';
 
-          img.addEventListener("mousedown", (event: MouseEvent) => {
+          button.addEventListener("mousedown", (event: MouseEvent) => {
             event.preventDefault();
             event.stopPropagation();
           });
-          img.addEventListener("click", (event: MouseEvent) => {
+          button.addEventListener("click", (event: MouseEvent) => {
             event.stopPropagation();
             event.preventDefault();
             this.ngZone.run(() => {
@@ -191,7 +198,8 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
             });
           });
 
-          container.appendChild(img);
+          button.appendChild(img);
+          container.appendChild(button);
           return container;
         }
       }

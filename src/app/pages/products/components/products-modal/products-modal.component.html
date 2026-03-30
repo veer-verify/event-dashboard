@@ -489,16 +489,16 @@
                                 <div class="view-field">
                                     <label class="field-label">Status</label>
                                     <ng-container>
-    <span class="status-badge" [ngClass]="{
-        'status-bg-sale': allDetails?.productDetails?.status?.toUpperCase()?.includes('SALE') || allDetails?.productDetails?.status?.toUpperCase()?.includes('RETURNED'),
+                                        <span class="status-badge" [ngClass]="{
+        'status-bg-sale': allDetails?.productDetails?.status?.toUpperCase()?.includes('SALE') || allDetails?.productDetails?.status?.toUpperCase()?.includes('RETURNED') || allDetails?.productDetails?.status?.toUpperCase()?.includes('DELIVERED'),
         'status-bg-new': allDetails?.productDetails?.status?.toUpperCase() === 'NEW' || allDetails?.productDetails?.status?.toUpperCase() === 'PUBLISHED',
         'status-bg-lease': allDetails?.productDetails?.status?.toUpperCase()?.includes('LEASE'),
         'status-bg-used': allDetails?.productDetails?.status?.toUpperCase() === 'USED',
         'status-bg-scrap':  allDetails?.productDetails?.status?.toUpperCase() === 'SCRAP'
     }">
-        {{ (allDetails?.productDetails?.status || "-") | uppercase }}
-    </span>
-</ng-container>
+                                            {{ (allDetails?.productDetails?.status || "-") | uppercase }}
+                                        </span>
+                                    </ng-container>
 
                                     <!-- <ng-container *ngIf="isEditing">
                                         <p-dropdown appendTo="body" [overlayOptions]="customOverlayOptions"
@@ -637,8 +637,8 @@
     'status-bg-used': prog.action.toUpperCase() === 'USED',
     'status-bg-scrap': prog.action.toUpperCase().includes('RETURNED') || prog.action.toUpperCase() === 'SCRAP'
 }">
-    {{ prog.action || "New" }}
-</span>
+                                                    {{ prog.action || "New" }}
+                                                </span>
 
                                             </div>
                                         </div>

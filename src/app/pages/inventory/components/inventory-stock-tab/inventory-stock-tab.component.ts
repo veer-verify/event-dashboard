@@ -82,16 +82,18 @@ export class InventoryStockTabComponent implements OnInit, OnChanges {
       {
         field: 'itemId',
         headerName: 'ITEM ID',
-        flex: 1,
-        minWidth: 80,
+        width: 85,
+        minWidth: 70,
+        maxWidth: 95,
+        suppressSizeToFit: true,
         cellClass: 'ellipsis-cell',
         tooltipValueGetter: (params) => params.value || ''
       },
       {
         field: 'itemName',
         headerName: 'ITEM NAME',
-        flex: 2,
-        minWidth: 200,
+        flex: 2.4,
+        minWidth: 250,
         cellClass: 'ellipsis-cell',
         valueGetter: (params) => {
           const make = params.data?.make || '';
@@ -109,37 +111,41 @@ export class InventoryStockTabComponent implements OnInit, OnChanges {
       {
         field: 'itemCode',
         headerName: 'ITEM CODE',
-        flex: 1.5,
-        minWidth: 160,
+        flex: 0.95,
+        minWidth: 120,
         cellClass: 'ellipsis-cell',
         tooltipValueGetter: (params) => params.value || '',
       },
       {
         field: 'unitsName',
         headerName: 'UNITS',
-        flex: 0.7,
-        minWidth: 70,
+        width: 85,
+        minWidth: 65,
+        maxWidth: 95,
+        suppressSizeToFit: true,
         cellClass: 'ellipsis-cell',
         tooltipValueGetter: (params) => params.value || ''
       },
       {
         field: 'usedFor',
         headerName: 'USED FOR',
-        flex: 0.7,
-        minWidth: 70,
+        flex: 0.8,
+        minWidth: 90,
         tooltipValueGetter: (params) => params.value || '',
         cellClass: 'ellipsis-cell'
       },
-      { field: 'opening', headerName: 'OPENING', flex: 0.8, minWidth: 80 },
-      { field: 'purchase', headerName: 'PURCHASE', flex: 0.8, minWidth: 80 },
-      { field: 'used', headerName: 'Used', flex: 0.8, minWidth: 80 },
-      { field: 'issued', headerName: 'ISSUED', flex: 0.8, minWidth: 80 },
-      { field: 'returned', headerName: 'RETURNED', flex: 0.8, minWidth: 90 },
+      { field: 'opening', headerName: 'OPENING', width: 80, minWidth: 65, maxWidth: 90, suppressSizeToFit: true },
+      { field: 'purchase', headerName: 'PURCHASE', width: 80, minWidth: 65, maxWidth: 90, suppressSizeToFit: true },
+      { field: 'used', headerName: 'Used', width: 75, minWidth: 65, maxWidth: 85, suppressSizeToFit: true },
+      { field: 'issued', headerName: 'ISSUED', width: 75, minWidth: 65, maxWidth: 85, suppressSizeToFit: true },
+      { field: 'returned', headerName: 'RETURNED', width: 85, minWidth: 70, maxWidth: 95, suppressSizeToFit: true },
       {
         field: 'closing',
         headerName: 'CLOSING',
-        flex: 0.8,
-        minWidth: 80,
+        width: 85,
+        minWidth: 70,
+        maxWidth: 95,
+        suppressSizeToFit: true,
         cellRenderer: (params: ICellRendererParams) => {
           const span = document.createElement('span');
           span.innerText = String(params.value ?? 0);
@@ -176,8 +182,10 @@ export class InventoryStockTabComponent implements OnInit, OnChanges {
       {
         field: 'preorder',
         headerName: 'PRE-ORDER',
-        flex: 0.8,
-        minWidth: 90,
+        width: 90,
+        minWidth: 75,
+        maxWidth: 100,
+        suppressSizeToFit: true,
         cellRenderer: (params: ICellRendererParams) => {
           if (params.value > 0) {
             const span = document.createElement('span');

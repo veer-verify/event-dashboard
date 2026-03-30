@@ -77,13 +77,13 @@ export class InventoryReturnTabComponent implements OnInit, OnChanges {
 
   constructor() {
     this.columnDefs = [
-      { field: 'id', headerName: 'ID', flex: 0.8, minWidth: 90 },
-      { field: 'returnDate', headerName: 'DATE', flex: 1, minWidth: 100 },
+      { field: 'id', headerName: 'ID', width: 70, minWidth: 65, maxWidth: 80, suppressSizeToFit: true },
+      { field: 'returnDate', headerName: 'DATE', width: 100, minWidth: 90, maxWidth: 110, suppressSizeToFit: true },
       {
         field: 'returnFrom',
         headerName: 'SITE',
-        flex: 1.5,
-        minWidth: 160,
+        flex: 1.8,
+        minWidth: 190,
         cellRenderer: (params: ICellRendererParams) => {
           const span = document.createElement('span');
           span.innerText = params.value;
@@ -98,8 +98,8 @@ export class InventoryReturnTabComponent implements OnInit, OnChanges {
       {
         field: 'returnTo',
         headerName: 'RETURN TO',
-        flex: 1.2,
-        minWidth: 130,
+        flex: 1.3,
+        minWidth: 145,
         cellRenderer: (params: ICellRendererParams) => {
           const span = document.createElement('span');
           span.innerText = params.value;
@@ -114,8 +114,10 @@ export class InventoryReturnTabComponent implements OnInit, OnChanges {
       {
         field: 'status',
         headerName: 'STATUS',
-        flex: 1,
-        minWidth: 110,
+        width: 95,
+        minWidth: 90,
+        maxWidth: 105,
+        suppressSizeToFit: true,
         cellRenderer: (params: ICellRendererParams) => {
           const span = document.createElement('span');
           span.innerText = params.value;
@@ -137,29 +139,32 @@ export class InventoryReturnTabComponent implements OnInit, OnChanges {
       {
         headerName: 'ACTION',
         field: 'action',
-        flex: 0.7,
-        minWidth: 80,
+        width: 75,
+        minWidth: 70,
+        maxWidth: 85,
+        suppressSizeToFit: true,
+        cellClass: 'inventory-return-action-cell',
         cellRenderer: (params: ICellRendererParams) => {
           const container = document.createElement('div');
-          container.style.display = 'flex';
-          container.style.alignItems = 'center';
-          container.style.justifyContent = 'center';
-          container.style.height = '100%';
+          container.className = 'inventory-return-action';
+
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'inventory-return-action-btn';
+          button.title = 'View details';
+          button.setAttribute('aria-label', 'View details');
 
           const img = document.createElement('img');
           img.src = 'assets/icons/information-icon.svg';
+          img.alt = 'View details';
           img.draggable = false;
-          img.style.cursor = 'pointer';
-          img.style.width = '20px';
-          img.style.height = '20px';
-          img.style.display = 'block';
-          img.style.flexShrink = '0';
+          img.className = 'inventory-return-action-icon';
 
-          img.addEventListener('mousedown', (event: MouseEvent) => {
+          button.addEventListener('mousedown', (event: MouseEvent) => {
             event.preventDefault();
             event.stopPropagation();
           });
-          img.addEventListener('click', (event: MouseEvent) => {
+          button.addEventListener('click', (event: MouseEvent) => {
             event.preventDefault();
             event.stopPropagation();
             this.ngZone.run(() => {
@@ -167,7 +172,8 @@ export class InventoryReturnTabComponent implements OnInit, OnChanges {
             });
           });
 
-          container.appendChild(img);
+          button.appendChild(img);
+          container.appendChild(button);
           return container;
         }
       }
