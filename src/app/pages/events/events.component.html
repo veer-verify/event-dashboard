@@ -721,10 +721,10 @@
   <ng-container *ngIf="mailselectitem?.mailColour == 2">
     <p class="email-text">
       <span class="warning-icon">⚠️</span>
-  <span class="message">
-    Email usage for <span class="highlight">"one-time"</span> tags is no longer permitted
-  </span>
-
+      <span class="message">
+        Email usage for <span class="highlight">"one-time"</span> tags is no
+        longer permitted
+      </span>
     </p>
   </ng-container>
 
@@ -741,7 +741,7 @@
       >
         <!-- ================= EMAIL PREVIEW ================= -->
         <div class="email-logo">
-          <img src="https://usstaging.ivisecurity.com/images/ivis.png" />
+          <img [src]="emailData?.logoUrl" alt="no image" />
         </div>
 
         <div class="email-site">
@@ -799,7 +799,7 @@
           <table class="email-table">
             <tr>
               <td class="label">Camera</td>
-              <td class="value">{{ mailselectitem?.cameraId }}</td>
+              <td class="value">{{ mailselectitem?.cameraName }}</td>
             </tr>
           </table>
 
@@ -897,7 +897,7 @@
     <div class="email-wrapper">
       <div style="overflow-y: auto; max-height: 80vh">
         <div class="email-logo">
-          <img src="https://usstaging.ivisecurity.com/images/ivis.png" />
+          <img [src]="emailData?.logoUrl" alt="no image" />
         </div>
 
         <div class="email-site">
@@ -958,7 +958,7 @@
           <table class="email-table">
             <tr>
               <td class="label">Camera</td>
-              <td class="value">{{ mailselectitem?.cameraId }}</td>
+              <td class="value">{{ mailselectitem?.cameraName }}</td>
             </tr>
           </table>
 

@@ -36,20 +36,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
   notifications: AppNotification[] = [];
   private notifSub?: Subscription;
 
-  userProfile: UserProfile = {
-    name: 'Username',
-    role: 'Screener',
-    id: '',
-    email: '',
-    phone: '',
-    version: 'V1.01',
-  };
+  userProfile: any;
 
   constructor(
     private router: Router,
     private authService: AuthService,
     private notification: NotificationService
-  ) {}
+  ) { }
 
   userData: any;
   ngOnInit(): void {
@@ -61,6 +54,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if (stored) {
       try {
         const data = JSON.parse(stored);
+        if (!data) return;
         this.userProfile = {
           name:
             `${data.FirstName ?? ''} ${data.LastName ?? ''}`.trim() ||
@@ -85,8 +79,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     );
 
     this.authService.getUserInfoForId().subscribe((res: any) => {
-  this.userData = res;
-});
+      this.userData = res;
+    });
   }
 
   ngOnDestroy() {
@@ -106,8 +100,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   closeNotifications() {
-  this.showNotifications = false;
-}
+    this.showNotifications = false;
+  }
 
   toggleNotifications() {
     this.showNotifications = !this.showNotifications;
@@ -116,10 +110,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
   }
 
-clearNotifications() {
-  this.notification.clear();
-  this.showNotifications = false; // 👈 auto close popup
-}
+  clearNotifications() {
+    this.notification.clear();
+    this.showNotifications = false; // 👈 auto close popup
+  }
 
   logout() {
     this.showUserCard = false;
@@ -127,4 +121,5 @@ clearNotifications() {
     this.notification.clear();  // 🔄 reset on logout
     this.authService.logout();
   }
+
 }

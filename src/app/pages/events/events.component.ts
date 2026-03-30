@@ -149,7 +149,7 @@ export class EventsComponent {
   }
 
   /** --------------- Filter sidebar state --------------- */
-  
+
   isFilterOpen = false;
 
   openFilter() {
@@ -343,8 +343,8 @@ export class EventsComponent {
       ).values(),
     );
 
-       const timeZoneRows = this.filterRowsForOptions(rows, "timezone");
- this.filterLists.timezones = this.uniq(timeZoneRows.map((r) => r.timezone));
+    const timeZoneRows = this.filterRowsForOptions(rows, "timezone");
+    this.filterLists.timezones = this.uniq(timeZoneRows.map((r) => r.timezone));
 
     const cameraRows = this.filterRowsForOptions(rows, "camera");
     this.filterLists.cameras = this.uniq(cameraRows.map((r) => r.cameraId));
@@ -593,7 +593,7 @@ export class EventsComponent {
   filterLists = {
     cities: [] as string[],
     sites: [] as any[],
-    timezones:[] as any[],
+    timezones: [] as any[],
     cameras: [] as string[],
     actionTags: ["Suspicious", "False", "Event_Wall", "Manual_Wall"],
     eventTypes: ["Event_Wall", "Manual_Wall", "Timed_Out"],
@@ -607,7 +607,7 @@ export class EventsComponent {
   get cities() {
     return this.filterLists.cities;
   }
-    get timezones() {
+  get timezones() {
     return this.filterLists.timezones;
   }
   get sites() {
@@ -645,7 +645,7 @@ export class EventsComponent {
     private notification: NotificationService,
     private zone: NgZone,
     private idelService: IdleService,
-  ) {}
+  ) { }
 
   /** -------------------- Lifecycle -------------------- */
   ngOnInit(): void {
@@ -1501,32 +1501,32 @@ export class EventsComponent {
     }
   }
 
-  alert:any;
-subalert:any;
-alertTypes: any = [];
-alertSubTypes: any = [];
+  alert: any;
+  subalert: any;
+  alertTypes: any = [];
+  alertSubTypes: any = [];
 
 
-   getCurrentSiteAlerts(){
+  getCurrentSiteAlerts() {
 
-    this.eventsService.getAlertCategoriesForSiteId(this.mailselectitem).subscribe((res:any)=>{
-     this.alertTypes=res;
+    this.eventsService.getAlertCategoriesForSiteId(this.mailselectitem).subscribe((res: any) => {
+      this.alertTypes = res;
     })
   }
 
-    onAlertChange() {
-   
-    const selectedAlert = this.alertTypes.find((a:any) => a.guardAlertTypeId == this.alert);
+  onAlertChange() {
+
+    const selectedAlert = this.alertTypes.find((a: any) => a.guardAlertTypeId == this.alert);
     this.alertSubTypes = selectedAlert ? selectedAlert.subAlerts : [];
-  
+
   }
 
   isSubmitting = false;
-  
+
   submitResolution() {
     if (
-      !this.emailData?.recipientEmails?.length || !this.action?.trim() || 
-!this.resolution?.trim()
+      !this.emailData?.recipientEmails?.length || !this.action?.trim() ||
+      !this.resolution?.trim()
     ) {
       this.showToast(
         "error",
@@ -1541,7 +1541,7 @@ alertSubTypes: any = [];
       .sendResolution({
         ...this.mailselectitem,
         ...this.emailData,
-        alertTagId1:this.mailselectitem.alertTagId,
+        alertTagId1: this.mailselectitem.alertTagId,
         selectedFiles: this.selectedFiles,
         action: this.action,
         resolution: this.resolution,
@@ -1552,17 +1552,17 @@ alertSubTypes: any = [];
           this.isSubmitting = false;
           this.closeMailoverlay();
           this.showPreview = false;
-          this.selectedFiles=[];
+          this.selectedFiles = [];
           this.loadClosedAndEscalatedDetails();
           this.preloadClosedCounts();
-          
+
         } else {
           this.showToast("error", "Something went wrong", "Failed!");
           this.isSubmitting = false;
         }
-      },(error:any)=>{
-         this.isSubmitting = false;
-          this.showToast("error", "Something went wrong", "Failed!");
+      }, (error: any) => {
+        this.isSubmitting = false;
+        this.showToast("error", "Something went wrong", "Failed!");
       });
   }
 
@@ -1622,7 +1622,7 @@ alertSubTypes: any = [];
       subTypeId: this.mailselectitem?.subAlertTagId,
       cameraId: this.mailselectitem?.cameraId,
       day: this.eventsService.weekdays[
-       this.mailselectitem.eventStartTime ? new Date(this.mailselectitem.eventStartTime).getDay() : 0
+        this.mailselectitem.eventStartTime ? new Date(this.mailselectitem.eventStartTime).getDay() : 0
       ],
       hour: this.mailselectitem.eventStartTime ? new Date(this.mailselectitem.eventStartTime).getHours() : 0,
       currentTime: this.mailselectitem?.eventStartTime,
@@ -1650,14 +1650,12 @@ alertSubTypes: any = [];
   mailselectitem: any;
   openMailTooltip(event: MouseEvent, params: any) {
 
-  
-  
+
+
     this.mailselectitem = params.data;
 
-    if(this.mailselectitem?.mailColour!=2){
-
+    if (this.mailselectitem?.mailColour != 2) {
       this.getCurrentSiteAlerts();
-  
       this.getEmailDataForVMSEvents();
     }
 
@@ -1808,9 +1806,9 @@ alertSubTypes: any = [];
   closeMailoverlay() {
     this.mailoverlay.hide();
     this.emailData = null;
-    this.selectedFiles=[];
-    this.action=null;
-    this.resolution=null;
+    this.selectedFiles = [];
+    this.action = null;
+    this.resolution = null;
   }
 
   closePlayPopup(): void {
@@ -2147,10 +2145,10 @@ alertSubTypes: any = [];
               row.employee ??
               (empName
                 ? {
-                    name: empName,
-                    level: empLevel,
-                    profileImage: empProfileImage, // 👈 used by ProfileImageRendererComponent
-                  }
+                  name: empName,
+                  level: empLevel,
+                  profileImage: empProfileImage, // 👈 used by ProfileImageRendererComponent
+                }
                 : undefined),
           };
         });
@@ -2564,7 +2562,7 @@ alertSubTypes: any = [];
     this.filterLists.cities = this.uniq(rows.map((r) => r.cityName ?? r.city));
     this.filterLists.sites = this.uniq(rows.map((r) => r.siteName));
 
-     this.filterLists.timezones = this.uniq(rows.map((r) => r.timezone));
+    this.filterLists.timezones = this.uniq(rows.map((r) => r.timezone));
 
     this.filterLists.cameras = this.uniq(rows.map((r) => r.cameraId));
 
@@ -2590,8 +2588,8 @@ alertSubTypes: any = [];
       ).values(),
     );
 
-      
- this.filterLists.timezones = this.uniq(rows.map((r) => r.timezone));
+
+    this.filterLists.timezones = this.uniq(rows.map((r) => r.timezone));
 
     this.filterLists.cameras = this.uniq(rows.map((r) => r.cameraId));
 
@@ -2637,7 +2635,7 @@ alertSubTypes: any = [];
         cellClass: "custom-cell",
         suppressHeaderMenuButton: true,
         getQuickFilterText: params => params.data.siteName,
-         cellRenderer: CopyCellRendererComponent, // copy cell element
+        cellRenderer: CopyCellRendererComponent, // copy cell element
       },
       {
         headerName: "DEVICE",
@@ -2687,7 +2685,7 @@ alertSubTypes: any = [];
         cellClass: "custome-cell",
         cellStyle: { opacity: "0.5" },
         suppressHeaderMenuButton: true,
-         cellRenderer: CopyCellRendererComponent, // copy cell element
+        cellRenderer: CopyCellRendererComponent, // copy cell element
         valueGetter: (params) => {
           return params.data?.subActionTag ? params.data.subActionTag : "-";
         },
@@ -2726,7 +2724,7 @@ alertSubTypes: any = [];
         valueGetter: (params) => {
           return params.data?.subAlertTag ? params.data.subAlertTag : "-";
         },
-         cellRenderer: CopyCellRendererComponent, // copy cell element
+        cellRenderer: CopyCellRendererComponent, // copy cell element
       },
       // {
       //   headerName: "EMP.",
@@ -2800,7 +2798,7 @@ alertSubTypes: any = [];
             color = "#2ea321";
           }
           else if (params.data?.mailColour === 2) {
-             tooltip = "One time";
+            tooltip = "One time";
             color = "#FFC400";
             // disableClick = 'onclick="event.stopPropagation(); return false;"';
           }
