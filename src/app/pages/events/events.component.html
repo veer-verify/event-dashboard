@@ -107,13 +107,24 @@
             <!-- ===================== Search + Filter Panel ===================== -->
 
             <div class="search-wrapper">
-             <div class="search-input-container">
-                <div class="search-chip" *ngFor="let term of searchTerms; let i = index">
+              <div class="search-input-container">
+                <div
+                  class="search-chip"
+                  *ngFor="let term of searchTerms; let i = index"
+                >
                   {{ term }}
-                  <span class="chip-remove" (click)="removeSearchTerm(i)">&#x2715;</span>
+                  <span class="chip-remove" (click)="removeSearchTerm(i)"
+                    >&#x2715;</span
+                  >
                 </div>
-                <input type="text" placeholder="Search here" [(ngModel)]="searchTerm" class="search-input"
-                  (input)="onFilterTextBoxChanged()" (keydown.enter)="addSearchTerm()" />
+                <input
+                  type="text"
+                  placeholder="Search here"
+                  [(ngModel)]="searchTerm"
+                  class="search-input"
+                  (input)="onFilterTextBoxChanged()"
+                  (keydown.enter)="addSearchTerm()"
+                />
               </div>
 
               <button
@@ -624,7 +635,8 @@
           <label class="event-wall-label">Event Console</label>
           <div class="dot-manualwall"></div>
           <label class="manual-wall-label">Manual Console</label>
-          <div class="dot-customevent"></div>                                            <!-- changed-->
+          <div class="dot-customevent"></div>
+          <!-- changed-->
           <label class="manual-wall-label">Custom Event</label>
           <!-- Timed-Out only for PENDING; we'll hide via TS for CLOSED -->
 
@@ -649,7 +661,8 @@
             Refresh
           </button>
           <select class="refresh-interval-select">
-            <option value="0">None</option>              <!-- changed-->
+            <option value="0">None</option>
+            <!-- changed-->
             <option value="1">1 min</option>
             <option value="5">5 min</option>
             <option value="10">10 min</option>

@@ -166,41 +166,45 @@ export class ProductsAllTabComponent implements OnInit, OnChanges {
         headerName: "MORE",
         sortable: false,
         width: 75,
-        minWidth: 70,
-        maxWidth: 85,
-        suppressSizeToFit: true,
+        suppressSizeToFit: false,
         cellClass: 'products-all-action-cell',
         cellRenderer: (params: ICellRendererParams) => {
-          const container = document.createElement("div");
-          container.className = 'products-all-action';
+          // const container = document.createElement("div");
+          // container.className = 'products-all-action';
 
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = 'products-all-action-btn';
-          button.title = "View details";
-          button.setAttribute("aria-label", "View details");
+          // const button = document.createElement("button");
+          // button.type = "button";
+          // button.className = 'products-all-action-btn';
+          // button.title = "View details";
+          // button.setAttribute("aria-label", "View details");
 
-          const img = document.createElement("img");
-          img.src = "assets/icons/information-icon.svg";
-          img.alt = "View details";
-          img.draggable = false;
-          img.className = 'products-all-action-icon';
+          // const img = document.createElement("img");
+          // img.src = "assets/icons/information-icon.svg";
+          // img.alt = "View details";
+          // img.draggable = false;
+          // img.className = 'products-all-action-icon';
 
-          button.addEventListener("mousedown", (event: MouseEvent) => {
-            event.preventDefault();
-            event.stopPropagation();
-          });
-          button.addEventListener("click", (event: MouseEvent) => {
-            event.stopPropagation();
-            event.preventDefault();
-            this.ngZone.run(() => {
-              this.viewProduct.emit(params.data);
-            });
-          });
+          // button.addEventListener("mousedown", (event: MouseEvent) => {
+          //   event.preventDefault();
+          //   event.stopPropagation();
+          // });
+          // button.addEventListener("click", (event: MouseEvent) => {
+          //   event.stopPropagation();
+          //   event.preventDefault();
+          //   // this.ngZone.run(() => {
+          //   //   this.viewProduct.emit(params.data);
+          //   // });
+          // });
 
-          button.appendChild(img);
-          container.appendChild(button);
-          return container;
+          // button.appendChild(img);
+          // container.appendChild(button);
+          // return container;
+          return `<button class="products-all-action-btn">
+          <img src="assets/icons/information-icon.svg" class="products-all-action-icon" alt="" />
+          </button>`;
+        },
+        onCellClicked: (params) => {
+          this.viewProduct.emit(params.data);
         }
       }
     ];
