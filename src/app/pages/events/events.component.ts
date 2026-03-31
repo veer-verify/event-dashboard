@@ -127,8 +127,6 @@ export class EventsComponent {
 
   filterPanelVisible = false;
 
-
-
   toggleFilterPanel() {
     this.filterPanelVisible = !this.filterPanelVisible;
   }
@@ -188,13 +186,13 @@ export class EventsComponent {
   pendingDisplayRows: any[] = []; // what PENDING grid sees
 
   onFilterReset() {
-    this.currentFilter = { ...this.getDefaultFilter() };                   // changes clear filter
-    this.searchTerm = "";                                                 // changes clear search input
-    this.searchTerms = [];                                               // changed clear search terms
+    this.currentFilter = { ...this.getDefaultFilter() }; // changes clear filter
+    this.searchTerm = ""; // changes clear search input
+    this.searchTerms = []; // changed clear search terms
     this.pendingDisplayRows = [...this.pendingRowData];
     setTimeout(() => this.autoSizeAllColumns(), 0);
     this.closedDisplayRows = [...this.rowData];
-    this.onFilterTextBoxChanged();                                      // changes clear search input
+    this.onFilterTextBoxChanged(); // changes clear search input
   }
 
   onFirstDataRendered() {
@@ -202,7 +200,7 @@ export class EventsComponent {
   }
 
   onFilterApply(criteria: EventsFilterCriteria) {
-    console.log(criteria)
+    console.log(criteria);
     this.preloadClosedCounts();
     const base =
       this.selectedFilter === "PENDING" ? this.pendingRowData : this.rowData;
@@ -239,10 +237,7 @@ export class EventsComponent {
       if (criteria.site !== null && row.siteName !== criteria.site.site)
         return false;
 
-      if (
-        criteria.timeZone !== null &&
-        row.timezone !== criteria.timeZone
-      )
+      if (criteria.timeZone !== null && row.timezone !== criteria.timeZone)
         return false;
 
       if (criteria.camera !== "All" && row.cameraId !== criteria.camera)
@@ -314,8 +309,6 @@ export class EventsComponent {
     ) {
       this.currentFilter = { ...this.currentFilter, camera: "All" };
     }
-
-
 
     // ✅ optional: same for queueName / queueLevel
     if (
@@ -495,14 +488,16 @@ export class EventsComponent {
   lastEndDateTime?: string;
 
   get mainStartDateStr(): string {
-    return this.selectedStartDate ? this.formatDate(this.selectedStartDate) : '';        // changes clear filter
+    return this.selectedStartDate
+      ? this.formatDate(this.selectedStartDate)
+      : ""; // changes clear filter
   }
   get mainEndDateStr(): string {
-    return this.selectedEndDate ? this.formatDate(this.selectedEndDate) : '';
+    return this.selectedEndDate ? this.formatDate(this.selectedEndDate) : "";
   }
 
   /** -------------------- Filters & toggles -------------------- */
-  rangeTooLarge = false;                                                                 // CHANGE 
+  rangeTooLarge = false; // CHANGE
   selectedFilter: "CLOSED" | "PENDING" = "CLOSED";
   selectedpendingFilter: "CONSOLES" | "QUEUES" = "CONSOLES";
 
@@ -512,15 +507,16 @@ export class EventsComponent {
   falseChecked = false;
 
   searchTerm = "";
-  searchTerms: string[] = [];                                                        // ! changed
+  searchTerms: string[] = []; // ! changed
   showMore = false;
 
-  addSearchTerm(): void {                                                             // ! changed 
+  addSearchTerm(): void {
+    // ! changed
     const term = this.searchTerm.trim();
     if (term && !this.searchTerms.includes(term)) {
       this.searchTerms.push(term);
     }
-    this.searchTerm = '';
+    this.searchTerm = "";
     this.onFilterTextBoxChanged();
   }
 
@@ -586,13 +582,13 @@ export class EventsComponent {
   };
 
   /** -------------------- Auto-refresh state -------------------- */
-    refreshInterval = 0;                                                          // change applied interval
+  refreshInterval = 0; // change applied interval
   pendingRefreshInterval = 0;
   // ✅ interval actually being used for auto refresh timer
   //refreshInterval = 1; // minutes; applied interval                             //  CHANGE removed
 
   // ✅ dropdown selection (NOT applied until Refresh click)
-  //pendingRefreshInterval = 1;                                                    // CHANGE removed 
+  //pendingRefreshInterval = 1;                                                    // CHANGE removed
 
   private refreshSub?: Subscription;
 
@@ -673,7 +669,7 @@ export class EventsComponent {
     private notification: NotificationService,
     private zone: NgZone,
     private idelService: IdleService,
-  ) { }
+  ) {}
 
   /** -------------------- Lifecycle -------------------- */
   ngOnInit(): void {
@@ -754,7 +750,7 @@ export class EventsComponent {
   /** ✅ Preload CLOSED counts cards (without needing MORE click) */
   private preloadClosedCounts(): void {
     if (this.selectedFilter !== "CLOSED") return;
-    if (this.rangeTooLarge) return;                                       // change
+    if (this.rangeTooLarge) return; // change
 
     if (!this.selectedStartDate || !this.selectedEndDate) {
       this.EscalatedDetailCombined = [];
@@ -985,7 +981,7 @@ export class EventsComponent {
   setFilter(filter: "CLOSED" | "PENDING"): void {
     this.selectedFilter = filter;
     this.searchTerm = "";
-    this.searchTerms = [];                                   // changes clear search terms
+    this.searchTerms = []; // changes clear search terms
     this.clearFiltersAndResults(); // ✅ clears filters when changing main tabs
 
     if (filter === "CLOSED") {
@@ -1072,7 +1068,7 @@ export class EventsComponent {
   }
 
   /** -------------------- ✅ REFRESH button handler (called from status bar) -------------------- */
-  /** ✅ Refresh button click (APPLY interval + call API + start/restart timer) */            ///! change removed
+  /** ✅ Refresh button click (APPLY interval + call API + start/restart timer) */ ///! change removed
   // refreshData(): void {
   //   // ✅ Apply the selection only when Refresh is clicked
   //   this.refreshInterval = this.pendingRefreshInterval;
@@ -1103,7 +1099,8 @@ export class EventsComponent {
   //     `Now refreshing every ${this.refreshInterval} minute(s).`,
   //   );
   // }
-  refreshData(): void {                                                                    ///! change added
+  refreshData(): void {
+    ///! change added
     this.refreshInterval = this.pendingRefreshInterval;
     console.log("[REFRESH CLICK] Applied interval:", this.refreshInterval);
 
@@ -1120,7 +1117,10 @@ export class EventsComponent {
     this.scheduleAutoRefresh(this.refreshInterval);
     this.hasStartedAutoRefresh = true;
 
-    this.notification.info("Refresh Applied", `Now refreshing every ${this.refreshInterval} minute(s).`);
+    this.notification.info(
+      "Refresh Applied",
+      `Now refreshing every ${this.refreshInterval} minute(s).`,
+    );
   }
 
   /** -------------------- ✅ Timer scheduler -------------------- */
@@ -1163,9 +1163,13 @@ export class EventsComponent {
   //   // Optional toast (purely informational)
   //   // this.notification.info("Interval selected", `Click Refresh to apply ${this.pendingRefreshInterval} min`);
   // }
-    onIntervalChange(newInterval: number): void {                                                ///! change added
+  onIntervalChange(newInterval: number): void {
+    ///! change added
     this.pendingRefreshInterval = Number(newInterval) || 0;
-    console.log("[INTERVAL SELECTED] pendingRefreshInterval:", this.pendingRefreshInterval);
+    console.log(
+      "[INTERVAL SELECTED] pendingRefreshInterval:",
+      this.pendingRefreshInterval,
+    );
     // no API call, no timer restart – only when Refresh is clicked
   }
 
@@ -1235,8 +1239,8 @@ export class EventsComponent {
 
   onFilterTextBoxChanged(): void {
     const combinedSearch = [...this.searchTerms, this.searchTerm.trim()]
-      .filter(t => t)
-      .join(' ');
+      .filter((t) => t)
+      .join(" ");
     this.gridApi?.setGridOption("quickFilterText", combinedSearch);
   }
 
@@ -1248,10 +1252,7 @@ export class EventsComponent {
 
   /** -------------------- Cell click handlers -------------------- */
 
-
   onCellClicked(event: any): void {
-
-
     if (event.colDef.field !== "more") return;
 
     const target = event.event.target as HTMLElement;
@@ -1562,26 +1563,27 @@ export class EventsComponent {
   alertTypes: any = [];
   alertSubTypes: any = [];
 
-
   getCurrentSiteAlerts() {
-
-    this.eventsService.getAlertCategoriesForSiteId(this.mailselectitem).subscribe((res: any) => {
-      this.alertTypes = res;
-    })
+    this.eventsService
+      .getAlertCategoriesForSiteId(this.mailselectitem)
+      .subscribe((res: any) => {
+        this.alertTypes = res;
+      });
   }
 
   onAlertChange() {
-
-    const selectedAlert = this.alertTypes.find((a: any) => a.guardAlertTypeId == this.alert);
+    const selectedAlert = this.alertTypes.find(
+      (a: any) => a.guardAlertTypeId == this.alert,
+    );
     this.alertSubTypes = selectedAlert ? selectedAlert.subAlerts : [];
-
   }
 
   isSubmitting = false;
 
   submitResolution() {
     if (
-      !this.emailData?.recipientEmails?.length || !this.action?.trim() ||
+      !this.emailData?.recipientEmails?.length ||
+      !this.action?.trim() ||
       !this.resolution?.trim()
     ) {
       this.showToast(
@@ -1602,24 +1604,26 @@ export class EventsComponent {
         action: this.action,
         resolution: this.resolution,
       })
-      .subscribe((res: any) => {
-        if (res.statusCode == 200) {
-          this.showToast("success", "Successfully completed", "");
+      .subscribe(
+        (res: any) => {
+          if (res.statusCode == 200) {
+            this.showToast("success", "Successfully completed", "");
+            this.isSubmitting = false;
+            this.closeMailoverlay();
+            this.showPreview = false;
+            this.selectedFiles = [];
+            this.loadClosedAndEscalatedDetails();
+            this.preloadClosedCounts();
+          } else {
+            this.showToast("error", "Something went wrong", "Failed!");
+            this.isSubmitting = false;
+          }
+        },
+        (error: any) => {
           this.isSubmitting = false;
-          this.closeMailoverlay();
-          this.showPreview = false;
-          this.selectedFiles = [];
-          this.loadClosedAndEscalatedDetails();
-          this.preloadClosedCounts();
-
-        } else {
           this.showToast("error", "Something went wrong", "Failed!");
-          this.isSubmitting = false;
-        }
-      }, (error: any) => {
-        this.isSubmitting = false;
-        this.showToast("error", "Something went wrong", "Failed!");
-      });
+        },
+      );
   }
 
   selectedFiles: File[] = [];
@@ -1678,9 +1682,13 @@ export class EventsComponent {
       subTypeId: this.mailselectitem?.subAlertTagId,
       cameraId: this.mailselectitem?.cameraId,
       day: this.eventsService.weekdays[
-        this.mailselectitem.eventStartTime ? new Date(this.mailselectitem.eventStartTime).getDay() : 0
+        this.mailselectitem.eventStartTime
+          ? new Date(this.mailselectitem.eventStartTime).getDay()
+          : 0
       ],
-      hour: this.mailselectitem.eventStartTime ? new Date(this.mailselectitem.eventStartTime).getHours() : 0,
+      hour: this.mailselectitem.eventStartTime
+        ? new Date(this.mailselectitem.eventStartTime).getHours()
+        : 0,
       currentTime: this.mailselectitem?.eventStartTime,
     };
 
@@ -1692,6 +1700,15 @@ export class EventsComponent {
           this.emailData = res.emailDetails;
           this.smsDetails = res.smsDetails;
           this.isMediaLoading = false;
+
+          const result = res.actionsTakenInfo
+            .flatMap((obj: any) => Object.values(obj))
+            .filter((arr: any) => arr.length !== 0)
+            .flatMap((arr: any) => arr)
+            .filter((item: any) => item.status === true)
+            .map((item: any) => item.name)
+            .join(", ");
+          this.action = result;
         } else {
           this.isMediaLoading = false;
         }
@@ -1705,9 +1722,6 @@ export class EventsComponent {
 
   mailselectitem: any;
   openMailTooltip(event: MouseEvent, params: any) {
-
-
-
     this.mailselectitem = params.data;
 
     if (this.mailselectitem?.mailColour != 2) {
@@ -2201,10 +2215,10 @@ export class EventsComponent {
               row.employee ??
               (empName
                 ? {
-                  name: empName,
-                  level: empLevel,
-                  profileImage: empProfileImage, // 👈 used by ProfileImageRendererComponent
-                }
+                    name: empName,
+                    level: empLevel,
+                    profileImage: empProfileImage, // 👈 used by ProfileImageRendererComponent
+                  }
                 : undefined),
           };
         });
@@ -2269,10 +2283,11 @@ export class EventsComponent {
   }
 
   /** -------------------- CLOSED fetch -------------------- */
-    private daysBetween(start: Date, end: Date): number {                    // CHANGE 
-  const diffMs = end.getTime() - start.getTime();
-  return diffMs / (1000 * 60 * 60 * 24);
-}
+  private daysBetween(start: Date, end: Date): number {
+    // CHANGE
+    const diffMs = end.getTime() - start.getTime();
+    return diffMs / (1000 * 60 * 60 * 24);
+  }
   event: any;
   onDateRangeSelected(event: {
     startDate: Date;
@@ -2302,18 +2317,18 @@ export class EventsComponent {
 
     this.currentFilter = {
       ...this.currentFilter,
-      startDate: this.formatDate(newStart),                              // changes
+      startDate: this.formatDate(newStart), // changes
       endDate: this.formatDate(newEnd),
     };
 
-        const diffDays = this.daysBetween(newStart, newEnd);                             //  change
+    const diffDays = this.daysBetween(newStart, newEnd); //  change
     if (diffDays > 7) {
       // Clear table data
       this.rowData = [];
       this.closedDisplayRows = [];
       this.EscalatedDetailCombined = [];
       this.secondEscalatedDetails = [];
-      
+
       this.rangeTooLarge = true;
 
       // Optional: show a warning
@@ -2336,9 +2351,10 @@ export class EventsComponent {
   }
 
   loadClosedAndEscalatedDetails(opts: { silent?: boolean } = {}): void {
-    const { silent = false } = opts; 
-      if (this.rangeTooLarge) {                                                 // change
-      if (!silent) this.idelService.isLoading.next(false);    
+    const { silent = false } = opts;
+    if (this.rangeTooLarge) {
+      // change
+      if (!silent) this.idelService.isLoading.next(false);
       return;
     }
     if (!this.selectedStartDate || !this.selectedEndDate) {
@@ -2441,7 +2457,7 @@ export class EventsComponent {
         });
 
         this.closedDisplayRows = [...this.rowData];
-    //this.updateDisplayRows();                                         //CHANGE not added
+        //this.updateDisplayRows();                                         //CHANGE not added
         const sum = (arr: number[]) =>
           arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
 
@@ -2465,7 +2481,8 @@ export class EventsComponent {
         const manualEvent = sum(
           countsList.map((c) => Number(c?.Manual_Event) || 0),
         );
-          const customEvent = sum(                                            // change
+        const customEvent = sum(
+          // change
           countsList.map((c) => Number(c?.Custom_Event) || 0),
         );
         this.secondEscalatedDetails = [
@@ -2483,7 +2500,7 @@ export class EventsComponent {
           { iconcolor: "#53BF8B", value: eventWall, color: "#ED3237" },
           { iconcolor: "#FFC400", value: manualWall, color: "#ED3237" },
           { iconcolor: "#353636ff", value: manualEvent, color: "#ED3237" },
-          { iconcolor: "magenta", value: customEvent, color: "#ED3237" },     // changed
+          { iconcolor: "magenta", value: customEvent, color: "#ED3237" }, // changed
         ];
 
         this.refreshDropdownListsFromClosed();
@@ -2592,8 +2609,12 @@ export class EventsComponent {
 
   private getDefaultFilter(): EventsFilterCriteria {
     return {
-      startDate: this.selectedStartDate ? this.formatDate(this.selectedStartDate) : null,       // changed
-      endDate: this.selectedEndDate ? this.formatDate(this.selectedEndDate) : null,               // changed
+      startDate: this.selectedStartDate
+        ? this.formatDate(this.selectedStartDate)
+        : null, // changed
+      endDate: this.selectedEndDate
+        ? this.formatDate(this.selectedEndDate)
+        : null, // changed
       startTime: "00:00",
       endTime: "23:59",
       minDuration: 0,
@@ -2685,7 +2706,6 @@ export class EventsComponent {
       ).values(),
     );
 
-
     this.filterLists.timezones = this.uniq(rows.map((r) => r.timezone));
 
     this.filterLists.cameras = this.uniq(rows.map((r) => r.cameraId));
@@ -2731,7 +2751,7 @@ export class EventsComponent {
         headerClass: "custom-header",
         cellClass: "custom-cell",
         suppressHeaderMenuButton: true,
-        getQuickFilterText: params => params.data.siteName,
+        getQuickFilterText: (params) => params.data.siteName,
         cellRenderer: CopyCellRendererComponent, // copy cell element
       },
       {
@@ -2893,8 +2913,7 @@ export class EventsComponent {
             // disableClick = 'onclick="event.stopPropagation(); return false;"';
           } else if (params.data?.mailColour === 0) {
             color = "#2ea321";
-          }
-          else if (params.data?.mailColour === 2) {
+          } else if (params.data?.mailColour === 2) {
             tooltip = "One time";
             color = "#FFC400";
             // disableClick = 'onclick="event.stopPropagation(); return false;"';

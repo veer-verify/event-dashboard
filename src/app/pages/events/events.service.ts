@@ -92,8 +92,7 @@ export class EventsService {
       filter.timeZone !== "All" &&
       filter.timeZone !== ""
     ) {
-
-      const cleanTz = filter.timeZone.match(/\((.*?)\)/)?.[1] || '';
+      const cleanTz = filter.timeZone.match(/\((.*?)\)/)?.[1] || "";
 
       params = params.set("timezone", cleanTz);
     }
@@ -193,7 +192,8 @@ export class EventsService {
   }
 
   getEmailDataForVMSEvents(payload: any) {
-    let url = `${environment.guard_monitoring_url}/getEmailDataForClosedEvent_1_0`;
+    // let url = `${environment.guard_monitoring_url}/getEmailDataForClosedEvent_1_0`;
+    let url = `${environment.guard_monitoring_url}/getEmailDataForVMSEvents_1_0`;
 
     let params = new HttpParams();
     params = params.set("siteId", payload?.siteId);
@@ -207,32 +207,39 @@ export class EventsService {
       "currentTime",
       this.datePipe.transform(payload?.currentTime, "yyyy-MM-dd HH:mm:ss")!,
     );
+    params = params.set("callingSystemDetail", "dashboard");
 
     return this.http.get(url, { params: params });
   }
 
-  sendResolution(payload: any) {
-    let url = `${environment.guard_monitoring_url}/sendResolutionEmail_1_0`;
+  public getTimeByTimezone(timezone: string = "Asia/Kolkata", time?: any) {
+    return moment.tz(timezone).format("YYYY-MM-DD HH:mm:ss");
+  }
 
-    // let url = `http://192.168.0.125:3009/sendResolutionEmail_1_0`;
+  sendResolution(payload: any) {
+    console.log(payload);
+    let url = `${environment.guard_monitoring_url}/sendResolutionEmail_1_0`;
+    // let url = `${environment.guard_monitoring_url}/eventsGenericEmail_2_0`;
 
     const userString = sessionStorage.getItem("verifai_user");
     const user = userString ? JSON.parse(userString) : null;
 
+    // let params = new HttpParams();
+    // params = params.set('siteId', payload?.siteId);
+    // params = params.set('day', this.getDay(payload?.timezoneValue));
+    // params = params.set('hour', this.getHour(payload?.timezoneValue));
+    // params = params.set('currentTime', this.getTimeByTimezone(payload?.timezoneValue));
+
     const formData = new FormData();
-
     formData.append("senderEmail", payload?.senderEmail);
-
     formData.append(
       "recipientEmails",
       JSON.stringify(payload?.recipientEmails ?? []),
     );
     formData.append("bcc", JSON.stringify(payload?.BCC ?? []));
     formData.append("cc", JSON.stringify(payload?.Cc ?? []));
-
     formData.append("subject", payload?.emailSubject);
     formData.append("body", payload?.emailBody);
-
     if (payload?.selectedFiles?.length) {
       payload.selectedFiles.forEach((file: File) => {
         formData.append("files", file);
@@ -245,32 +252,27 @@ export class EventsService {
     // );
 
     formData.append("fields", JSON.stringify(payload?.emailFields));
-
     formData.append("siteId", payload?.siteId);
     formData.append("cameraId", payload?.cameraId);
     // formData.append('cameraName', payload?.cameraName );
-
     formData.append("actionsTaken", payload?.action);
     formData.append("notes", payload?.resolution);
-
     formData.append("eventId", payload?.eventId);
     formData.append("createdBy", user?.UserId);
-
     formData.append("alerTagId", payload?.alertTagId1);
     formData.append("subAlertTagId", payload?.subAlertTagId);
-
     formData.append("timeZone", payload?.timezone);
+    // formData.append('callingSystemDetail', 'vms');
 
     return this.http.post(url, formData);
   }
 
-
-    getAlertCategoriesForSiteId(payload: any) {
+  getAlertCategoriesForSiteId(payload: any) {
     let url = `${environment.guard_monitoring_url}/getAlertCategoriesForSiteId_1_0`;
     let params = new HttpParams();
 
     if (payload?.siteId) {
-      params = params.set('siteId', payload?.siteId);
+      params = params.set("siteId", payload?.siteId);
     }
 
     return this.http.get(url, { params });
