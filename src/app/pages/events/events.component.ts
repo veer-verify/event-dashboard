@@ -669,7 +669,7 @@ export class EventsComponent {
     private notification: NotificationService,
     private zone: NgZone,
     private idelService: IdleService,
-  ) {}
+  ) { }
 
   /** -------------------- Lifecycle -------------------- */
   ngOnInit(): void {
@@ -1705,8 +1705,10 @@ export class EventsComponent {
             .flatMap((obj: any) => Object.values(obj))
             .filter((arr: any) => arr.length !== 0)
             .flatMap((arr: any) => arr)
-            .filter((item: any) => item.status === true)
-            .map((item: any) => item.name)
+            // .filter((item: any) => item.status === true)
+            .map((item: any) =>
+              `${item.name} ${item.status ? '[Responded]' : '[Not Responded]'}`
+            )
             .join(", ");
           this.action = result;
         } else {
@@ -2215,10 +2217,10 @@ export class EventsComponent {
               row.employee ??
               (empName
                 ? {
-                    name: empName,
-                    level: empLevel,
-                    profileImage: empProfileImage, // 👈 used by ProfileImageRendererComponent
-                  }
+                  name: empName,
+                  level: empLevel,
+                  profileImage: empProfileImage, // 👈 used by ProfileImageRendererComponent
+                }
                 : undefined),
           };
         });
