@@ -64,8 +64,8 @@
     <span *ngIf="selectedEvent.eventDuration">
       TOTAL DURATION : {{ selectedEvent.eventDuration }}
     </span>
-    <span>INDIA {{ "00:00:00" }}</span>
-    <span>US {{ "00:00:00" }}</span>
+    <span>INDIA {{ selectedEvent.indiaDuration || "00:00:00" }}</span>
+    <span>US {{ selectedEvent.usDuration || "00:00:00" }}</span>
   </div>
 
   <div class="div">

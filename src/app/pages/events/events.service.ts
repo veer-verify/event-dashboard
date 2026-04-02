@@ -261,7 +261,7 @@ export class EventsService {
     formData.append("createdBy", user?.UserId);
     formData.append("alerTagId", payload?.alertTagId1);
     formData.append("subAlertTagId", payload?.subAlertTagId);
-    formData.append("timeZone", payload?.timezone);
+    formData.append("timeZone", payload?.timezoneValue);
     // formData.append('callingSystemDetail', 'vms');
 
     return this.http.post(url, formData);
