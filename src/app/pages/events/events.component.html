@@ -835,14 +835,27 @@
           <div class="form-row">
             <div class="form-group">
               <label>Actions Taken</label>
-              <input
-                type="text"
-                [(ngModel)]="action"
-                placeholder="Describe action taken"
-              />
+              <div class="custom-chips-container" (click)="chipInput.focus()">
+                <span
+                  class="custom-chip"
+                  *ngFor="let item of action; let i = index"
+                >
+                  {{ item }}
+                  <span class="remove-chip" (click)="removeChip(i)">×</span>
+                </span>
+                <input
+                  #chipInput
+                  type="text"
+                  [(ngModel)]="chipText"
+                  placeholder="Describe action taken"
+                  (keydown)="handleChipInput($event)"
+                  (blur)="addChipOnBlur()"
+                />
+              </div>
             </div>
 
-            <div class="form-group">
+         
+          </div>   <div class="form-group">
               <label>Notes</label>
               <input
                 type="text"
@@ -850,8 +863,6 @@
                 placeholder="Additional notes"
               />
             </div>
-          </div>
-
           <!-- ===== FILE UPLOAD ===== -->
           <div class="upload-box">
             <input
@@ -986,7 +997,7 @@
           <table class="email-table">
             <tr>
               <td class="label">Actions Taken</td>
-              <td class="value">{{ action || "-" }}</td>
+              <td class="value">{{ action.join(", ") || "-" }}</td>
             </tr>
           </table>
 

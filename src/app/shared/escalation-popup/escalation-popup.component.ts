@@ -607,6 +607,8 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
         return "#353636ff";
       case "Missed Wall":
         return "#FF0000";
+      case "Custom Event":
+        return "magenta";
       default:
         return "#ccc";
     }

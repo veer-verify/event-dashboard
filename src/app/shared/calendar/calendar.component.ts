@@ -253,19 +253,19 @@ export class CalendarComponent implements OnInit {
       0,
       0
     );
+    const dayEnd = new Date(dayStart);
+    dayEnd.setHours(23, 59, 59, 999);
 
     if (this.wholeDay) {
       this.startDate = dayStart;
-      const dayEnd = new Date(dayStart);
-      dayEnd.setHours(23, 59, 59, 999);
       this.endDate = dayEnd;
       this.startTime = '00:00:00';
       this.endTime = '23:59:59';
     } else {
-      // this.startDate = dayStart;
-      // this.endDate = now
+      this.startDate = dayStart;
+      this.endDate = dayEnd;
       this.startTime = '00:00:00';
-      this.endTime = this.formatTime24(now);
+      this.endTime = '23:59:59';
     }
   }
 
@@ -634,10 +634,10 @@ export class CalendarComponent implements OnInit {
 
   goToday() {
     this.dashboard_service.isTimeSelected = true;
-     this.setDefaultRange();       // changed
+    this.setTodayStartEndValues();
     this.viewMode = 'day';
     this.currentMonth = new Date(this.endDate);
-     this.inlineDate = new Date(this.startDate);
+    this.inlineDate = new Date(this.startDate);
 
     // Start of today
     // const dayStart = new Date(

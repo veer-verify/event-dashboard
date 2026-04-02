@@ -1,7 +1,6 @@
 @font-face {
   font-family: "Neometric Regular";
-  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Regular.woff")
-    format("woff");
+  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Regular.woff") format("woff");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -9,8 +8,7 @@
 
 @font-face {
   font-family: "Neometric Medium";
-  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Medium-(Regular).woff")
-    format("woff");
+  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Medium-(Regular).woff") format("woff");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
@@ -150,8 +148,10 @@
 
 /* active (while mouse is pressed) – “click” effect */
 .refreshbutton:active {
-  transform: scale(0.96); /* small shrink */
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); /* tighter shadow */
+  transform: scale(0.96);
+  /* small shrink */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  /* tighter shadow */
   background-color: #f0f0f0;
 }
 
@@ -2233,7 +2233,7 @@ input:checked + .slider:before {
 .form-row {
   display: flex;
   gap: 14px;
-  margin-bottom: 16px;
+  margin-bottom: 1px;      /* 16px to 1px */
 }
 
 .form-group {
@@ -2464,4 +2464,79 @@ input:checked + .slider:before {
   /* text-decoration: underline; */
   color: #d32f2f;
   text-transform: uppercase;
+}
+/* ===================== CUSTOM CHIPS ===================== */
+.custom-chips-container {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #dedede;
+  border-radius: 6px;
+  background: #fff;
+  padding: 6px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  cursor: text;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+/* Focus like old input */
+.custom-chips-container:focus-within {
+  border-color: #bcbcbc;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03);
+}
+
+/* ===================== CHIP STYLE ===================== */
+.custom-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f3f5;
+  color: #444;
+  border: 1px solid #dde1e6;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: normal;
+  font-family: 'Neometric Medium', sans-serif;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* Remove icon */
+.remove-chip {
+  font-size: 13px;
+  /* font-weight: bold; */
+  cursor: pointer;
+  line-height: 1;
+  color: #7a7a7a;
+  opacity: 0.75;
+  transition: 0.2s;
+}
+
+.remove-chip:hover {
+  opacity: 1;
+  color: #333;
+}
+
+/* ===================== INPUT ===================== */
+.custom-chips-container input {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  flex: 1;
+  min-width: 120px;
+  font-size: 13px;
+  font-family: 'Neometric Medium', sans-serif;
+  padding: 2px 0;
+  height: 24px;
+  background: transparent;
+  color: #333;
+}
+
+.custom-chips-container input::placeholder {
+  color: #999;
+  font-size: 12px;
 }

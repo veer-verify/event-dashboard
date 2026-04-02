@@ -1583,7 +1583,7 @@ export class EventsComponent {
   submitResolution() {
     if (
       !this.emailData?.recipientEmails?.length ||
-      !this.action?.trim() ||
+      !this.action?.length ||
       !this.resolution?.trim()
     ) {
       this.showToast(
@@ -1601,7 +1601,7 @@ export class EventsComponent {
         ...this.emailData,
         alertTagId1: this.mailselectitem.alertTagId,
         selectedFiles: this.selectedFiles,
-        action: this.action,
+        action: this.action.join(", "),
         resolution: this.resolution,
       })
       .subscribe(
@@ -1669,8 +1669,40 @@ export class EventsComponent {
     fileInput.value = "";
   }
 
-  action: any;
+  action: string[] = [];
+  chipText: string = "";
   resolution: any;
+
+  handleChipInput(event: KeyboardEvent) {
+    const value = this.chipText.trim();
+
+    if (event.key === "Enter" || event.key === "," || event.key === "Tab") {
+      event.preventDefault();
+
+      if (value && !this.action.includes(value)) {
+        this.action.push(value);
+        this.chipText = "";
+      }
+    }
+
+    if (event.key === "Backspace" && !this.chipText && this.action.length) {
+      this.action.pop();
+    }
+  }
+
+  addChipOnBlur() {
+    const value = this.chipText.trim();
+
+    if (value && !this.action.includes(value)) {
+      this.action.push(value);
+    }
+
+    this.chipText = "";
+  }
+
+  removeChip(index: number) {
+    this.action.splice(index, 1);
+  }
   emailObject: any;
   emailData: any;
   smsDetails: any;
@@ -1701,16 +1733,30 @@ export class EventsComponent {
           this.smsDetails = res.smsDetails;
           this.isMediaLoading = false;
 
-          const result = res.actionsTakenInfo
-            .flatMap((obj: any) => Object.values(obj))
-            .filter((arr: any) => arr.length !== 0)
-            .flatMap((arr: any) => arr)
-            // .filter((item: any) => item.status === true)
-            .map((item: any) =>
-              `${item.name} ${item.status ? '[Responded]' : '[Not Responded]'}`
-            )
-            .join(", ");
-          this.action = result;
+          const level1Data =
+            res.actionsTakenInfo.find((obj: any) => obj.level_1)?.level_1 || [];
+
+          const level3Data =
+            res.actionsTakenInfo.find((obj: any) => obj.level_3)?.level_3 || [];
+
+          /* Level 1 => Played / Not Played */
+          const formattedLevel1 = level1Data.map(
+            (item: any) =>
+              `${item.name} ${item.status ? "(Played)" : "(Not Played)"}`
+          );
+
+          /* Level 3 => Responded / Not Responded */
+
+          const formattedLevel3 = [
+            ...new Set(
+              level3Data.map(
+                (item: any) =>
+                  `${item.name} ${item.status ? "(Responded)" : "(Not Responded)"}`
+              )
+            ),
+          ];
+
+          this.action = [...formattedLevel1, ...formattedLevel3];
         } else {
           this.isMediaLoading = false;
         }
@@ -1879,7 +1925,7 @@ export class EventsComponent {
     this.mailoverlay.hide();
     this.emailData = null;
     this.selectedFiles = [];
-    this.action = null;
+    this.action = [];
     this.resolution = null;
   }
 
