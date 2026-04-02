@@ -1707,66 +1707,53 @@ export class EventsComponent {
   emailData: any;
   smsDetails: any;
   getEmailDataForVMSEvents() {
-    this.emailObject = {
-      siteId: this.mailselectitem?.siteId,
-      siteName: this.mailselectitem?.siteName,
-      alertTypeId: this.mailselectitem?.alertTagId,
-      subTypeId: this.mailselectitem?.subAlertTagId,
-      cameraId: this.mailselectitem?.cameraId,
-      day: this.eventsService.weekdays[
-        this.mailselectitem.eventStartTime
-          ? new Date(this.mailselectitem.eventStartTime).getDay()
-          : 0
-      ],
-      hour: this.mailselectitem.eventStartTime
-        ? new Date(this.mailselectitem.eventStartTime).getHours()
-        : 0,
-      currentTime: this.mailselectitem?.eventStartTime,
-    };
+  this.emailObject = {
+    siteId: this.mailselectitem?.siteId,
+    siteName: this.mailselectitem?.siteName,
+    alertTypeId: this.mailselectitem?.alertTagId,
+    subTypeId: this.mailselectitem?.subAlertTagId,
+    cameraId: this.mailselectitem?.cameraId,
+    day: this.eventsService.weekdays[
+      this.mailselectitem.eventStartTime
+        ? new Date(this.mailselectitem.eventStartTime).getDay()
+        : 0
+    ],
+    hour: this.mailselectitem.eventStartTime
+      ? new Date(this.mailselectitem.eventStartTime).getHours()
+      : 0,
+    currentTime: this.mailselectitem?.eventStartTime,
+  };
 
-    this.isMediaLoading = true;
+  this.isMediaLoading = true;
 
-    this.eventsService.getEmailDataForVMSEvents(this.emailObject).subscribe({
-      next: (res: any) => {
-        if (res.statusCode === 200) {
-          this.emailData = res.emailDetails;
-          this.smsDetails = res.smsDetails;
-          this.isMediaLoading = false;
-
-          const level1Data =
-            res.actionsTakenInfo.find((obj: any) => obj.level_1)?.level_1 || [];
-
-          const level3Data =
-            res.actionsTakenInfo.find((obj: any) => obj.level_3)?.level_3 || [];
-
-          /* Level 1 => Played / Not Played */
-          const formattedLevel1 = level1Data.map(
-            (item: any) =>
-              `${item.name} ${item.status ? "(Played)" : "(Not Played)"}`
-          );
-
-          /* Level 3 => Responded / Not Responded */
-
-          const formattedLevel3 = [
-            ...new Set(
-              level3Data.map(
-                (item: any) =>
-                  `${item.name} ${item.status ? "(Responded)" : "(Not Responded)"}`
-              )
-            ),
-          ];
-
-          this.action = [...formattedLevel1, ...formattedLevel3];
-        } else {
-          this.isMediaLoading = false;
-        }
-      },
-      error: (err) => {
+  this.eventsService.getEmailDataForVMSEvents(this.emailObject).subscribe({
+    next: (res: any) => {
+      if (res.statusCode === 200) {
+        this.emailData = res.emailDetails;
+        this.smsDetails = res.smsDetails;
         this.isMediaLoading = false;
-        this.showToast("error", "Connection Failed", "Something went wrong!");
-      },
-    });
-  }
+
+        const level1Data =
+          res.actionsTakenInfo.find((obj: any) => obj.level_1)?.level_1 || [];
+
+        const level2Data =
+          res.actionsTakenInfo.find((obj: any) => obj.level_2)?.level_2 || [];
+
+        const level3Data =
+          res.actionsTakenInfo.find((obj: any) => obj.level_3)?.level_3 || [];
+
+        // Directly display API response strings
+        this.action = [...level1Data, ...level2Data, ...level3Data];
+      } else {
+        this.isMediaLoading = false;
+      }
+    },
+    error: (err) => {
+      this.isMediaLoading = false;
+      this.showToast("error", "Connection Failed", "Something went wrong!");
+    },
+  });
+}
 
   mailselectitem: any;
   openMailTooltip(event: MouseEvent, params: any) {
