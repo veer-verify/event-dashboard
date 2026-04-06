@@ -12,7 +12,7 @@ export class EventsService {
   constructor(
     private datePipe: DatePipe,
     private http: HttpClient,
-  ) {}
+  ) { }
 
   // 🔹 events data endpoints
   private readonly eventReportFullData = `${environment.eventDataUrl}/getEventReportFullData_1_0`;
@@ -347,10 +347,10 @@ export class EventsService {
     "Saturday",
   ];
   getHour(timezone: string) {
-    return moment().tz(timezone).hours();
+    return moment.tz(timezone).hours();
   }
   getDay(timezone: string) {
-    return moment().tz(timezone).day();
+    return moment.tz(timezone).day();
   }
 
   getEmailDataForVMSEvents(payload: any) {

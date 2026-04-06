@@ -6,5 +6,6 @@ export const environment = {
   mqApiBaseUrl: "https://prodmq.ivisecurity.com/queueManagement_test",
   eventDataUrl: "https://prod.ivisecurity.com/events_data_test",
   guard_monitoring_url: `https://prod.ivisecurity.com/guard_monitoring_test`,
+  vipSitesUrl: `https://prod.ivisecurity.com/vipsites`,
   loggingEnabled: true,
 };
