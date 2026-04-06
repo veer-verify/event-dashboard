@@ -8,6 +8,7 @@ import {
   Output,
   OnInit,
   Input,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -26,6 +27,7 @@ type DateRangePayload = {
   startTime: string;
   endDate: Date;
   endTime: string;
+  origin?: 'picker' | 'navigation';
 };
 
 @Component({
@@ -53,6 +55,8 @@ export class CalendarComponent implements OnInit {
   @Input() timezone: any;
 
   @Output() dateRangeSelected = new EventEmitter<DateRangePayload>();
+
+  @ViewChild('op') op!: any;
 
   private readonly autoEmit: boolean = false;
   private readonly DEFAULT_LAST_HOURS = 24;           //change last 24 hours by default
@@ -158,6 +162,7 @@ export class CalendarComponent implements OnInit {
       startTime: this.startTime,
       endDate: this.endDate,
       endTime: this.endTime,
+      origin: 'navigation',
     });
   }
 
@@ -174,11 +179,12 @@ export class CalendarComponent implements OnInit {
       startTime: this.startTime,
       endDate: this.endDate,
       endTime: this.endTime,
+      origin: 'navigation',
     });
   }
 
-  // called by the red arrow Confirm button
-  confirmSelection(op: any) {
+  // called by the red arrow Confirm button or externally
+  confirmSelection(op?: any) {
     const now = new Date();
 
     if (this.wholeDay) {
@@ -219,6 +225,7 @@ export class CalendarComponent implements OnInit {
         startTime: this.startTime,
         endDate: this.endDate,
         endTime: this.endTime,
+        origin: op ? 'picker' : 'navigation',
       });
     }
     op?.hide?.();

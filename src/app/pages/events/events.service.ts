@@ -16,10 +16,13 @@ export class EventsService {
 
   // 🔹 events data endpoints
   private readonly eventReportFullData = `${environment.eventDataUrl}/getEventReportFullData_1_0`;
+  // private readonly eventReportFullData =
+  //   `http://192.168.0.244:8000/getEventReportFullData_1_0`;
+
 
   private readonly actionTagCategoriesUrl = `${environment.eventDataUrl}/getActionTagCategories_1_0`;
 
-  private readonly eventReportCountsForActionTag = `${environment.eventDataUrl}/getEventReportCountsForActionTag_1_0`;
+  // private readonly eventReportCountsForActionTag = `${environment.eventDataUrl}/getEventReportCountsForActionTag_1_0`;    //// API Merged into getEventReportFullData
 
   private readonly getEventsMoreInfoUrl = `${environment.eventDataUrl}/getEventsMoreInfo_1_0`;
 
@@ -37,20 +40,171 @@ export class EventsService {
   private readonly consolePendingMessagesUrl = `${environment.mqApiBaseUrl}/getConsolePendingMessages_1_0`;
 
   private readonly pendingEventsCountsUrl = `${environment.mqApiBaseUrl}/getPendingEventsCounts_1_0`;
+  // private readonly allSitesListUrl = `http://192.168.0.229:3004/vipsites/getSitesList_1_0`;
 
+  private readonly allSitesListUrl = `${environment.vipSitesUrl}/getSitesList_1_0`;
+
+
+  private readonly liveInfoForSiteAndCameraUrl = `https://usstaging.ivisecurity.com/vipsites/getLiveInfoForSiteAndCamera_1_0`;
+  private readonly siteSpecificAlertCategoriesUrl = `https://usstaging.ivisecurity.com/guard_monitoring/getAlertCategoriesForSiteId_1_0`;
+  private readonly timezonesUrl = `https://usstaging.ivisecurity.com/events_data/getTimezones_1_0`;
+  private readonly employeeLevelsUrl = `https://usstaging.ivisecurity.com/events_data/getLevelsInfo_1_0`;
+
+
+  /**
+   * 🔹 Get Suspicious / False events
+   *
+   * Expected behavior:
+   * falsecheck=true, suspiciouscheck=false  => only false
+   * falsecheck=false, suspiciouscheck=true  => only suspicious
+   * falsecheck=true, suspiciouscheck=true   => both
+   * falsecheck=false, suspiciouscheck=false => backend default / all / none
+   */
   getSuspiciousEvents(
-    actionTag: number,
+    falsecheck: boolean,
+    suspiciouscheck: boolean,
     startDate?: string,
     endDate?: string,
+    filter?: any,
   ): Observable<any> {
-    return this.http.get<any>(
-      `${this.eventReportFullData}?fromDate=${startDate}&toDate=${endDate}&actionTag=${actionTag}`,
-    );
+    let params = new HttpParams();
+
+
+    if (startDate) {
+      params = params.set("fromDate", startDate);
+    }
+
+
+    if (endDate) {
+      params = params.set("toDate", endDate);
+    }
+
+
+    // ✅ Pass both toggles exactly as backend expects
+    params = params.set("falseActionTag", String(falsecheck));
+    params = params.set("suspiciousActionTag", String(suspiciouscheck));
+
+
+    // Optional filters
+    if (filter) {
+      if (
+        filter.timezoneValue !== null &&
+        filter.timezoneValue !== undefined &&
+        filter.timezoneValue !== ""
+      ) {
+        params = params.set("timezone", filter.timezoneValue);
+      } else if (
+        filter.timeZone !== null &&
+        filter.timeZone !== undefined &&
+        filter.timeZone !== "All" &&
+        filter.timeZone !== ""
+      ) {
+        const cleanTz =
+          filter.timeZone.match(/\((.*?)\)/)?.[1] || filter.timeZone;
+        params = params.set("timezone", cleanTz);
+      }
+
+
+      if (filter.site !== null && filter.site !== undefined) {
+        let sid = filter.site;
+        if (typeof filter.site === "object") {
+          sid = filter.site.siteId || filter.site.site || filter.site.id;
+        }
+        if (sid && sid !== "All") {
+          params = params.set("siteId", sid);
+        }
+      }
+
+
+      if (
+        filter.camera !== null &&
+        filter.camera !== undefined &&
+        filter.camera !== "" &&
+        filter.camera !== "All"
+      ) {
+        params = params.set("cameraId", filter.camera);
+      }
+
+
+      if (
+        filter.consoleType !== null &&
+        filter.consoleType !== undefined &&
+        filter.consoleType !== "" &&
+        filter.consoleType !== "All"
+      ) {
+        params = params.set("eventType", filter.consoleType);
+      }
+
+
+      if (
+        filter.employeeId !== null &&
+        filter.employeeId !== undefined &&
+        filter.employeeId !== ""
+      ) {
+        params = params.set("employee", filter.employeeId);
+      } else if (
+        filter.employee !== null &&
+        filter.employee !== undefined &&
+        filter.employee !== "" &&
+        filter.employee !== "All"
+      ) {
+        params = params.set("employee", filter.employee);
+      }
+
+
+      if (
+        filter.alertType !== null &&
+        filter.alertType !== undefined &&
+        filter.alertType !== "" &&
+        filter.alertType !== "All"
+      ) {
+        params = params.set("alertType", filter.alertType);
+      }
+
+
+      if (
+        filter.actionTagId !== null &&
+        filter.actionTagId !== undefined
+      ) {
+        params = params.set("subActionTagId", filter.actionTagId);
+      } else if (
+        filter.actionTag !== null &&
+        filter.actionTag !== undefined &&
+        filter.actionTag !== "" &&
+        filter.actionTag !== "All"
+      ) {
+        params = params.set("actionTag", filter.actionTag);
+      }
+    }
+
+
+    return this.http.get<any>(this.eventReportFullData, { params });
   }
 
   getConsoleEventsCounts_1_0(): Observable<any> {
     return this.http.get<any>(this.consoleEventsCountsUrl);
   }
+
+  getActionTagCategories(): Observable<any> {
+    return this.http.get<any>(this.actionTagCategoriesUrl);
+  }
+
+  getTimezones(): Observable<any> {
+    return this.http.get<any>(this.timezonesUrl);
+  }
+
+  getEmployeeLevels(): Observable<any> {
+    return this.http.get<any>(this.employeeLevelsUrl);
+  }
+
+  getSitesList(): Observable<any> {
+    return this.http.get<any>(this.allSitesListUrl);
+  }
+
+  getLiveInfoForSiteAndCamera(siteId: any): Observable<any> {
+    return this.http.get<any>(`${this.liveInfoForSiteAndCameraUrl}?siteId=${siteId}`);
+  }
+
 
   getPendingEventsCounts_1_0(): Observable<any> {
     return this.http.get<any>(this.pendingEventsCountsUrl);
@@ -66,59 +220,59 @@ export class EventsService {
     return this.http.get<any>(`${this.pendingMessagesUrl}`);
   }
 
-  getActionTagCategories(): Observable<any> {
-    return this.http.get<any>(this.actionTagCategoriesUrl);
-  }
+  // getActionTagCategories(): Observable<any> {
+  //   return this.http.get<any>(this.actionTagCategoriesUrl);
+  // }
 
-  getEventReportCountsForActionTag(
-    startDate?: string,
-    endDate?: string,
-    suspiciouscheck?: boolean,
-    falsecheck?: boolean,
+  // getEventReportCountsForActionTag(  //// API Merged into getEventReportFullData
+  //   startDate?: string,
+  //   endDate?: string,
+  //   suspiciouscheck?: boolean,
+  //   falsecheck?: boolean,
 
-    filter?: any,
-  ): Observable<any> {
-    const url =
-      `${this.eventReportCountsForActionTag}?fromDate=${startDate}` +
-      `&toDate=${endDate}&falseActionTag=${falsecheck}&suspiciousActionTag=${suspiciouscheck}`;
+  //   filter?: any,
+  // ): Observable<any> {
+  //   const url =
+  //     `${this.eventReportCountsForActionTag}?fromDate=${startDate}` +
+  //     `&toDate=${endDate}&falseActionTag=${falsecheck}&suspiciousActionTag=${suspiciouscheck}`;
 
-    let params = new HttpParams();
+  //   let params = new HttpParams();
 
-    // if (actionTag) {
-    //   params = params.set("actionTag", actionTag);
-    // }
-    if (
-      filter.timeZone !== null &&
-      filter.timeZone !== "All" &&
-      filter.timeZone !== ""
-    ) {
-      const cleanTz = filter.timeZone.match(/\((.*?)\)/)?.[1] || "";
+  //   // if (actionTag) {
+  //   //   params = params.set("actionTag", actionTag);
+  //   // }
+  //   if (
+  //     filter.timeZone !== null &&
+  //     filter.timeZone !== "All" &&
+  //     filter.timeZone !== ""
+  //   ) {
+  //     const cleanTz = filter.timeZone.match(/\((.*?)\)/)?.[1] || "";
 
-      params = params.set("timezone", cleanTz);
-    }
+  //     params = params.set("timezone", cleanTz);
+  //   }
 
-    if (filter.site !== null) {
-      params = params.set("siteId", filter.site.siteId);
-    }
+  //   if (filter.site !== null) {
+  //     params = params.set("siteId", filter.site.siteId);
+  //   }
 
-    if (
-      filter.camera !== null &&
-      filter.camera !== "" &&
-      filter.camera !== "All"
-    ) {
-      params = params.set("cameraId", filter.camera);
-    }
+  //   if (
+  //     filter.camera !== null &&
+  //     filter.camera !== "" &&
+  //     filter.camera !== "All"
+  //   ) {
+  //     params = params.set("cameraId", filter.camera);
+  //   }
 
-    if (
-      filter.consoleType !== null &&
-      filter.consoleType !== "" &&
-      filter.consoleType !== "All"
-    ) {
-      params = params.set("EventType", filter.consoleType);
-    }
+  //   if (
+  //     filter.consoleType !== null &&
+  //     filter.consoleType !== "" &&
+  //     filter.consoleType !== "All"
+  //   ) {
+  //     params = params.set("EventType", filter.consoleType);
+  //   }
 
-    return this.http.get<any>(url, { params });
-  }
+  //   return this.http.get<any>(url, { params });
+  // }
 
   getEventMoreInfo(eventId: number): Observable<any> {
     const url = `${this.getEventsMoreInfoUrl}?eventId=${eventId}`;
@@ -165,9 +319,17 @@ export class EventsService {
     let url = `${environment.eventDataUrl}/downloadEventsReport_1_0`;
     let params = new HttpParams();
 
-    params = params.set("fromDate", payload?.fromDate);
-    params = params.set("toDate", payload?.toDate);
-    params = params.set("actionTag", payload?.actionTag);
+    if (payload?.fromDate) params = params.set("fromDate", payload.fromDate);
+    if (payload?.toDate) params = params.set("toDate", payload.toDate);
+
+    // ✅ Toggle booleans as per backend requirement
+    params = params.set("falseActionTag", String(payload?.falseActionTag ?? false));
+    params = params.set("suspiciousActionTag", String(payload?.suspiciousActionTag ?? false));
+
+    if (payload?.timezone) params = params.set("timezone", payload.timezone);
+    if (payload?.siteId && payload.siteId !== "All") params = params.set("siteId", payload.siteId);
+    if (payload?.cameraId && payload.cameraId !== "All") params = params.set("cameraId", payload.cameraId);
+    if (payload?.eventType && payload.eventType !== "All") params = params.set("eventType", payload.eventType);
 
     return this.http.get<ArrayBuffer>(url, {
       params,
@@ -267,14 +429,17 @@ export class EventsService {
     return this.http.post(url, formData);
   }
 
-  getAlertCategoriesForSiteId(payload: any) {
+
+  getAlertCategoriesForSiteId(siteIdOrPayload: any) {
     let url = `${environment.guard_monitoring_url}/getAlertCategoriesForSiteId_1_0`;
     let params = new HttpParams();
 
-    if (payload?.siteId) {
-      params = params.set("siteId", payload?.siteId);
+    const siteId = (typeof siteIdOrPayload === 'object') ? siteIdOrPayload?.siteId : siteIdOrPayload;
+
+    if (siteId) {
+      params = params.set("siteId", siteId);
     }
 
-    return this.http.get(url, { params });
+    return this.http.get<any>(url, { params });
   }
 }

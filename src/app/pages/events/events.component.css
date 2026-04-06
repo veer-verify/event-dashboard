@@ -477,8 +477,8 @@
 
 .filters {
   display: flex;
-  gap: 10px;
-  justify-content: space-between;
+  gap: 165vh;
+  justify-content: flex-end;
   align-items: center;
 }
 
@@ -1162,11 +1162,11 @@ input:checked + .slider:before {
 }
 
 .escalated-section {
-  display: flex;
+  /* display: flex; */
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .calender-escalated-card {
@@ -2539,4 +2539,274 @@ input:checked + .slider:before {
 .custom-chips-container input::placeholder {
   color: #999;
   font-size: 12px;
+}
+/* ===================== Header Filter Dropdowns ===================== */
+/* ===================== Header Filter Dropdowns ===================== */
+.header-filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.hf-dropdown {
+  position: relative;
+  user-select: none;
+}
+
+/* Base button style (for shared properties) */
+.hf-btn, .hf-btn1 {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-family: "Neometric Medium", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.02);
+  transition: all 0.18s ease;
+}
+
+/* SPECIFIC STYLE FOR SITES (First Button) */
+.hf-btn1 {
+  width: 200px; /* Fixed width for consistency */
+  justify-content: space-between; /* Pushes arrow to the far right */
+  border-color: #d1d1d1; /* Slightly darker border to stand out */
+}
+
+/* Regular Buttons */
+.hf-btn {
+  gap: 8px;
+}
+
+/* Hover & Active States */
+.hf-btn:hover, .hf-btn1:hover {
+  background: #f8f8f8;
+  border-color: #c8c8c8;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.hf-btn.hf-active, .hf-btn1.hf-active {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+  color: #fff;
+}
+
+/* Arrow styling */
+.hf-arrow {
+  font-size: 9px;
+  color: #888;
+  transition: transform 0.2s ease;
+}
+.hf-active .hf-arrow { color: #fff; }
+.hf-arrow-up { transform: rotate(180deg); }
+
+/* MENUS */
+.hf-menu, .hf-menu1 {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1100;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  /* border-radius: 10px; */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.13);
+  max-height: 280px;
+  overflow-y: auto;
+  animation: hfFadeIn 0.15s ease;
+}
+
+.hf-menu { min-width: 220px; }
+
+/* SPECIFIC MENU FOR SITES */
+.hf-menu1 {
+  width: 100%; /* Matches the 180px button width */
+  min-width: 180px;
+}
+
+/* SEARCH IN DROPDOWN */
+.hf-search-container {
+  padding: 8px 10px;
+  background: #fbfbfb;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.hf-search-input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 11px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  outline: none;
+  font-family: "Neometric Regular", sans-serif;
+  transition: border-color 0.2s;
+}
+
+.hf-search-input:focus {
+  border-color: #ed3237;
+  background: #fff;
+}
+
+/* Item styling */
+.hf-item, .hf-item1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 14px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s;
+  border-bottom: 1px solid #f7f7f7;
+}
+
+.hf-item:hover, .hf-item1:hover { background: #f5f5f5; }
+
+.hf-item.hf-selected, .hf-item1.hf-selected {
+  background: #fff4f4;
+  color: #ed3237;
+  font-weight: 600;
+}
+
+/* Count badge */
+.hf-count {
+  background: #f0f0f0;
+  color: #555;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 10px;
+}
+.hf-item.hf-selected .hf-count {
+  background: #ffd6d7;
+  color: #ed3237;
+}
+
+/* Empty state */
+.hf-empty {
+  padding: 14px;
+  text-align: center;
+  font-size: 12px;
+  color: #aaa;
+  font-style: italic;
+}
+.hf-empty1 {
+  padding: 14px;
+  text-align: center;
+  font-size: 12px;
+  color: #aaa;
+  font-style: italic;
+}
+/* Responsive */
+@media (max-width: 768px) {
+  .header-filters {
+    gap: 6px;
+  }
+
+  .hf-btn {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .hf-menu {
+    min-width: 180px;
+  }
+}
+
+/* ================================================================== */
+
+/* Apply Filters button */
+.hf-apply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 16px;
+  background: #1a1a1a;
+  border: none;
+  border-radius: 20px;
+  font-family: "Neometric Medium", sans-serif;
+  font-size: 12px;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition: background 0.18s, box-shadow 0.18s;
+}
+
+.hf-apply-btn:hover {
+  background: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Clear Filters pill button */
+.hf-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  background: #ed3237;
+  border: none;
+  border-radius: 20px;
+  font-family: "Neometric Medium", sans-serif;
+  font-size: 12px;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(237, 50, 55, 0.3);
+  transition: background 0.18s, box-shadow 0.18s;
+}
+
+.hf-clear-btn:hover {
+  background: #c9282d;
+  box-shadow: 0 2px 8px rgba(237, 50, 55, 0.4);
+}
+
+/* Result count badge */
+.hf-result-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: #f0f0f0;
+  border-radius: 12px;
+  font-family: "Neometric Medium", sans-serif;
+  font-size: 11px;
+  color: #555;
+  white-space: nowrap;
+}
+
+/* New layout for unified submit button */
+.calendar-submit-row,
+.pending-submit-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hf-apply-btn-calendar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  background: #ed3237; /* UseIvify Red */
+  border: none;
+  border-radius: 20px;
+  font-family: "Neometric Medium", sans-serif;
+  font-size: 12px;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(237, 50, 55, 0.3);
+  transition: background 0.18s, box-shadow 0.18s;
+  height: 30px; /* Match calendar/clock height */
+}
+
+.hf-apply-btn-calendar:hover {
+  background: #c9282d;
+  box-shadow: 0 2px 8px rgba(237, 50, 55, 0.4);
 }

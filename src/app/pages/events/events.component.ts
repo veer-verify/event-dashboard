@@ -1,10 +1,12 @@
-import {
+﻿import {
   Component,
   OnInit,
   OnDestroy,
   ViewChild,
   ElementRef,
   forwardRef,
+  HostListener,
+  NgZone,
 } from "@angular/core";
 import {
   GridApi,
@@ -48,7 +50,7 @@ import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { NotificationService } from "src/app/shared/notification.service";
 
 import { ProfileImageRendererComponent } from "./profile-image-renderer.component";
-import { NgZone } from "@angular/core";
+
 import { RefreshStatusPanelComponent } from "./refresh-status-panel.component";
 import { ImagePipe } from "src/app/shared/image.pipe"; // adjust path
 import { IdleService } from "src/Services/idle.service";
@@ -116,6 +118,7 @@ interface SecondEscalatedDetail {
   ],
 })
 export class EventsComponent {
+  @ViewChild("calendarComponent") calendarComponent!: any;
   @ViewChild("filterOverlay") filterOverlay!: OverlayPanel;
   @ViewChild("paginationControlsClosed")
   paginationControlsClosed!: ElementRef<HTMLDivElement>;
@@ -139,6 +142,400 @@ export class EventsComponent {
 
   closeFilterPanel() {
     this.filterPanelVisible = false;
+  }
+
+  // ===================== Header Filter States =====================
+  showSiteDropdown = false;
+  showCameraDropdown = false;
+  showActionTagDropdown = false;
+  showEmployeeDropdown = false;
+  showTimezoneDropdown = false;
+  showAlertTypeDropdown = false;
+
+  headerSite: string | null = null;
+  headerCamera: string | null = null;
+  headerActionTag: string | null = null;
+  headerEmployee: string | null = null;
+  headerTimezone: string | null = null;
+  headerAlertType: string | null = null;
+
+  private actionTagCategories: any[] = [];
+  private allSitesList: any[] = [];
+  private initialLoadCompleted = false;
+  
+  siteSearchQuery: string = "";
+  cameraSearchQuery: string = "";
+  actionTagSearchQuery: string = "";
+  timezoneSearchQuery: string = "";
+  employeeSearchQuery: string = "";
+  alertTypeSearchQuery: string = "";
+  liveCamerasList: any[] = [];
+  allTimezonesList: any[] = [];
+  allEmployeesList: any[] = [];
+  hardcodedAlertTypes: string[] = ["Event_Wall", "Manual_Wall", "Custom_Event", "Manual_Event"];
+
+  siteOptions: { siteName: string; count: number }[] = [];
+  cameraOptions: { id: string; label?: string; count: number }[] = [];
+  actionTagOptions: { tag: string; count: number }[] = [];
+  employeeOptions: { level: string; count: number }[] = [];
+  timezoneOptions: { label: string; value?: any; count: number }[] = [];
+  alertTypeOptions: { label: string; count: number }[] = [];
+
+  get hasActiveHeaderFilters(): boolean {
+    return !!(this.headerSite || this.headerCamera || this.headerActionTag || this.headerEmployee || this.headerTimezone || this.headerAlertType);
+  }
+
+  get activeTabTotalRows(): number {
+    return this.rowData.length;
+  }
+
+  get activeTabDisplayRows(): number {
+    return this.closedDisplayRows.length;
+  }
+
+  onHeaderFilterChange(type: string, value: any) {
+      if (type === 'actionTag') {
+    this.headerActionTag = value;
+    // Also set the ID version
+    if (value && value !== "All") {
+      this.currentFilter.actionTagId = this.getActionTagIdFromString(value);
+    } else {
+      this.currentFilter.actionTagId = null;
+    }
+  }
+    if (type === 'site') {
+      this.headerSite = value;
+      this.headerCamera = null; // Reset camera when site changes
+      this.cameraSearchQuery = ""; // Reset camera search
+      
+      if (value) {
+        const sid = this.getSiteIdByName(value);
+        if (sid) {
+          // Fetch Site-Specific Cameras
+          this.eventsService.getLiveInfoForSiteAndCamera(sid).subscribe(res => {
+            this.liveCamerasList = Array.isArray(res) ? res : (res?.data || res?.cameras || res?.liveInfo || res?.siteCameras || []);
+            this.recomputeHeaderOptions();
+          });
+          // Fetch Site-Specific Action Tag Categories
+          this.eventsService.getAlertCategoriesForSiteId(sid).subscribe(res => {
+            if (res) {
+              this.actionTagCategories = res.actionTagCategories || res.data || [];
+              this.recomputeHeaderOptions();
+            }
+          });
+        }
+      } else {
+        this.liveCamerasList = [];
+        // Revert to Global Action Tag Categories for "All Sites"
+        this.eventsService.getActionTagCategories().subscribe(res => {
+          if (res?.status === "success" || res?.statusCode === 200) {
+            this.actionTagCategories = res.actionTagCategories || [];
+            this.recomputeHeaderOptions();
+          }
+        });
+        this.recomputeHeaderOptions();
+      }
+    } else if (type === 'camera') {
+      this.headerCamera = value;
+    } else if (type === 'actionTag') {
+      this.headerActionTag = value;
+    } else if (type === 'employee') {
+      this.headerEmployee = value;
+    } else if (type === 'timezone') {
+      this.headerTimezone = value;
+    } else if (type === 'alertType') {
+      this.headerAlertType = value;
+    }
+    this.recomputeHeaderOptions();
+  }
+
+  get filteredActionTagOptions() {
+    if (!this.actionTagSearchQuery) return this.actionTagOptions;
+    const q = this.actionTagSearchQuery.toLowerCase();
+    return this.actionTagOptions.filter(t => t.tag.toLowerCase().includes(q));
+  }
+
+  get filteredTimezoneOptions() {
+    if (!this.timezoneSearchQuery) return this.timezoneOptions;
+    const q = this.timezoneSearchQuery.toLowerCase();
+    return this.timezoneOptions.filter(t => t.label.toLowerCase().includes(q));
+  }
+
+  get filteredEmployeeOptions() {
+    if (!this.employeeSearchQuery) return this.employeeOptions;
+    const q = this.employeeSearchQuery.toLowerCase();
+    return this.employeeOptions.filter(e => e.level.toLowerCase().includes(q));
+  }
+
+  get filteredAlertTypeOptions() {
+    if (!this.alertTypeSearchQuery) return this.alertTypeOptions;
+    const q = this.alertTypeSearchQuery.toLowerCase();
+    return this.alertTypeOptions.filter(a => a.label.toLowerCase().includes(q));
+  }
+
+
+  @HostListener("document:click", ["$event"])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    // Close dropdowns if clicking outside any dropdown button or menu
+    if (!target.closest(".hf-dropdown") && !target.closest(".hf-menu")) {
+      this.showSiteDropdown = false;
+      this.showCameraDropdown = false;
+      this.showActionTagDropdown = false;
+      this.showEmployeeDropdown = false;
+      this.showTimezoneDropdown = false;
+      this.showAlertTypeDropdown = false;
+    }
+  }
+
+  applyHeaderFilters() {
+    // 1. Explicitly hide calendar overlay if it exists
+    if (this.calendarComponent?.op) {
+      this.calendarComponent.op.hide();
+    }
+
+    // 2. Sync header filter state to currentFilter payload
+    const sid = this.headerSite ? this.getSiteIdByName(this.headerSite) : null;
+    this.currentFilter = {
+      ...this.currentFilter,
+      site: sid,
+      camera: this.headerCamera ?? "All",
+      actionTag: this.headerActionTag ?? "All",
+      actionTagId: this.headerActionTag ? this.getActionTagIdFromString(this.headerActionTag) : null,
+      employee: this.headerEmployee ?? "All",
+      employeeId: this.headerEmployee ? this.getEmployeeIdByLabel(this.headerEmployee) : null,
+      timeZone: this.headerTimezone ?? null,
+      timezoneValue: this.headerTimezone ? this.getTimezoneValueByLabel(this.headerTimezone) : null,
+      consoleType: this.headerAlertType ?? "All"
+    };
+
+    // 3. Trigger calendar confirmation (updates internal date state via emission)
+    // We do NOT call loadClosedAndEscalatedDetails() inside onDateRangeSelected anymore
+    if (this.selectedFilter === "CLOSED" && this.calendarComponent) {
+      this.calendarComponent.confirmSelection();
+    }
+
+    // 4. Load data (Only call this ONCE here to prevent double-firing)
+    if (this.selectedFilter === "CLOSED") {
+      this.loadClosedAndEscalatedDetails(); 
+    } else {
+      this.loadPendingEvents();
+    }
+  }
+
+  get filteredSiteOptions() {
+    if (!this.siteSearchQuery) return this.siteOptions;
+    const q = this.siteSearchQuery.toLowerCase();
+    return this.siteOptions.filter(s => s.siteName.toLowerCase().includes(q));
+  }
+
+  get filteredCameraOptions() {
+    if (!this.cameraSearchQuery) return this.cameraOptions;
+    const q = this.cameraSearchQuery.toLowerCase();
+    return this.cameraOptions.filter(c => c.id.toLowerCase().includes(q));
+  }
+
+  clearHeaderFilters() {
+    this.headerSite = null;
+    this.headerCamera = null;
+    this.headerActionTag = null;
+    this.headerEmployee = null;
+    this.headerTimezone = null;
+    this.headerAlertType = null;
+    
+    this.currentFilter = {
+      ...this.currentFilter,
+      site: null,
+      camera: "All",
+      actionTag: "All",
+      employee: "All",
+      timeZone: null,
+      timezoneValue: null,
+      consoleType: "All"
+    };
+    this.loadClosedAndEscalatedDetails();
+  }
+
+  private getSiteIdByName(name: string): any {
+    const site = this.allSitesList.find(s => s.siteName === name);
+    return site ? site.siteId : null;
+  }
+
+  private getTimezoneValueByLabel(label: string | null): string | null {
+    if (!label) return null;
+    const opt = this.timezoneOptions.find(o => o.label === label);
+    if (opt && opt.value) return opt.value;
+
+    // Fallback search in allTimezonesList for robust mapping
+    const tz = this.allTimezonesList.find(t => {
+      const short = t.timezoneCode || t.shortform || t.shortTerm || t.abbreviation || t.name;
+      return short === label || (typeof short === 'object' && short?.name === label);
+    });
+
+    if (tz) {
+      return tz.timezoneValue || tz.timezoneName || tz.fullName || tz.timezone || tz.name || label;
+    }
+
+    return label;
+  }
+
+  private getActionTagIdFromString(tagName: string): any {
+    if (!this.actionTagCategories) return null;
+    for (const cat of this.actionTagCategories) {
+      const sub = cat.actionTagSubCategories?.find((s: any) => (s.subCategoryName || s.subActionTagName || s.name) === tagName);
+      if (sub) return sub.subCategoryId || sub.id;
+    }
+    return null;
+  }
+
+  private getEmployeeIdByLabel(label: string): any {
+    const employee = this.rowData.find(r => {
+      const empLabel = r.employeeName || r.employeeInfo?.level || r.userLevels || r.userLevel || "N/A";
+      return empLabel === label;
+    });
+    return employee ? (employee.employeeId || employee.employee) : null;
+  }
+
+  recomputeHeaderOptions() {
+    // 1. Site Options (Using complete list from API)
+    if (this.allSitesList && this.allSitesList.length > 0) {
+      this.siteOptions = this.allSitesList.map(s => {
+        const name = s.siteName || s.site_name || s.name || "Unknown Site";
+        return {
+          siteName: name,
+          count: this.rowData.filter(r => r.siteName === name).length
+        };
+      });
+    } else {
+      const siteMap = new Map<string, number>();
+      this.rowData.forEach(r => {
+        if (r.siteName) siteMap.set(r.siteName, (siteMap.get(r.siteName) || 0) + 1);
+      });
+      this.siteOptions = Array.from(siteMap.entries()).map(([siteName, count]) => ({ siteName, count }));
+    }
+
+    // 2. Camera Options (Cascades from headerSite or uses API results)
+    if (this.headerSite && this.liveCamerasList && this.liveCamerasList.length > 0) {
+      this.cameraOptions = this.liveCamerasList.map((c: any) => {
+        const id = c.cameraId || c.cameraName || c.camera_id || c.id || "Unknown Camera";
+        const label = c.cameraName || c.name || id;
+        return {
+          id: id,
+          label: label,
+          count: this.rowData.filter(r => {
+            const sameSiteName = r.siteName === this.headerSite;
+            const sameSiteId = this.headerSite && r.siteName && this.getSiteIdByName(r.siteName) === this.getSiteIdByName(this.headerSite);
+            const sameCam = r.cameraId === id || r.cameraName === id || r.cameraName === label;
+            return (sameSiteName || sameSiteId) && sameCam;
+          }).length
+        };
+      });
+    } else if (this.headerSite) {
+      const cameraMap = new Map<string, number>();
+      this.rowData.forEach(r => {
+        if (r.siteName === this.headerSite || this.getSiteIdByName(r.siteName) === this.getSiteIdByName(this.headerSite!)) {
+          const cam = r.cameraId || r.cameraName;
+          if (cam) cameraMap.set(cam, (cameraMap.get(cam) || 0) + 1);
+        }
+      });
+      this.cameraOptions = Array.from(cameraMap.entries()).map(([id, count]) => ({ id, label: id, count }));
+    } else {
+      this.cameraOptions = [];
+    }
+
+    // 3. Action Tag Options (Using categories from API based on Suspicious/False check)
+    if (this.actionTagCategories && this.actionTagCategories.length > 0) {
+      const targetTags: any[] = [];
+      const suspiciousCat = this.actionTagCategories.find(c => c.categoryId === 2);
+      const falseCat = this.actionTagCategories.find(c => c.categoryId === 1);
+
+      if (this.suspiciousChecked && suspiciousCat?.actionTagSubCategories) {
+        targetTags.push(...suspiciousCat.actionTagSubCategories);
+      }
+      if (this.falseChecked && falseCat?.actionTagSubCategories) {
+        targetTags.push(...falseCat.actionTagSubCategories);
+      }
+
+      const tagMap = new Map<string, any>();
+      targetTags.forEach(t => {
+        const name = t.subCategoryName || t.name || t.subActionTagName;
+        if (name && !tagMap.has(name)) {
+          tagMap.set(name, {
+            tag: name,
+            count: this.rowData.filter(r => {
+              const tagValue = r.subActionTag || r.actionTag || r.subActionTagName;
+              return tagValue === name;
+            }).length
+          });
+        }
+      });
+      this.actionTagOptions = Array.from(tagMap.values());
+    } else {
+      const tagMap = new Map<string, number>();
+      this.rowData.forEach(r => {
+        const tagValue = r.subActionTag || r.actionTag || r.subActionTagName;
+        if (tagValue) tagMap.set(tagValue, (tagMap.get(tagValue) || 0) + 1);
+      });
+      this.actionTagOptions = Array.from(tagMap.entries()).map(([tag, count]) => ({ tag, count }));
+    }
+
+    // 4. Timezone Options (Global - Full List)
+    if (this.allTimezonesList && this.allTimezonesList.length > 0) {
+      this.timezoneOptions = this.allTimezonesList.map(t => {
+        // Robust mapping: short acronym (display) vs long IANA name (payload)
+        const short = t.timezoneCode || t.shortform || t.shortTerm || t.abbreviation || t.name;
+        const full = t.timezoneValue || t.timezoneName || t.fullName || t.timezone || t.name;
+        
+        const shortLabel = (typeof short === 'string') ? short : (short?.name || t.name || "N/A");
+        const fullValue = (typeof full === 'string') ? full : (full?.name || t.name || shortLabel);
+
+        return {
+          label: shortLabel,
+          value: fullValue,
+          count: this.rowData.filter(r => {
+            const rowTz = r.timezone || r.timezoneValue || r.tz || r.timeZone;
+            return rowTz === shortLabel || rowTz === fullValue;
+          }).length
+        };
+      });
+    } else {
+      const tzMap = new Map<string, number>();
+      this.rowData.forEach(r => {
+        const tzValue = r.tz || r.timezone;
+        if (tzValue) tzMap.set(tzValue, (tzMap.get(tzValue) || 0) + 1);
+      });
+      this.timezoneOptions = Array.from(tzMap.entries()).map(([timezone, count]) => ({ 
+        label: timezone, 
+        value: timezone, 
+        count: count 
+      }));
+    }
+
+    // 5. Employee Options (Global - Full List)
+    if (this.allEmployeesList && this.allEmployeesList.length > 0) {
+      this.employeeOptions = this.allEmployeesList.map(e => {
+        const level = e.levelName || e.level || e.name || e;
+        return {
+          level: level,
+          count: this.rowData.filter(r => r.employeeName === level || r.employeeInfo?.level === level).length
+        };
+      });
+    } else {
+      const empMap = new Map<string, number>();
+      this.rowData.forEach(r => {
+        const empValue = r.employeeName || r.employeeInfo?.level;
+        if (empValue) empMap.set(empValue, (empMap.get(empValue) || 0) + 1);
+      });
+      this.employeeOptions = Array.from(empMap.entries()).map(([level, count]) => ({ level, count }));
+    }
+
+    // 6. Alert Type Options (Global - Hardcoded)
+    this.alertTypeOptions = this.hardcodedAlertTypes.map(type => {
+      return {
+        label: type,
+        count: this.rowData.filter(r => r.alertType === type || r.eventType === type).length
+      };
+    });
   }
 
   // Opens/closes the popup anchored to the button click
@@ -171,6 +568,9 @@ export class EventsComponent {
     site: null,
     camera: "All",
     actionTag: "All",
+    actionTagId: null,
+    timezoneValue: null,
+    employeeId: null,
     eventType: "All",
     employee: "All",
     queueLevel: "All",
@@ -198,107 +598,106 @@ export class EventsComponent {
   onFirstDataRendered() {
     this.autoSizeAllColumns();
   }
-
   onFilterApply(criteria: EventsFilterCriteria) {
-    console.log(criteria);
-    this.preloadClosedCounts();
-    const base =
-      this.selectedFilter === "PENDING" ? this.pendingRowData : this.rowData;
+  console.log(criteria);
+  const base =
+    this.selectedFilter === "PENDING" ? this.pendingRowData : this.rowData;
 
-    const start = criteria.startDate
-      ? this.toDateAtTime(new Date(criteria.startDate), criteria.startTime)
-      : undefined;
-    const end = criteria.endDate
-      ? this.toDateAtTime(new Date(criteria.endDate), criteria.endTime)
-      : undefined;
+  const start = criteria.startDate
+    ? this.toDateAtTime(new Date(criteria.startDate), criteria.startTime)
+    : undefined;
+  const end = criteria.endDate
+    ? this.toDateAtTime(new Date(criteria.endDate), criteria.endTime)
+    : undefined;
 
-    const filtered = base.filter((row) => {
-      const timeField = row.eventTime || row.eventStartTime || row.timestamp;
-      if (!this.withinRange(timeField, start, end)) return false;
-      // ✅ Queue filters (PENDING only)
-      if (this.selectedFilter === "PENDING") {
-        if (
-          criteria.queueLevel !== "All" &&
-          row.queueLevel !== criteria.queueLevel
-        ) {
-          return false;
-        }
-
-        if (
-          criteria.queueName !== "All" &&
-          row.queueName !== criteria.queueName
-        ) {
-          return false;
-        }
-      }
-      // dropdowns
-      const city = row.cityName ?? row.city;
-      if (criteria.city !== "All" && city !== criteria.city) return false;
-      if (criteria.site !== null && row.siteName !== criteria.site.site)
-        return false;
-
-      if (criteria.timeZone !== null && row.timezone !== criteria.timeZone)
-        return false;
-
-      if (criteria.camera !== "All" && row.cameraId !== criteria.camera)
-        return false;
-
-      // 🔹 Action Tag filter (using eventType from dropdown)
-      const selectedActionTag = criteria.eventType;
-      if (selectedActionTag !== "All") {
-        const rowActionTag =
-          this.selectedFilter === "PENDING"
-            ? row.actionTag
-            : (row.subActionTag ?? row.actionTag);
-
-        if (rowActionTag !== selectedActionTag) {
-          return false;
-        }
-      }
-
-      // 🔹 Employee (userLevel) filter
-      const level =
-        row.employee?.level ?? row.userLevels ?? row.userLevel ?? "N/A";
-      if (criteria.employee !== "All" && level !== criteria.employee) {
-        return false;
-      }
-
-      // 🔹 Alert Type filter
-      if (criteria.consoleType !== "All") {
-        const rowAlertType = row.eventType ?? row.eventTag;
-        if (rowAlertType !== criteria.consoleType) {
-          return false;
-        }
-      }
-
-      // duration
-      const durationStr = row.duration ?? row.eventDuration;
-      const durationMin = this.parseDurationToMinutes(durationStr);
-      if (
-        !this.withinDuration(
-          criteria.minDuration,
-          criteria.maxDuration,
-          durationMin,
-        )
-      )
-        return false;
-
-      return true;
-    });
-
+  const filtered = base.filter((row) => {
+    const timeField = row.eventTime || row.eventStartTime || row.timestamp;
+    if (!this.withinRange(timeField, start, end)) return false;
+    // ✅ Queue filters (PENDING only)
     if (this.selectedFilter === "PENDING") {
-      this.pendingDisplayRows = filtered;
-    } else {
-      this.closedDisplayRows = filtered;
+      if (
+        criteria.queueLevel !== "All" &&
+        row.queueLevel !== criteria.queueLevel
+      ) {
+        return false;
+      }
+
+      if (
+        criteria.queueName !== "All" &&
+        row.queueName !== criteria.queueName
+      ) {
+        return false;
+      }
     }
+    // dropdowns
+    const city = row.cityName ?? row.city;
+    if (criteria.city !== "All" && city !== criteria.city) return false;
+    if (criteria.site !== null && row.siteName !== criteria.site.site)
+      return false;
+
+    if (criteria.timeZone !== null && row.timezone !== criteria.timeZone)
+      return false;
+
+    if (criteria.camera !== "All" && row.cameraId !== criteria.camera)
+      return false;
+
+    // 🔹 Action Tag filter - Use ID
+    const selectedActionTagId = criteria.actionTagId;
+    if (selectedActionTagId !== null && selectedActionTagId !== undefined) {
+      const rowActionTagId = row.subActionTagId ?? row.actionTagId;
+      if (rowActionTagId !== selectedActionTagId) {
+        return false;
+      }
+    }
+
+    // 🔹 Employee (userLevel) filter
+    const level =
+      row.employee?.level ?? row.userLevels ?? row.userLevel ?? "N/A";
+    if (criteria.employee !== "All" && level !== criteria.employee) {
+      return false;
+    }
+
+    // 🔹 Alert Type filter
+    if (criteria.consoleType !== "All") {
+      const rowAlertType = row.eventType ?? row.eventTag;
+      if (rowAlertType !== criteria.consoleType) {
+        return false;
+      }
+    }
+
+    // duration
+    const durationStr = row.duration ?? row.eventDuration;
+    const durationMin = this.parseDurationToMinutes(durationStr);
+    if (
+      !this.withinDuration(
+        criteria.minDuration,
+        criteria.maxDuration,
+        durationMin,
+      )
+    )
+      return false;
+
+    return true;
+  });
+
+  if (this.selectedFilter === "PENDING") {
+    this.pendingDisplayRows = filtered;
+  } else {
+    this.closedDisplayRows = filtered;
+  }
 
     this.onFilterClose(); // if you're using the sidebar boolean
     this.filterPanelVisible = false; // if you also use this toggle elsewhere
-  }
+}
 
   onFilterCriteriaChange(criteria: EventsFilterCriteria): void {
     this.currentFilter = { ...criteria };
-
+  // Map actionTag string to actionTagId
+  if (this.currentFilter.actionTag && this.currentFilter.actionTag !== "All") {
+    this.currentFilter.actionTagId = this.getActionTagIdFromString(this.currentFilter.actionTag);
+  } else {
+    this.currentFilter.actionTagId = null;
+  }
     // ✅ rebuild dropdown lists based on current selections
     this.recomputeFilterDropdowns();
 
@@ -331,14 +730,17 @@ export class EventsComponent {
         ? (this.pendingRowData ?? [])
         : (this.rowData ?? []);
 
-    // build each options list by filtering rows with currentFilter,
-    // but ignoring the same field so options don't collapse incorrectly.
-    const siteRows = this.filterRowsForOptions(rows, "site");
-    this.filterLists.sites = Array.from(
-      new Map(
-        siteRows.map((r) => [r.siteId, { siteId: r.siteId, site: r.siteName }]),
-      ).values(),
-    );
+    // 1. Sites: Use dynamic list if available
+    if (this.allSitesList && this.allSitesList.length > 0) {
+      this.filterLists.sites = this.allSitesList.map(s => ({ siteId: s.siteId, site: s.siteName }));
+    } else {
+      const siteRows = this.filterRowsForOptions(rows, "site");
+      this.filterLists.sites = Array.from(
+        new Map(
+          siteRows.map((r) => [r.siteId, { siteId: r.siteId, site: r.siteName }]),
+        ).values(),
+      );
+    }
 
     const timeZoneRows = this.filterRowsForOptions(rows, "timezone");
     this.filterLists.timezones = this.uniq(timeZoneRows.map((r) => r.timezone));
@@ -353,16 +755,25 @@ export class EventsComponent {
       ),
     );
 
-    const actionTagRows = this.filterRowsForOptions(rows, "eventType");
-    this.filterLists.eventTypes = this.uniq(
-      actionTagRows
-        .map((r) =>
-          this.selectedFilter === "PENDING"
-            ? r.actionTag
-            : (r.subActionTag ?? r.actionTag),
-        )
-        .filter((v: any) => v != null && v !== ""),
-    );
+    // 5. Action Tags: Use dynamic categories if available
+    if (this.actionTagCategories && this.actionTagCategories.length > 0) {
+      const targetTags: any[] = [];
+      this.actionTagCategories.forEach(c => {
+        if (c.actionTagSubCategories) targetTags.push(...c.actionTagSubCategories);
+      });
+      this.filterLists.eventTypes = Array.from(new Set(targetTags.map(t => t.subActionTagName)));
+    } else {
+      const actionTagRows = this.filterRowsForOptions(rows, "eventType");
+      this.filterLists.eventTypes = this.uniq(
+        actionTagRows
+          .map((r) =>
+            this.selectedFilter === "PENDING"
+              ? r.actionTag
+              : (r.subActionTag ?? r.actionTag),
+          )
+          .filter((v: any) => v != null && v !== ""),
+      );
+    }
 
     const alertRows = this.filterRowsForOptions(rows, "consoleType");
     this.filterLists.consoleTypes = this.uniq(
@@ -385,78 +796,74 @@ export class EventsComponent {
   }
 
   private filterRowsForOptions(
-    rows: any[],
-    ignoreField:
-      | "site"
-      | "timezone"
-      | "camera"
-      | "employee"
-      | "eventType"
-      | "consoleType"
-      | "queueName"
-      | "queueLevel",
-  ): any[] {
-    const c = this.currentFilter;
+  rows: any[],
+  ignoreField:
+    | "site"
+    | "timezone"
+    | "camera"
+    | "employee"
+    | "eventType"
+    | "consoleType"
+    | "queueName"
+    | "queueLevel",
+): any[] {
+  const c = this.currentFilter;
 
-    return rows.filter((row) => {
-      // Site
+  return rows.filter((row) => {
+    // Site
+    if (
+      ignoreField !== "site" &&
+      c.site !== null &&
+      row.siteName !== c.site.site
+    )
+      return false;
+
+    // Camera
+    if (
+      ignoreField !== "camera" &&
+      c.camera !== "All" &&
+      row.cameraId !== c.camera
+    )
+      return false;
+
+    // Employee (levels)
+    if (ignoreField !== "employee") {
+      const level =
+        row.employee?.level ?? row.userLevels ?? row.userLevel ?? "N/A";
+      if (c.employee !== "All" && level !== c.employee) return false;
+    }
+
+    // ACTION TAG - Use ID instead of string
+    if (ignoreField !== "eventType" && c.actionTagId !== null && c.actionTagId !== undefined) {
+      const rowTagId = row.subActionTagId ?? row.actionTagId;
+      if (rowTagId !== c.actionTagId) return false;
+    }
+
+    // Alert Type dropdown (consoleType)
+    if (ignoreField !== "consoleType" && c.consoleType !== "All") {
+      const rowAlert = row.eventType ?? row.eventTag;
+      if (rowAlert !== c.consoleType) return false;
+    }
+
+    // Pending-only queue filters
+    if (this.selectedFilter === "PENDING") {
       if (
-        ignoreField !== "site" &&
-        c.site !== null &&
-        row.siteName !== c.site.site
+        ignoreField !== "queueName" &&
+        c.queueName !== "All" &&
+        row.queueName !== c.queueName
       )
         return false;
-
-      // Camera
       if (
-        ignoreField !== "camera" &&
-        c.camera !== "All" &&
-        row.cameraId !== c.camera
+        ignoreField !== "queueLevel" &&
+        c.queueLevel !== "All" &&
+        row.queueLevel !== c.queueLevel
       )
         return false;
+    }
 
-      // Employee (levels)
-      if (ignoreField !== "employee") {
-        const level =
-          row.employee?.level ?? row.userLevels ?? row.userLevel ?? "N/A";
-        if (c.employee !== "All" && level !== c.employee) return false;
-      }
-
-      // Action Tag dropdown (you store it in criteria.eventType)
-      if (ignoreField !== "eventType" && c.eventType !== "All") {
-        const rowTag =
-          this.selectedFilter === "PENDING"
-            ? row.actionTag
-            : (row.subActionTag ?? row.actionTag);
-
-        if (rowTag !== c.eventType) return false;
-      }
-
-      // Alert Type dropdown (consoleType)
-      if (ignoreField !== "consoleType" && c.consoleType !== "All") {
-        const rowAlert = row.eventType ?? row.eventTag;
-        if (rowAlert !== c.consoleType) return false;
-      }
-
-      // Pending-only queue filters
-      if (this.selectedFilter === "PENDING") {
-        if (
-          ignoreField !== "queueName" &&
-          c.queueName !== "All" &&
-          row.queueName !== c.queueName
-        )
-          return false;
-        if (
-          ignoreField !== "queueLevel" &&
-          c.queueLevel !== "All" &&
-          row.queueLevel !== c.queueLevel
-        )
-          return false;
-      }
-
-      return true;
-    });
-  }
+    return true;
+  });
+}
 
   private parseDurationToMinutes(value?: string): number {
     if (!value) return 0;
@@ -498,7 +905,7 @@ export class EventsComponent {
 
   /** -------------------- Filters & toggles -------------------- */
   rangeTooLarge = false; // CHANGE
-  selectedFilter: "CLOSED" | "PENDING" = "CLOSED";
+  selectedFilter: any = "CLOSED";
   selectedpendingFilter: "CONSOLES" | "QUEUES" = "CONSOLES";
 
   consolesChecked = true;
@@ -680,7 +1087,6 @@ export class EventsComponent {
     this.setupColumnDefs();
     // this.loadPendingEvents();
     // this.preloadPendingCounts();
-    // this.preloadClosedCounts();
 
     // this.timezoneDropdown();
 
@@ -709,6 +1115,22 @@ export class EventsComponent {
         });
       }
     }, 0);
+
+    this.eventsService.getSitesList().subscribe(res => {
+      if (res) {
+        // Robust mapping for sites: check for direct array or wrapped properties
+        this.allSitesList = Array.isArray(res) ? res : (res.vipsites || res.data || res.sites || []);
+        this.recomputeHeaderOptions(); 
+        this.recomputeFilterDropdowns(); 
+      }
+    });
+
+    this.eventsService.getTimezones().subscribe(res => {
+      if (res) {
+        this.allTimezonesList = Array.isArray(res) ? res : (res.data || res.timezones || []);
+        this.recomputeHeaderOptions();
+      }
+    });
   }
 
   /** ✅ Preload PENDING counts card data (without needing MORE click) */
@@ -747,90 +1169,89 @@ export class EventsComponent {
   }
 
   EscalatedDetailCombined: any = [];
-  /** ✅ Preload CLOSED counts cards (without needing MORE click) */
-  private preloadClosedCounts(): void {
-    if (this.selectedFilter !== "CLOSED") return;
-    if (this.rangeTooLarge) return; // change
+    /** ✅ Preload CLOSED counts cards (without needing MORE click) */  //counts
+  // private preloadClosedCounts(): void {
+  //   if (this.selectedFilter !== "CLOSED") return;
+  //   if (this.rangeTooLarge) return; // change
 
-    if (!this.selectedStartDate || !this.selectedEndDate) {
-      this.EscalatedDetailCombined = [];
-      return;
-    }
+  //   if (!this.selectedStartDate || !this.selectedEndDate) {
+  //     this.EscalatedDetailCombined = [];
+  //     return;
+  //   }
 
-    if (!this.suspiciousChecked && !this.falseChecked) {
-      this.EscalatedDetailCombined = [];
-      return;
-    }
+  //   if (!this.suspiciousChecked && !this.falseChecked) {
+  //     this.EscalatedDetailCombined = [];
+  //     return;
+  //   }
 
-    const start = this.formatDateTimeFull(this.selectedStartDate);
-    const end = this.formatDateTimeFull(this.selectedEndDate);
+  //   const start = this.formatDateTimeFull(this.selectedStartDate);
+  //   const end = this.formatDateTimeFull(this.selectedEndDate);
 
-    this.actionTagCountsclosed(
-      start,
-      end,
-      this.suspiciousChecked,
-      this.falseChecked,
-    );
-  }
+  //   this.actionTagCountsclosed(
+  //     start,
+  //     end,
+  //     this.suspiciousChecked,
+  //     this.falseChecked,
+  //   );
+  // }
 
-  actionTagCountsclosed(
-    start: any,
-    end: any,
-    suspiciouscheck: any,
-    falsecheck: any,
-  ) {
-    this.eventsService
-      .getEventReportCountsForActionTag(
-        start,
-        end,
-        suspiciouscheck,
-        falsecheck,
-        this.currentFilter,
-      )
-      .subscribe({
-        next: (res) => {
-          const counts = res?.counts || [];
-          const result: EscalatedDetail[] = [];
+  // actionTagCountsclosed(
+  //   start: any,
+  //   end: any,
+  //   suspiciouscheck: any,
+  //   falsecheck: any,
+  // ) {
+  //   this.eventsService
+  //     .getEventReportCountsForActionTag(
+  //       start,
+  //       end,
+  //       suspiciouscheck,
+  //       falsecheck,
+  //       this.currentFilter,
+  //     )
+  //     .subscribe({
+  //       next: (res) => {
+  //         const counts = res?.counts || [];
+  //         const result: EscalatedDetail[] = [];
 
-          Object.entries(counts).forEach(([label, data]: any) => {
-            if (!label || label === "null") return;
+  //         Object.entries(counts).forEach(([label, data]: any) => {
+  //           if (!label || label === "null") return;
 
-            result.push({
-              label,
-              value: data.totalCount || 0,
-              color: ESCALATED_COLORS[0],
-              icons: [
-                { iconPath: "assets/home.svg", count: data.sites || 0 },
-                { iconPath: "assets/cam.svg", count: data.cameras || 0 },
-              ],
-              colordot: [
-                {
-                  iconcolor: "#53BF8B",
-                  label: "Event Wall",
-                  count: data.Event_Wall || 0,
-                },
-                {
-                  iconcolor: "#FFC400",
-                  label: "Manual Wall",
-                  count: data.Manual_Wall || 0,
-                },
-                {
-                  iconcolor: "#353636ff",
-                  label: "Manual Event",
-                  count: data.Manual_Event || 0,
-                },
-              ],
-            });
-          });
+  //           result.push({
+  //             label,
+  //             value: data.totalCount || 0,
+  //             color: ESCALATED_COLORS[0],
+  //             icons: [
+  //               { iconPath: "assets/home.svg", count: data.sites || 0 },
+  //               { iconPath: "assets/cam.svg", count: data.cameras || 0 },
+  //             ],
+  //             colordot: [
+  //               {
+  //                 iconcolor: "#53BF8B",
+  //                 label: "Event Wall",
+  //                 count: data.Event_Wall || 0,
+  //               },
+  //               {
+  //                 iconcolor: "#FFC400",
+  //                 label: "Manual Wall",
+  //                 count: data.Manual_Wall || 0,
+  //               },
+  //               {
+  //                 iconcolor: "#353636ff",
+  //                 label: "Manual Event",
+  //                 count: data.Manual_Event || 0,
+  //               },
+  //             ],
+  //           });
+  //         });
 
-          this.EscalatedDetailCombined = result;
-        },
-        error: () => {
-          this.EscalatedDetailCombined = [];
-        },
-      });
-  }
-
+  //         this.EscalatedDetailCombined = result;
+  //       },
+  //       error: () => {
+  //         this.EscalatedDetailCombined = [];
+  //       },
+  //     });
+  // }
   get escalatedDetailsCombined(): EscalatedDetail[] {
     return this.EscalatedDetailCombined;
   }
@@ -1007,8 +1428,8 @@ export class EventsComponent {
       return;
     }
     this.loadClosedAndEscalatedDetails();
-    this.preloadClosedCounts();
-    // this.loadEscalatedDetails();
+    // this.preloadClosedCounts();     //counts
+    // // this.loadEscalatedDetails();
   }
 
   /** PENDING: when either Consoles/Queues checkbox changes */
@@ -1110,7 +1531,7 @@ export class EventsComponent {
       this.preloadPendingCounts();
     } else {
       this.loadClosedAndEscalatedDetails({ silent: false });
-      this.preloadClosedCounts();
+      // this.preloadClosedCounts();  //counts
     }
 
     // start timer (if interval > 0)
@@ -1137,8 +1558,8 @@ export class EventsComponent {
         this.preloadPendingCounts();
       } else {
         this.loadClosedAndEscalatedDetails({ silent: true });
-        this.preloadClosedCounts();
-        //  this.loadEscalatedDetails();
+        // this.preloadClosedCounts();         //counts
+        // //  this.loadEscalatedDetails();
       }
     });
   }
@@ -1613,7 +2034,7 @@ export class EventsComponent {
             this.showPreview = false;
             this.selectedFiles = [];
             this.loadClosedAndEscalatedDetails();
-            this.preloadClosedCounts();
+            // this.preloadClosedCounts();   //counts
           } else {
             this.showToast("error", "Something went wrong", "Failed!");
             this.isSubmitting = false;
@@ -1706,7 +2127,7 @@ export class EventsComponent {
   emailObject: any;
   emailData: any;
   smsDetails: any;
-  getEmailDataForVMSEvents() {
+getEmailDataForVMSEvents() {
   this.emailObject = {
     siteId: this.mailselectitem?.siteId,
     siteName: this.mailselectitem?.siteName,
@@ -2329,6 +2750,7 @@ export class EventsComponent {
     startTime: string;
     endDate: Date;
     endTime: string;
+    origin?: 'picker' | 'navigation';
   }): void {
     this.event = event;
     const newStart = this.combineDateAndTime(event.startDate, event.startTime);
@@ -2377,11 +2799,22 @@ export class EventsComponent {
 
     this.rangeTooLarge = false;
 
-    // Existing logic: load data
+    // 🔹 Initial load happens on first emission.
+    // 🔹 "navigation" origin (Today/Arrows) should trigger immediate refresh.
+    // 🔹 "picker" origin should ONLY update state (waits for manual Submit).
+    const isInitial = !this.initialLoadCompleted;
+    const isQuickNav = (event as any).origin === 'navigation';
 
-    if (this.selectedFilter === "CLOSED") {
-      this.loadClosedAndEscalatedDetails();
-      this.preloadClosedCounts(); // ✅ ADD
+    if (isInitial) {
+      this.initialLoadCompleted = true;
+    }
+
+    if (isInitial || isQuickNav) {
+      if (this.selectedFilter === "CLOSED") {
+        this.loadClosedAndEscalatedDetails();
+      } else {
+        this.loadPendingEvents();
+      }
     }
   }
 
@@ -2415,152 +2848,162 @@ export class EventsComponent {
     const startDateStr = this.formatDateTimeFull(this.selectedStartDate);
     const endDateStr = this.formatDateTimeFull(this.selectedEndDate);
 
-    const calls = [
-      this.suspiciousChecked
-        ? this.eventsService.getSuspiciousEvents(2, startDateStr, endDateStr)
-        : of(null),
-      this.falseChecked
-        ? this.eventsService.getSuspiciousEvents(1, startDateStr, endDateStr)
-        : of(null),
-    ];
+    this.eventsService
+      .getSuspiciousEvents(
+        this.falseChecked,
+        this.suspiciousChecked,
+        startDateStr,
+        endDateStr,
+        this.currentFilter,
+      )
+      .subscribe({
+        next: (res) => {
+          if (!silent) this.idelService.isLoading.next(false);
 
-    forkJoin(calls).subscribe({
-      next: ([suspRes, falseRes]) => {
-        if (!silent) this.idelService.isLoading.next(false);
+          // ✅ Reset all data states to clear stale counts/rows on "No Data" (404/Empty)
+          this.rowData = [];
+          this.closedDisplayRows = [];
+          this.EscalatedDetailCombined = [];
+          this.secondEscalatedDetails = [];
 
-        const allEventData: any[] = [];
-        const countsList: any[] = [];
+          const allEventData = res?.eventData || [];
+          const countsObj = res?.counts || {};
 
-        if (
-          Array.isArray(suspRes?.eventData) &&
-          suspRes.eventData.length != 0
-        ) {
-          allEventData.push(...suspRes.eventData);
-        }
+          this.rowData = allEventData.map((e: any) => {
+            let alertColor = "#53BF8B";
+            if (e?.eventType === "Manual_Wall") alertColor = "#FFC400";
+            else if (e?.eventType === "Event_Wall") alertColor = "#53BF8B";
+            else if (e?.eventType === "Manual_Event") alertColor = "#353636ff";
+            else if (e?.eventType === "Custom_Event") alertColor = "magenta";
 
-        if (
-          Array.isArray(falseRes?.eventData) &&
-          falseRes.eventData.length != 0
-        ) {
-          allEventData.push(...falseRes.eventData);
-        }
+            const empName = e?.userName ?? e?.user ?? "";
+            const empLevel = e?.userLevels ?? "N/A";
 
-        if (suspRes?.counts) countsList.push(suspRes.counts);
-        if (falseRes?.counts) countsList.push(falseRes.counts);
+            const empProfileImage =
+              e?.profileImage ?? e?.avatar ?? e?.employee?.profileImage ?? null;
 
-        const dedupMap = new Map<string | number, any>();
-        for (const e of allEventData) {
-          const key =
-            e?.eventId ?? `${e?.siteId}-${e?.cameraId}-${e?.eventStartTime}`;
-          if (!dedupMap.has(key)) dedupMap.set(key, e);
-        }
-        const mergedRows = Array.from(dedupMap.values());
-
-        this.rowData = mergedRows.map((e: any) => {
-          let alertColor = "#53BF8B";
-          if (e?.eventType === "Manual_Wall") alertColor = "#FFC400";
-          else if (e?.eventType === "Event_Wall") alertColor = "#53BF8B";
-          else if (e?.eventType === "Manual_Event") alertColor = "#353636ff";
-          else if (e?.eventType === "Custom_Event") alertColor = "magenta";
-
-          const empName = e?.userName ?? e?.user ?? "";
-          const empLevel = e?.userLevels ?? "N/A";
-
-          const empProfileImage =
-            e?.profileImage ?? e?.avatar ?? e?.employee?.profileImage ?? null;
-
-          return {
-            ...e,
-            siteId: e?.siteId,
-            siteName: e?.siteName,
-            device: e?.unitId,
-            cameraId: e?.cameraId,
-            duration: e?.eventDuration,
+            return {
+              ...e,
+              siteId: e?.siteId,
+              siteName: e?.siteName,
+              device: e?.unitId,
+              cameraId: e?.cameraId,
+              duration: e?.eventDuration,
             // timezone: e?.timezoneValue,
-            timezone: e?.timezone,
-            eventStartTime: e?.eventStartTime,
-            actionTag: e?.actionTag ?? e?.subActionTag,
-            subActionTag: e?.subActionTag ?? e?.actionTag,
-            employee: {
-              name: empName,
-              level: empLevel,
+              timezone: e?.timezone,
+              eventStartTime: e?.eventStartTime,
+              actionTag: e?.actionTag ?? e?.subActionTag,
+              subActionTag: e?.subActionTag ?? e?.actionTag,
+              employeeInfo: {
+                name: empName,
+                level: empLevel,
               profileImage: empProfileImage, // 👈 renderer uses this
+              },
+              alertType: alertColor,
+              more: true,
+            };
+          });
+
+          this.closedDisplayRows = [...this.rowData];
+
+          // ✅ Handle actionTagCounts for bottom cards
+          const actionTagCounts = res?.actionTagCounts || {};
+
+          if (actionTagCounts && Object.keys(actionTagCounts).length > 0) {
+            const result: EscalatedDetail[] = [];
+            Object.entries(actionTagCounts).forEach(([label, data]: any) => {
+              if (!label || label === "null") return;
+              result.push({
+                label,
+                value: data.totalCount || 0,
+                color: ESCALATED_COLORS[0],
+                icons: [
+                  { iconPath: "assets/home.svg", count: data.sites || 0 },
+                  { iconPath: "assets/cam.svg", count: data.cameras || 0 },
+                ],
+                colordot: [
+                  {
+                    iconcolor: "#53BF8B",
+                    label: "Event Wall",
+                    count: data.Event_Wall || 0,
+                  },
+                  {
+                    iconcolor: "#FFC400",
+                    label: "Manual Wall",
+                    count: data.Manual_Wall || 0,
+                  },
+                  {
+                    iconcolor: "#353636ff",
+                    label: "Manual Event",
+                    count: data.Manual_Event || 0,
+                  },
+                  {
+                    iconcolor: "magenta",
+                    label: "Custom Event",
+                    count: data.Custom_Event || 0,
+                  },
+                ],
+              });
+            });
+            this.EscalatedDetailCombined = result;
+          }
+
+          // ✅ Handle top cards (sites, cameras, etc.)
+          const uniqueSites = new Set<string | number>();
+          const uniqueCams = new Set<string | number>();
+          allEventData.forEach((r: any) => {
+            if (r?.siteId) uniqueSites.add(r.siteId);
+            if (r?.cameraId) uniqueCams.add(r.cameraId);
+          });
+
+          const totalEventsCount = Number(countsObj?.totalEventsCount) || 0;
+          const eventWall = Number(countsObj?.Event_Wall) || 0;
+          const manualWall = Number(countsObj?.Manual_Wall) || 0;
+          const manualEvent = Number(countsObj?.Manual_Event) || 0;
+          const customEvent = Number(countsObj?.Custom_Event) || 0;
+
+          this.secondEscalatedDetails = [
+            { label: "TOTAL", value: totalEventsCount, color: "#ED3237" },
+            {
+              iconPath: "assets/home.svg",
+              value: uniqueSites.size,
+              color: "#ED3237",
             },
-            alertType: alertColor,
-            more: true,
-          };
-        });
+            {
+              iconPath: "assets/cam.svg",
+              value: uniqueCams.size,
+              color: "#ED3237",
+            },
+            { iconcolor: "#53BF8B", value: eventWall, color: "#ED3237" },
+            { iconcolor: "#FFC400", value: manualWall, color: "#ED3237" },
+            { iconcolor: "#353636ff", value: manualEvent, color: "#ED3237" },
+            { iconcolor: "magenta", value: customEvent, color: "#ED3237" },
+          ];
 
-        this.closedDisplayRows = [...this.rowData];
-        //this.updateDisplayRows();                                         //CHANGE not added
-        const sum = (arr: number[]) =>
-          arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+          this.refreshDropdownListsFromClosed();
+          this.applyTableFilters();
+          this.filterLists.eventTypes = this.uniq(
+            this.rowData
+              .map((r) => r.subActionTag)
+              .filter((v) => v != null && v !== ""),
+          );
 
-        const totalEventsCount = sum(
-          countsList.map((c) => Number(c?.totalEventsCount) || 0),
-        );
+          this.filterLists.consoleTypes = this.uniq(
+            this.rowData
+              .map((r) => r.eventType ?? r.eventTag)
+              .filter((v) => v != null && v !== ""),
+          );
 
-        const uniqueSites = new Set<string | number>();
-        const uniqueCams = new Set<string | number>();
-        mergedRows.forEach((r) => {
-          if (r?.siteId) uniqueSites.add(r.siteId);
-          if (r?.cameraId) uniqueCams.add(r.cameraId);
-        });
-
-        const eventWall = sum(
-          countsList.map((c) => Number(c?.Event_Wall) || 0),
-        );
-        const manualWall = sum(
-          countsList.map((c) => Number(c?.Manual_Wall) || 0),
-        );
-        const manualEvent = sum(
-          countsList.map((c) => Number(c?.Manual_Event) || 0),
-        );
-        const customEvent = sum(
-          // change
-          countsList.map((c) => Number(c?.Custom_Event) || 0),
-        );
-        this.secondEscalatedDetails = [
-          { label: "TOTAL", value: totalEventsCount || 0, color: "#ED3237" },
-          {
-            iconPath: "assets/home.svg",
-            value: uniqueSites.size,
-            color: "#ED3237",
-          },
-          {
-            iconPath: "assets/cam.svg",
-            value: uniqueCams.size,
-            color: "#ED3237",
-          },
-          { iconcolor: "#53BF8B", value: eventWall, color: "#ED3237" },
-          { iconcolor: "#FFC400", value: manualWall, color: "#ED3237" },
-          { iconcolor: "#353636ff", value: manualEvent, color: "#ED3237" },
-          { iconcolor: "magenta", value: customEvent, color: "#ED3237" }, // changed
-        ];
-
-        this.refreshDropdownListsFromClosed();
-        // 🔹 CLOSED: "Action Tag" options come from subActionTag in the response
-        this.filterLists.eventTypes = this.uniq(
-          this.rowData
-            .map((r) => r.subActionTag)
-            .filter((v) => v != null && v !== ""),
-        );
-
-        // 🔹 CLOSED: Alert Type options from eventType / eventTag in CLOSED data
-        this.filterLists.consoleTypes = this.uniq(
-          this.rowData
-            .map((r) => r.eventType ?? r.eventTag)
-            .filter((v) => v != null && v !== ""),
-        );
-      },
-      error: (err) => {
-        if (!silent) this.idelService.isLoading.next(false);
-        console.error("Failed to load/merge CLOSED results", err);
-        this.rowData = [];
-        this.closedDisplayRows = [];
-        this.secondEscalatedDetails = [];
-      },
-    });
+          this.recomputeHeaderOptions();
+        },
+        error: (err) => {
+          if (!silent) this.idelService.isLoading.next(false);
+          console.error("Failed to load results", err);
+          this.rowData = [];
+          this.closedDisplayRows = [];
+          this.secondEscalatedDetails = [];
+        },
+      });
   }
 
   /** -------------------- Escalated "More" cards -------------------- */
@@ -2660,6 +3103,9 @@ export class EventsComponent {
       site: null,
       camera: "All",
       actionTag: "All",
+      actionTagId: null,
+      timezoneValue: null,
+      employeeId: null,
       eventType: "All",
       employee: "All",
       queueLevel: "All",
@@ -2669,7 +3115,7 @@ export class EventsComponent {
   }
 
   private clearFiltersAndResults(): void {
-    // ✅ Important: new object reference so the child @Input setter runs
+    //   Important: new object reference so the child @Input setter runs
     this.currentFilter = { ...this.getDefaultFilter() };
 
     // ✅ Clear applied filtering
@@ -2710,48 +3156,101 @@ export class EventsComponent {
   }
 
   /** -------------------- Dropdown list refresh -------------------- */
-  private refreshDropdownListsFromPending() {
-    const rows = this.pendingRowData || [];
-    this.filterLists.cities = this.uniq(rows.map((r) => r.cityName ?? r.city));
-    this.filterLists.sites = this.uniq(rows.map((r) => r.siteName));
+  // private refreshDropdownListsFromPending() {
+  //   const rows = this.pendingRowData || [];
+  //   this.filterLists.cities = this.uniq(rows.map((r) => r.cityName ?? r.city));
+  //   this.filterLists.sites = this.uniq(rows.map((r) => r.siteName));
 
-    this.filterLists.timezones = this.uniq(rows.map((r) => r.timezone));
+  //   this.filterLists.timezones = this.uniq(rows.map((r) => r.timezone));
 
-    this.filterLists.cameras = this.uniq(rows.map((r) => r.cameraId));
+  //   this.filterLists.cameras = this.uniq(rows.map((r) => r.cameraId));
 
-    // ✅ Queue Names dropdown values
-    this.filterLists.queueNames = this.uniq(rows.map((r) => r.queueName));
-    // ✅ Queue Levels dropdown values
-    this.filterLists.queueLevels = this.uniq(rows.map((r) => r.queueLevel));
+  //   // ✅ Queue Names dropdown values
+  //   this.filterLists.queueNames = this.uniq(rows.map((r) => r.queueName));
+  //   // ✅ Queue Levels dropdown values
+  //   this.filterLists.queueLevels = this.uniq(rows.map((r) => r.queueLevel));
 
-    // 🔁 Now build options from userLevels / employee.level
-    this.filterLists.userLevels = this.uniq(
-      rows.map(
-        (r) => r.employee?.level ?? r.userLevels ?? r.userLevel ?? "N/A",
-      ),
-    );
-  }
+  //   // 🔁 Now build options from userLevels / employee.level
+  //   this.filterLists.userLevels = this.uniq(
+  //     rows.map(
+  //       (r) => r.employee?.level ?? r.userLevels ?? r.userLevel ?? "N/A",
+  //     ),
+  //   );
+  // }
+private refreshDropdownListsFromPending() {
+  const rows = this.pendingRowData || [];
 
+  this.filterLists.cities = this.uniq(rows.map((r) => r.cityName ?? r.city));
+  this.filterLists.sites = this.uniq(rows.map((r) => r.siteName));
+
+  this.filterLists.timezones = this.uniq(
+    rows.map((r) => r.timezone).filter((v) => v != null && v !== "")
+  );
+
+  this.filterLists.cameras = this.uniq(rows.map((r) => r.cameraId));
+
+  this.filterLists.queueNames = this.uniq(rows.map((r) => r.queueName));
+  this.filterLists.queueLevels = this.uniq(rows.map((r) => r.queueLevel));
+
+  // Employee dropdown (LEVEL)
+  this.filterLists.userLevels = this.uniq(
+    rows
+      .map((r) => r.employee?.level ?? r.userLevels ?? r.userLevel)
+      .filter((v) => v != null && v !== "")
+  );
+
+  // Action Tag dropdown
+  this.filterLists.eventTypes = this.uniq(
+    rows
+      .map((r) => r.subActionTag ?? r.actionTag)
+      .filter((v) => v != null && v !== "")
+  );
+
+  // Alert Type dropdown
+  this.filterLists.consoleTypes = this.uniq(
+    rows
+      .map((r) => r.eventType ?? r.eventTag)
+      .filter((v) => v != null && v !== "")
+  );
+}
   private refreshDropdownListsFromClosed() {
-    const rows = this.rowData || [];
-    this.filterLists.cities = this.uniq(rows.map((r) => r.cityName ?? r.city));
-    this.filterLists.sites = Array.from(
-      new Map(
-        rows.map((r) => [r.siteId, { siteId: r.siteId, site: r.siteName }]),
-      ).values(),
-    );
+  const rows = this.rowData || [];
 
-    this.filterLists.timezones = this.uniq(rows.map((r) => r.timezone));
+  this.filterLists.cities = this.uniq(rows.map((r) => r.cityName ?? r.city));
 
-    this.filterLists.cameras = this.uniq(rows.map((r) => r.cameraId));
+  this.filterLists.sites = Array.from(
+    new Map(
+      rows.map((r) => [r.siteId, { siteId: r.siteId, site: r.siteName }]),
+    ).values(),
+  );
 
-    // 🔁 Use levels instead of names
-    this.filterLists.userLevels = this.uniq(
-      rows.map(
-        (r) => r.employee?.level ?? r.userLevels ?? r.userLevel ?? "N/A",
-      ),
-    );
-  }
+  this.filterLists.timezones = this.uniq(
+    rows.map((r) => r.timezone).filter((v) => v != null && v !== "")
+  );
+
+  this.filterLists.cameras = this.uniq(rows.map((r) => r.cameraId));
+
+  // Employee dropdown (LEVEL)
+  this.filterLists.userLevels = this.uniq(
+    rows
+      .map((r) => r.employee?.level ?? r.userLevels ?? r.userLevel)
+      .filter((v) => v != null && v !== "")
+  );
+
+  // Action Tag dropdown
+  this.filterLists.eventTypes = this.uniq(
+    rows
+      .map((r) => r.subActionTag ?? r.actionTag)
+      .filter((v) => v != null && v !== "")
+  );
+
+  // Alert Type dropdown
+  this.filterLists.consoleTypes = this.uniq(
+    rows
+      .map((r) => r.eventType ?? r.eventTag)
+      .filter((v) => v != null && v !== "")
+  );
+}
 
   private autoSizeAllColumns(skipHeader = false): void {
     // if (!this.gridApi) return;
@@ -2895,7 +3394,7 @@ export class EventsComponent {
       // },
       {
         headerName: "EMP.",
-        field: "employee",
+        field: "employeeInfo",
         headerClass: "custom-header",
         cellClass: "custom-cell",
         cellRenderer: ProfileImageRendererComponent,
@@ -2941,7 +3440,11 @@ export class EventsComponent {
             color = "#1955af";
 
             // disableClick = 'onclick="event.stopPropagation(); return false;"';
-          } else if (params.data?.mailColour === null) {
+          }else if (params.data?.mailColour === 3) {
+      // ✅ NEW: Handle mailColour = 3
+      tooltip = " Mail Failed";
+      color = "#ff0000"; // Red color
+    }  else if (params.data?.mailColour === null) {
             tooltip = "Event already closed";
             color = "gray";
 
@@ -3087,7 +3590,7 @@ export class EventsComponent {
       },
       {
         headerName: "EMP",
-        field: "employee",
+        field: "employeeInfo",
         headerClass: "custom-header",
         cellClass: "custom-cell",
         valueFormatter: (params) => params.value?.name || "N/A",
@@ -3129,19 +3632,80 @@ export class EventsComponent {
   }
 
   spinexcel: boolean = false;
+  onFilterChange(updatedFilter: EventsFilterCriteria) {
+  this.currentFilter = updatedFilter;
+  this.applyTableFilters();
+}
 
+applyTableFilters(): void {
+  const rows =
+    this.selectedFilter === "PENDING"
+      ? [...this.pendingRowData]
+      : [...this.rowData];
+
+  const f = this.currentFilter || {};
+
+  const filtered = rows.filter((row: any) => {
+    // ---------- ACTION TAG - Use ID instead of string ----------
+    const actionTagMatch =
+      !f.actionTagId ||
+      f.actionTagId === null ||
+      f.actionTag === "All" ||
+      ((row.subActionTagId ?? row.actionTagId) === f.actionTagId);
+
+    // ---------- EMPLOYEE (LEVEL) ----------
+    const rowEmployeeLevel =
+      (row.employee?.level ?? row.userLevels ?? row.userLevel ?? "").toString().trim();
+
+    const employeeMatch =
+      !f.employee ||
+      f.employee === "All" ||
+      rowEmployeeLevel.toLowerCase() === f.employee.toLowerCase();
+
+    // ---------- ALERT TYPE ----------
+    const rowAlertType =
+      (row.eventType ?? row.eventTag ?? "").toString().trim();
+
+    const alertTypeMatch =
+      !f.consoleType ||
+      f.consoleType === "All" ||
+      rowAlertType.toLowerCase() === f.consoleType.toLowerCase();
+
+    // ---------- TIMEZONE ----------
+    const rowTimezone =
+      (row.timezone ?? "").toString().trim();
+
+    const timezoneMatch =
+      !f.timeZone ||
+      f.timeZone === "All" ||
+      rowTimezone.toLowerCase() === f.timeZone.toLowerCase();
+
+    return (
+      actionTagMatch &&
+      employeeMatch &&
+      alertTypeMatch &&
+      timezoneMatch
+    );
+  });
+
+  if (this.selectedFilter === "PENDING") {
+    this.pendingDisplayRows = filtered;
+  } else {
+    this.closedDisplayRows = filtered;
+  }
+
+  setTimeout(() => this.autoSizeAllColumns(), 0);
+}
   downloadExcel() {
     const payload = {
       fromDate: this.lastStartDateTime,
       toDate: this.lastEndDateTime,
-      actionTag:
-        this.suspiciousChecked && this.falseChecked
-          ? ""
-          : this.suspiciousChecked
-            ? "2"
-            : this.falseChecked
-              ? "1"
-              : "",
+      falseActionTag: this.falseChecked,
+      suspiciousActionTag: this.suspiciousChecked,
+      timezone: this.headerTimezone ? this.getTimezoneValueByLabel(this.headerTimezone) : null,
+      siteId: this.headerSite ? this.getSiteIdByName(this.headerSite) : null,
+      cameraId: this.headerCamera ?? "All",
+      eventType: this.headerAlertType ? this.headerAlertType.replace(/ /g, "_") : "All"
     };
 
     if (!this.lastStartDateTime || !this.lastEndDateTime) {

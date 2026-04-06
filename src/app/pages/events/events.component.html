@@ -2,24 +2,10 @@
   <div class="dashboard-content">
     <!-- ===================== Dashboard Header ===================== -->
     <div class="dashboard-content-section">
-      <div class="section-header">
-        <h2>EVENTS</h2>
-        <!-- Filter Buttons -->
-        <div class="filters">
-          <button
-            [class.active]="selectedFilter === 'CLOSED'"
-            (click)="setFilter('CLOSED')"
-          >
-            CLOSED
-          </button>
-          <button
-            [class.active]="selectedFilter === 'PENDING'"
-            (click)="setFilter('PENDING')"
-          >
-            PENDING
-          </button>
-        </div>
-      </div>
+      <!-- ===================== Header Filter Dropdowns (CLOSED tab only) ===================== -->
+      
+
+      
 
       <!-- ===================== LOADER OVERLAY ===================== -->
       <div class="loader-overlay" *ngIf="_loader | async">
@@ -34,112 +20,250 @@
 
         <div class="escalated-section">
           <div>
-            <app-calendar
-              *ngIf="selectedFilter === 'CLOSED'"
-              variant="events"
-              (dateRangeSelected)="onDateRangeSelected($event)"
-            ></app-calendar>
+            <div style="display: flex; justify-content: space-between;gap: 20px;">
+              <!-- <div  *ngIf="selectedFilter !== 'CLOSED'"></div> -->
+            <div class="calendar-submit-row" *ngIf="selectedFilter === 'CLOSED'">
+              <app-calendar
+                #calendarComponent
+                variant="events"
+                (dateRangeSelected)="onDateRangeSelected($event)"
+              ></app-calendar>
+ <div style="display: flex; gap: 60px; justify-content: space-between;">
+      <div
+        class="header-filters"
+        *ngIf="selectedFilter === 'CLOSED'"
+        style="padding: 10px 0"
+      >
+        <!-- Sites Dropdown -->
+        <div class="hf-dropdown">
+          <button
+            class="hf-btn1"
+            [class.hf-active]="headerSite !== null"
+            type="button"
+            (click)="$event.stopPropagation(); showSiteDropdown = !showSiteDropdown; showCameraDropdown=false; showActionTagDropdown=false; showEmployeeDropdown=false; showTimezoneDropdown=false; showAlertTypeDropdown=false"
+          >
+            <span>{{ headerSite ?? "All Sites" }}</span>
+            <span class="hf-arrow" [class.hf-arrow-up]="showSiteDropdown"
+              >&#9660;</span
+            >
+          </button>
 
-            <!-- Show current datetime if PENDING -->
-            <div *ngIf="selectedFilter === 'PENDING'" class="current-datetime">
-              {{ currentDateTime | date: "dd MMM, yyyy HH:mm " | uppercase }}
+          <div class="hf-menu1" *ngIf="showSiteDropdown">
+            <div class="hf-search-container">
+              <input
+                type="text"
+                class="hf-search-input"
+                placeholder="Search sites..."
+                [(ngModel)]="siteSearchQuery"
+                (click)="$event.stopPropagation()"
+              />
             </div>
+            <div
+              class="hf-item1"
+              [class.hf-selected]="headerSite === null"
+              (click)="onHeaderFilterChange('site', null); $event.stopPropagation(); showSiteDropdown = false; siteSearchQuery=''"
+            >
+              <span>All Sites</span>
+            </div>
+            <div
+              class="hf-item1"
+              *ngFor="let s of filteredSiteOptions"
+              [class.hf-selected]="headerSite === s.siteName"
+              (click)="onHeaderFilterChange('site', s.siteName); $event.stopPropagation(); showSiteDropdown = false; siteSearchQuery=''"
+            >
+              <span>{{ s.siteName }}</span>
+            </div>
+            <div class="hf-empty" *ngIf="filteredSiteOptions.length === 0">No sites found</div>
+          </div>
+        </div>
+
+        <!-- Cameras Dropdown (cascades from selected site) -->
+        <div class="hf-dropdown">
+          <button
+            class="hf-btn"
+            [class.hf-active]="headerCamera !== null"
+            type="button"
+            (click)="$event.stopPropagation(); showCameraDropdown = !showCameraDropdown; showSiteDropdown=false; showActionTagDropdown=false; showEmployeeDropdown=false; showTimezoneDropdown=false; showAlertTypeDropdown=false"
+          >
+            <span>{{ headerCamera ?? "All Cameras" }}</span>
+            <span class="hf-arrow" [class.hf-arrow-up]="showCameraDropdown"
+              >&#9660;</span
+            >
+          </button>
+          <div class="hf-menu" *ngIf="showCameraDropdown">
+            <div *ngIf="!headerSite" class="hf-empty" style="padding: 20px; text-align: center;">
+              Select a site to view cameras
+            </div>
+
+            <ng-container *ngIf="headerSite">
+              <div class="hf-search-container">
+                <input
+                  type="text"
+                  class="hf-search-input"
+                  placeholder="Search cameras..."
+                  [(ngModel)]="cameraSearchQuery"
+                  (click)="$event.stopPropagation()"
+                />
+              </div>
+              <div
+                class="hf-item"
+                [class.hf-selected]="headerCamera === null"
+                (click)="onHeaderFilterChange('camera', null); $event.stopPropagation(); showCameraDropdown = false; cameraSearchQuery=''"
+              >
+                <span>All Cameras</span>
+              </div>
+              <div
+                class="hf-item"
+                *ngFor="let c of filteredCameraOptions"
+                [class.hf-selected]="headerCamera === c.id"
+                (click)="onHeaderFilterChange('camera', c.id); $event.stopPropagation(); showCameraDropdown = false; cameraSearchQuery=''"
+              >
+                <span>{{ c.label || c.id }}</span>
+              </div>
+              <div class="hf-empty" *ngIf="filteredCameraOptions.length === 0">
+                No cameras found for selected site
+              </div>
+            </ng-container>
+          </div>
+        </div>
+        <!-- Timezone Dropdown -->
+        <div class="hf-dropdown">
+          <button
+            class="hf-btn"
+            [class.hf-active]="headerTimezone !== null"
+            type="button"
+            (click)="$event.stopPropagation(); showTimezoneDropdown = !showTimezoneDropdown; showSiteDropdown=false; showCameraDropdown=false; showActionTagDropdown=false; showEmployeeDropdown=false; showAlertTypeDropdown=false"
+          >
+            <span>{{ headerTimezone ?? "All Timezones" }}</span>
+            <span class="hf-arrow" [class.hf-arrow-up]="showTimezoneDropdown"
+              >&#9660;</span
+            >
+          </button>
+          <div class="hf-menu" *ngIf="showTimezoneDropdown">
+            <div class="hf-search-container">
+              <input
+                type="text"
+                class="hf-search-input"
+                placeholder="Search timezones..."
+                [(ngModel)]="timezoneSearchQuery"
+                (click)="$event.stopPropagation()"
+              />
+            </div>
+            <div
+              class="hf-item"
+              [class.hf-selected]="headerTimezone === null"
+              (click)="onHeaderFilterChange('timezone', null); $event.stopPropagation(); showTimezoneDropdown = false; timezoneSearchQuery = ''"
+            >
+              <span>All Timezones</span>
+            </div>
+            <div
+              class="hf-item"
+              *ngFor="let tz of filteredTimezoneOptions"
+              [class.hf-selected]="headerTimezone === tz.label"
+              (click)="onHeaderFilterChange('timezone', tz.label); $event.stopPropagation(); showTimezoneDropdown = false; timezoneSearchQuery = ''"
+            >
+              <span>{{ tz.label }}</span>
+            </div>
+            <div class="hf-empty" *ngIf="filteredTimezoneOptions.length === 0">
+              No timezones found
+            </div>
+          </div>
+        </div>
+
+        <!-- Alert Type Dropdown -->
+        <div class="hf-dropdown">
+          <button
+            class="hf-btn"
+            [class.hf-active]="headerAlertType !== null"
+            type="button"
+            (click)="$event.stopPropagation(); showAlertTypeDropdown = !showAlertTypeDropdown; showSiteDropdown=false; showCameraDropdown=false; showActionTagDropdown=false; showEmployeeDropdown=false; showTimezoneDropdown=false"
+          >
+            <span>{{ headerAlertType ?? "All Event Types" }}</span>
+            <span class="hf-arrow" [class.hf-arrow-up]="showAlertTypeDropdown"
+              >&#9660;</span
+            >
+          </button>
+          <div class="hf-menu" *ngIf="showAlertTypeDropdown">
+            <div class="hf-search-container">
+              <input
+                type="text"
+                class="hf-search-input"
+                placeholder="Search alert types..."
+                [(ngModel)]="alertTypeSearchQuery"
+                (click)="$event.stopPropagation()"
+              />
+            </div>
+            <div
+              class="hf-item"
+              [class.hf-selected]="headerAlertType === null"
+              (click)="onHeaderFilterChange('alertType', null); $event.stopPropagation(); showAlertTypeDropdown = false; alertTypeSearchQuery = ''"
+            >
+              <span>All Event Types</span>
+            </div>
+            <div
+              class="hf-item"
+              *ngFor="let at of filteredAlertTypeOptions"
+              [class.hf-selected]="headerAlertType === at.label"
+              (click)="onHeaderFilterChange('alertType', at.label); $event.stopPropagation(); showAlertTypeDropdown = false; alertTypeSearchQuery = ''"
+            >
+              <span>{{ at.label }}</span>
+            </div>
+            <div class="hf-empty" *ngIf="filteredAlertTypeOptions.length === 0">
+              No alert types found
+            </div>
+          </div>
+        </div>
+
+        <!-- Clear Filters Button -->
+
+        <!-- Clear Filters Button -->
+        <button
+          class="hf-clear-btn"
+          *ngIf="hasActiveHeaderFilters"
+          type="button"
+          (click)="clearHeaderFilters(); $event.stopPropagation()"
+        >
+          &#x2715; Clear
+        </button>
+
+  
+       </div>
+  
+     </div>
+              <button
+                class="hf-apply-btn-calendar"
+                type="button"
+                (click)="applyHeaderFilters(); $event.stopPropagation()"
+              >
+                SUBMIT
+              </button>
+              </div>
+                  <div class="filters">
+                      <div *ngIf="selectedFilter === 'PENDING'" style="display: flex; gap: 20px; justify-content: space-between;margin-top: 10px;" class="pending-submit-row">
+              <div class="current-datetime">
+                {{ currentDateTime | date: "dd MMM, yyyy HH:mm " | uppercase }}
+              </div>  </div>
+              <div style="display: flex; gap: 20px; justify-content: end;margin-top: 10px;">
+        <button
+          [class.active]="selectedFilter === 'CLOSED'"
+          (click)="setFilter('CLOSED')"
+        >
+          CLOSED
+        </button>
+        <button
+          [class.active]="selectedFilter === 'PENDING'"
+          (click)="setFilter('PENDING')"
+        >
+          PENDING
+        </button>
+      </div>
+      </div>
+      
+            </div>      
           </div>
 
           <div style="display: flex; gap: 20px">
-            <!-- CLOSED filter toggles -->
-            <div class="filter" *ngIf="selectedFilter === 'CLOSED'">
-              <div class="filter-item">
-                <h3 class="filters-title">SUSPICIOUS</h3>
-                <label class="switch">
-                  <input
-                    type="checkbox"
-                    name="closedSuspicious"
-                    [(ngModel)]="suspiciousChecked"
-                    (change)="onClosedTogglesChanged()"
-                  />
-                  <span class="slider round"></span>
-                </label>
-              </div>
-
-              <div class="filter-item">
-                <h3 class="filters-title">FALSE</h3>
-                <label class="switch">
-                  <input
-                    type="checkbox"
-                    name="closedFalse"
-                    [(ngModel)]="falseChecked"
-                    (change)="onClosedTogglesChanged()"
-                  />
-                  <span class="slider round"></span>
-                </label>
-              </div>
-            </div>
-
-            <!-- PENDING filter toggles -->
-            <div class="filter" *ngIf="selectedFilter === 'PENDING'">
-              <div class="filter-item">
-                <h3 class="filters-title">CONSOLES</h3>
-                <label class="switch">
-                  <input
-                    type="checkbox"
-                    name="pendingConsoles"
-                    [(ngModel)]="consolesChecked"
-                    (change)="onPendingTogglesChanged()"
-                  />
-                  <span class="slider round"></span>
-                </label>
-              </div>
-
-              <div class="filter-item">
-                <h3 class="filters-title">QUEUES</h3>
-                <label class="switch">
-                  <input
-                    type="checkbox"
-                    name="pendingQueues"
-                    [(ngModel)]="queuesChecked"
-                    (change)="onPendingTogglesChanged()"
-                  />
-                  <span class="slider round"></span>
-                </label>
-              </div>
-            </div>
-            <!-- ===================== Search + Filter Panel ===================== -->
-
-            <div class="search-wrapper">
-              <div class="search-input-container">
-                <div
-                  class="search-chip"
-                  *ngFor="let term of searchTerms; let i = index"
-                >
-                  {{ term }}
-                  <span class="chip-remove" (click)="removeSearchTerm(i)"
-                    >&#x2715;</span
-                  >
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search here"
-                  [(ngModel)]="searchTerm"
-                  class="search-input"
-                  (input)="onFilterTextBoxChanged()"
-                  (keydown.enter)="addSearchTerm()"
-                />
-              </div>
-
-              <button
-                type="button"
-                class="filter-toggle-btn"
-                (click)="openFilter()"
-                aria-label="Open filters"
-              >
-                <img
-                  src="assets/filter-icon.png"
-                  alt="filter"
-                  class="filter-toggle-icon"
-                />
-              </button>
-            </div>
+            <!-- CLOSED filter toggles -->    
           </div>
         </div>
 
@@ -453,7 +577,101 @@
         </div>
 
         <!-- ================= RIGHT SIDE (MORE / LESS) ================= -->
-        <div class="ec-right more-less-toggle">
+        <div class="ec-right more-less-toggle" style="display: flex; justify-content: space-between; align-items: center;gap: 10px;">
+           <div class="filter" style="margin-right: 20px;" *ngIf="selectedFilter === 'CLOSED'">
+              <div class="filter-item">
+                <h3 class="filters-title">SUSPICIOUS</h3>
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    name="closedSuspicious"
+                    [(ngModel)]="suspiciousChecked"
+                    (change)="onClosedTogglesChanged()"
+                  />
+                  <span class="slider round"></span>
+                </label>
+              </div>
+
+              <div class="filter-item">
+                <h3 class="filters-title">FALSE</h3>
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    name="closedFalse"
+                    [(ngModel)]="falseChecked"
+                    (change)="onClosedTogglesChanged()"
+                  />
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+             <div *ngIf="selectedFilter === 'PENDING'" style="display: flex; gap: 20px; justify-content: space-between;margin-top: 10px;" class="pending-submit-row">
+               <!-- PENDING filter toggles -->
+            <div class="filter" *ngIf="selectedFilter === 'PENDING'">
+              <div class="filter-item">
+                <h3 class="filters-title">CONSOLES</h3>
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    name="pendingConsoles"
+                    [(ngModel)]="consolesChecked"
+                    (change)="onPendingTogglesChanged()"
+                  />
+                  <span class="slider round"></span>
+                </label>
+              </div>
+
+              <div class="filter-item">
+                <h3 class="filters-title">QUEUES</h3>
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    name="pendingQueues"
+                    [(ngModel)]="queuesChecked"
+                    (change)="onPendingTogglesChanged()"
+                  />
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+            </div>
+             <!-- ===================== Search + Filter Panel ===================== -->
+
+            <div class="search-wrapper">
+              <div class="search-input-container">
+                <div
+                  class="search-chip"
+                  *ngFor="let term of searchTerms; let i = index"
+                >
+                  {{ term }}
+                  <span class="chip-remove" (click)="removeSearchTerm(i)"
+                    >&#x2715;</span
+                  >
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search here"
+                  [(ngModel)]="searchTerm"
+                  class="search-input"
+                  (input)="onFilterTextBoxChanged()"
+                  (keydown.enter)="addSearchTerm()"
+                />
+              </div>
+
+              <button
+                type="button"
+                style="border-radius: 50px;"
+                class="filter-toggle-btn"
+                (click)="openFilter()"
+                aria-label="Open filters"
+              >
+                <img
+                  src="assets/filter-icon.png"
+                  alt="filter"
+                  class="filter-toggle-icon"
+                />
+              </button>
+            </div>
           <button class="ec-toggle-btn" (click)="toggleMore()">
             <i [ngClass]="showMore ? 'arrow-up' : 'arrow-down'"></i>
             <span class="btn-text">{{ showMore ? "LESS" : "MORE" }}</span>
@@ -637,7 +855,7 @@
           <label class="manual-wall-label">Manual Console</label>
           <div class="dot-customevent"></div>
           <!-- changed-->
-          <label class="manual-wall-label">Custom Event</label>
+          <label class="manual-wall-label">Custom Event</label>           
           <!-- Timed-Out only for PENDING; we'll hide via TS for CLOSED -->
 
           @if (selectedFilter === "CLOSED") {

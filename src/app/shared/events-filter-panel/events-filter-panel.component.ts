@@ -14,7 +14,7 @@ export interface EventsFilterCriteria {
   maxDuration: number | null;
 
   city: string;
-  timeZone: Timezoneoption | null,
+  timeZone: string | null,
   site: SiteOption | null;
 
   camera: string;
@@ -22,6 +22,9 @@ export interface EventsFilterCriteria {
   eventType: string;   // used as "Alert Type"
   employee: string;
   userLevels: string;
+  actionTagId: number | null;
+  timezoneValue: string | null;
+  employeeId: string | null;
 
   // 👉 Pending-only filters
   queueLevel: string;
@@ -115,6 +118,9 @@ export class EventsFilterPanelComponent implements OnChanges {
     site: null,
     camera: 'All',
     actionTag: 'All',
+    actionTagId: null,
+    timezoneValue: null,
+    employeeId: null,
     eventType: 'All',
     employee: 'All',
     queueLevel: 'All',
@@ -221,6 +227,9 @@ export class EventsFilterPanelComponent implements OnChanges {
       site: null,
       camera: 'All',
       actionTag: 'All',
+      actionTagId: null,
+      timezoneValue: null,
+      employeeId: null,
       eventType: 'All',
       employee: 'All',
       queueLevel: 'All',
