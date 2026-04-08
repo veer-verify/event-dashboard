@@ -481,9 +481,9 @@ export class GroupsComponent implements OnInit, OnDestroy {
       const term = this.searchUserTerm.toLowerCase();
       return this.users.filter(
         (u) =>
-          u.userName.toLowerCase().includes(term) ||
-          u.email.toLowerCase().includes(term) ||
-          u.userContact.toLowerCase().includes(term)
+          u?.userName?.toLowerCase().includes(term) ||
+          u?.email?.toLowerCase().includes(term) ||
+          u?.userContact?.toLowerCase().includes(term)
       );
     }
     return this.users;
