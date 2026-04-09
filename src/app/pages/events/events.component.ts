@@ -1,4 +1,4 @@
-﻿import {
+import {
   Component,
   OnInit,
   OnDestroy,
@@ -162,7 +162,7 @@ export class EventsComponent {
   private actionTagCategories: any[] = [];
   private allSitesList: any[] = [];
   private initialLoadCompleted = false;
-  
+
   siteSearchQuery: string = "";
   cameraSearchQuery: string = "";
   actionTagSearchQuery: string = "";
@@ -194,20 +194,20 @@ export class EventsComponent {
   }
 
   onHeaderFilterChange(type: string, value: any) {
-      if (type === 'actionTag') {
-    this.headerActionTag = value;
-    // Also set the ID version
-    if (value && value !== "All") {
-      this.currentFilter.actionTagId = this.getActionTagIdFromString(value);
-    } else {
-      this.currentFilter.actionTagId = null;
+    if (type === 'actionTag') {
+      this.headerActionTag = value;
+      // Also set the ID version
+      if (value && value !== "All") {
+        this.currentFilter.actionTagId = this.getActionTagIdFromString(value);
+      } else {
+        this.currentFilter.actionTagId = null;
+      }
     }
-  }
     if (type === 'site') {
       this.headerSite = value;
       this.headerCamera = null; // Reset camera when site changes
       this.cameraSearchQuery = ""; // Reset camera search
-      
+
       if (value) {
         const sid = this.getSiteIdByName(value);
         if (sid) {
@@ -312,12 +312,15 @@ export class EventsComponent {
     // 3. Trigger calendar confirmation (updates internal date state via emission)
     // We do NOT call loadClosedAndEscalatedDetails() inside onDateRangeSelected anymore
     if (this.selectedFilter === "CLOSED" && this.calendarComponent) {
-      this.calendarComponent.confirmSelection();
+      // Pass true to ensure it emits origin: 'picker'
+      this.calendarComponent.confirmSelection(true);
     }
 
     // 4. Load data (Only call this ONCE here to prevent double-firing)
+    // IMPORTANT: If confirmSelection is called, it emits onDateRangeSelected.
+    // We already handle navigation origin there. Here we explicitly trigger for manual Submit.
     if (this.selectedFilter === "CLOSED") {
-      this.loadClosedAndEscalatedDetails(); 
+      this.loadClosedAndEscalatedDetails();
     } else {
       this.loadPendingEvents();
     }
@@ -342,7 +345,7 @@ export class EventsComponent {
     this.headerEmployee = null;
     this.headerTimezone = null;
     this.headerAlertType = null;
-    
+
     this.currentFilter = {
       ...this.currentFilter,
       site: null,
@@ -485,7 +488,7 @@ export class EventsComponent {
         // Robust mapping: short acronym (display) vs long IANA name (payload)
         const short = t.timezoneCode || t.shortform || t.shortTerm || t.abbreviation || t.name;
         const full = t.timezoneValue || t.timezoneName || t.fullName || t.timezone || t.name;
-        
+
         const shortLabel = (typeof short === 'string') ? short : (short?.name || t.name || "N/A");
         const fullValue = (typeof full === 'string') ? full : (full?.name || t.name || shortLabel);
 
@@ -504,10 +507,10 @@ export class EventsComponent {
         const tzValue = r.tz || r.timezone;
         if (tzValue) tzMap.set(tzValue, (tzMap.get(tzValue) || 0) + 1);
       });
-      this.timezoneOptions = Array.from(tzMap.entries()).map(([timezone, count]) => ({ 
-        label: timezone, 
-        value: timezone, 
-        count: count 
+      this.timezoneOptions = Array.from(tzMap.entries()).map(([timezone, count]) => ({
+        label: timezone,
+        value: timezone,
+        count: count
       }));
     }
 
@@ -599,105 +602,105 @@ export class EventsComponent {
     this.autoSizeAllColumns();
   }
   onFilterApply(criteria: EventsFilterCriteria) {
-  console.log(criteria);
-  const base =
-    this.selectedFilter === "PENDING" ? this.pendingRowData : this.rowData;
+    console.log(criteria);
+    const base =
+      this.selectedFilter === "PENDING" ? this.pendingRowData : this.rowData;
 
-  const start = criteria.startDate
-    ? this.toDateAtTime(new Date(criteria.startDate), criteria.startTime)
-    : undefined;
-  const end = criteria.endDate
-    ? this.toDateAtTime(new Date(criteria.endDate), criteria.endTime)
-    : undefined;
+    const start = criteria.startDate
+      ? this.toDateAtTime(new Date(criteria.startDate), criteria.startTime)
+      : undefined;
+    const end = criteria.endDate
+      ? this.toDateAtTime(new Date(criteria.endDate), criteria.endTime)
+      : undefined;
 
-  const filtered = base.filter((row) => {
-    const timeField = row.eventTime || row.eventStartTime || row.timestamp;
-    if (!this.withinRange(timeField, start, end)) return false;
-    // ✅ Queue filters (PENDING only)
-    if (this.selectedFilter === "PENDING") {
+    const filtered = base.filter((row) => {
+      const timeField = row.eventTime || row.eventStartTime || row.timestamp;
+      if (!this.withinRange(timeField, start, end)) return false;
+      // ✅ Queue filters (PENDING only)
+      if (this.selectedFilter === "PENDING") {
+        if (
+          criteria.queueLevel !== "All" &&
+          row.queueLevel !== criteria.queueLevel
+        ) {
+          return false;
+        }
+
+        if (
+          criteria.queueName !== "All" &&
+          row.queueName !== criteria.queueName
+        ) {
+          return false;
+        }
+      }
+      // dropdowns
+      const city = row.cityName ?? row.city;
+      if (criteria.city !== "All" && city !== criteria.city) return false;
+      if (criteria.site !== null && row.siteName !== criteria.site.site)
+        return false;
+
+      if (criteria.timeZone !== null && row.timezone !== criteria.timeZone)
+        return false;
+
+      if (criteria.camera !== "All" && row.cameraId !== criteria.camera)
+        return false;
+
+      // 🔹 Action Tag filter - Use ID
+      const selectedActionTagId = criteria.actionTagId;
+      if (selectedActionTagId !== null && selectedActionTagId !== undefined) {
+        const rowActionTagId = row.subActionTagId ?? row.actionTagId;
+        if (rowActionTagId !== selectedActionTagId) {
+          return false;
+        }
+      }
+
+      // 🔹 Employee (userLevel) filter
+      const level =
+        row.employee?.level ?? row.userLevels ?? row.userLevel ?? "N/A";
+      if (criteria.employee !== "All" && level !== criteria.employee) {
+        return false;
+      }
+
+      // 🔹 Alert Type filter
+      if (criteria.consoleType !== "All") {
+        const rowAlertType = row.eventType ?? row.eventTag;
+        if (rowAlertType !== criteria.consoleType) {
+          return false;
+        }
+      }
+
+      // duration
+      const durationStr = row.duration ?? row.eventDuration;
+      const durationMin = this.parseDurationToMinutes(durationStr);
       if (
-        criteria.queueLevel !== "All" &&
-        row.queueLevel !== criteria.queueLevel
-      ) {
-        return false;
-      }
-
-      if (
-        criteria.queueName !== "All" &&
-        row.queueName !== criteria.queueName
-      ) {
-        return false;
-      }
-    }
-    // dropdowns
-    const city = row.cityName ?? row.city;
-    if (criteria.city !== "All" && city !== criteria.city) return false;
-    if (criteria.site !== null && row.siteName !== criteria.site.site)
-      return false;
-
-    if (criteria.timeZone !== null && row.timezone !== criteria.timeZone)
-      return false;
-
-    if (criteria.camera !== "All" && row.cameraId !== criteria.camera)
-      return false;
-
-    // 🔹 Action Tag filter - Use ID
-    const selectedActionTagId = criteria.actionTagId;
-    if (selectedActionTagId !== null && selectedActionTagId !== undefined) {
-      const rowActionTagId = row.subActionTagId ?? row.actionTagId;
-      if (rowActionTagId !== selectedActionTagId) {
-        return false;
-      }
-    }
-
-    // 🔹 Employee (userLevel) filter
-    const level =
-      row.employee?.level ?? row.userLevels ?? row.userLevel ?? "N/A";
-    if (criteria.employee !== "All" && level !== criteria.employee) {
-      return false;
-    }
-
-    // 🔹 Alert Type filter
-    if (criteria.consoleType !== "All") {
-      const rowAlertType = row.eventType ?? row.eventTag;
-      if (rowAlertType !== criteria.consoleType) {
-        return false;
-      }
-    }
-
-    // duration
-    const durationStr = row.duration ?? row.eventDuration;
-    const durationMin = this.parseDurationToMinutes(durationStr);
-    if (
-      !this.withinDuration(
-        criteria.minDuration,
-        criteria.maxDuration,
-        durationMin,
+        !this.withinDuration(
+          criteria.minDuration,
+          criteria.maxDuration,
+          durationMin,
+        )
       )
-    )
-      return false;
+        return false;
 
-    return true;
-  });
+      return true;
+    });
 
-  if (this.selectedFilter === "PENDING") {
-    this.pendingDisplayRows = filtered;
-  } else {
-    this.closedDisplayRows = filtered;
-  }
+    if (this.selectedFilter === "PENDING") {
+      this.pendingDisplayRows = filtered;
+    } else {
+      this.closedDisplayRows = filtered;
+    }
 
     this.onFilterClose(); // if you're using the sidebar boolean
     this.filterPanelVisible = false; // if you also use this toggle elsewhere
-}
+  }
 
   onFilterCriteriaChange(criteria: EventsFilterCriteria): void {
     this.currentFilter = { ...criteria };
-  // Map actionTag string to actionTagId
-  if (this.currentFilter.actionTag && this.currentFilter.actionTag !== "All") {
-    this.currentFilter.actionTagId = this.getActionTagIdFromString(this.currentFilter.actionTag);
-  } else {
-    this.currentFilter.actionTagId = null;
-  }
+    // Map actionTag string to actionTagId
+    if (this.currentFilter.actionTag && this.currentFilter.actionTag !== "All") {
+      this.currentFilter.actionTagId = this.getActionTagIdFromString(this.currentFilter.actionTag);
+    } else {
+      this.currentFilter.actionTagId = null;
+    }
     // ✅ rebuild dropdown lists based on current selections
     this.recomputeFilterDropdowns();
 
@@ -796,74 +799,74 @@ export class EventsComponent {
   }
 
   private filterRowsForOptions(
-  rows: any[],
-  ignoreField:
-    | "site"
-    | "timezone"
-    | "camera"
-    | "employee"
-    | "eventType"
-    | "consoleType"
-    | "queueName"
-    | "queueLevel",
-): any[] {
-  const c = this.currentFilter;
+    rows: any[],
+    ignoreField:
+      | "site"
+      | "timezone"
+      | "camera"
+      | "employee"
+      | "eventType"
+      | "consoleType"
+      | "queueName"
+      | "queueLevel",
+  ): any[] {
+    const c = this.currentFilter;
 
-  return rows.filter((row) => {
-    // Site
-    if (
-      ignoreField !== "site" &&
-      c.site !== null &&
-      row.siteName !== c.site.site
-    )
-      return false;
-
-    // Camera
-    if (
-      ignoreField !== "camera" &&
-      c.camera !== "All" &&
-      row.cameraId !== c.camera
-    )
-      return false;
-
-    // Employee (levels)
-    if (ignoreField !== "employee") {
-      const level =
-        row.employee?.level ?? row.userLevels ?? row.userLevel ?? "N/A";
-      if (c.employee !== "All" && level !== c.employee) return false;
-    }
-
-    // ACTION TAG - Use ID instead of string
-    if (ignoreField !== "eventType" && c.actionTagId !== null && c.actionTagId !== undefined) {
-      const rowTagId = row.subActionTagId ?? row.actionTagId;
-      if (rowTagId !== c.actionTagId) return false;
-    }
-
-    // Alert Type dropdown (consoleType)
-    if (ignoreField !== "consoleType" && c.consoleType !== "All") {
-      const rowAlert = row.eventType ?? row.eventTag;
-      if (rowAlert !== c.consoleType) return false;
-    }
-
-    // Pending-only queue filters
-    if (this.selectedFilter === "PENDING") {
+    return rows.filter((row) => {
+      // Site
       if (
-        ignoreField !== "queueName" &&
-        c.queueName !== "All" &&
-        row.queueName !== c.queueName
+        ignoreField !== "site" &&
+        c.site !== null &&
+        row.siteName !== c.site.site
       )
         return false;
+
+      // Camera
       if (
-        ignoreField !== "queueLevel" &&
-        c.queueLevel !== "All" &&
-        row.queueLevel !== c.queueLevel
+        ignoreField !== "camera" &&
+        c.camera !== "All" &&
+        row.cameraId !== c.camera
       )
         return false;
-    }
 
-    return true;
-  });
-}
+      // Employee (levels)
+      if (ignoreField !== "employee") {
+        const level =
+          row.employee?.level ?? row.userLevels ?? row.userLevel ?? "N/A";
+        if (c.employee !== "All" && level !== c.employee) return false;
+      }
+
+      // ACTION TAG - Use ID instead of string
+      if (ignoreField !== "eventType" && c.actionTagId !== null && c.actionTagId !== undefined) {
+        const rowTagId = row.subActionTagId ?? row.actionTagId;
+        if (rowTagId !== c.actionTagId) return false;
+      }
+
+      // Alert Type dropdown (consoleType)
+      if (ignoreField !== "consoleType" && c.consoleType !== "All") {
+        const rowAlert = row.eventType ?? row.eventTag;
+        if (rowAlert !== c.consoleType) return false;
+      }
+
+      // Pending-only queue filters
+      if (this.selectedFilter === "PENDING") {
+        if (
+          ignoreField !== "queueName" &&
+          c.queueName !== "All" &&
+          row.queueName !== c.queueName
+        )
+          return false;
+        if (
+          ignoreField !== "queueLevel" &&
+          c.queueLevel !== "All" &&
+          row.queueLevel !== c.queueLevel
+        )
+          return false;
+      }
+
+      return true;
+    });
+  }
 
   private parseDurationToMinutes(value?: string): number {
     if (!value) return 0;
@@ -1120,8 +1123,8 @@ export class EventsComponent {
       if (res) {
         // Robust mapping for sites: check for direct array or wrapped properties
         this.allSitesList = Array.isArray(res) ? res : (res.vipsites || res.data || res.sites || []);
-        this.recomputeHeaderOptions(); 
-        this.recomputeFilterDropdowns(); 
+        this.recomputeHeaderOptions();
+        this.recomputeFilterDropdowns();
       }
     });
 
@@ -1169,7 +1172,7 @@ export class EventsComponent {
   }
 
   EscalatedDetailCombined: any = [];
-    /** ✅ Preload CLOSED counts cards (without needing MORE click) */  //counts
+  /** ✅ Preload CLOSED counts cards (without needing MORE click) */  //counts
   // private preloadClosedCounts(): void {
   //   if (this.selectedFilter !== "CLOSED") return;
   //   if (this.rangeTooLarge) return; // change
@@ -2127,54 +2130,54 @@ export class EventsComponent {
   emailObject: any;
   emailData: any;
   smsDetails: any;
-getEmailDataForVMSEvents() {
-  this.emailObject = {
-    siteId: this.mailselectitem?.siteId,
-    siteName: this.mailselectitem?.siteName,
-    alertTypeId: this.mailselectitem?.alertTagId,
-    subTypeId: this.mailselectitem?.subAlertTagId,
-    cameraId: this.mailselectitem?.cameraId,
-    day: this.eventsService.weekdays[
-      this.mailselectitem.eventStartTime
-        ? new Date(this.mailselectitem.eventStartTime).getDay()
-        : 0
-    ],
-    hour: this.mailselectitem.eventStartTime
-      ? new Date(this.mailselectitem.eventStartTime).getHours()
-      : 0,
-    currentTime: this.mailselectitem?.eventStartTime,
-  };
+  getEmailDataForVMSEvents() {
+    this.emailObject = {
+      siteId: this.mailselectitem?.siteId,
+      siteName: this.mailselectitem?.siteName,
+      alertTypeId: this.mailselectitem?.alertTagId,
+      subTypeId: this.mailselectitem?.subAlertTagId,
+      cameraId: this.mailselectitem?.cameraId,
+      day: this.eventsService.weekdays[
+        this.mailselectitem.eventStartTime
+          ? new Date(this.mailselectitem.eventStartTime).getDay()
+          : 0
+      ],
+      hour: this.mailselectitem.eventStartTime
+        ? new Date(this.mailselectitem.eventStartTime).getHours()
+        : 0,
+      currentTime: this.mailselectitem?.eventStartTime,
+    };
 
-  this.isMediaLoading = true;
+    this.isMediaLoading = true;
 
-  this.eventsService.getEmailDataForVMSEvents(this.emailObject).subscribe({
-    next: (res: any) => {
-      if (res.statusCode === 200) {
-        this.emailData = res.emailDetails;
-        this.smsDetails = res.smsDetails;
+    this.eventsService.getEmailDataForVMSEvents(this.emailObject).subscribe({
+      next: (res: any) => {
+        if (res.statusCode === 200) {
+          this.emailData = res.emailDetails;
+          this.smsDetails = res.smsDetails;
+          this.isMediaLoading = false;
+
+          const level1Data =
+            res.actionsTakenInfo.find((obj: any) => obj.level_1)?.level_1 || [];
+
+          const level2Data =
+            res.actionsTakenInfo.find((obj: any) => obj.level_2)?.level_2 || [];
+
+          const level3Data =
+            res.actionsTakenInfo.find((obj: any) => obj.level_3)?.level_3 || [];
+
+          // Directly display API response strings
+          this.action = [...level1Data, ...level2Data, ...level3Data];
+        } else {
+          this.isMediaLoading = false;
+        }
+      },
+      error: (err) => {
         this.isMediaLoading = false;
-
-        const level1Data =
-          res.actionsTakenInfo.find((obj: any) => obj.level_1)?.level_1 || [];
-
-        const level2Data =
-          res.actionsTakenInfo.find((obj: any) => obj.level_2)?.level_2 || [];
-
-        const level3Data =
-          res.actionsTakenInfo.find((obj: any) => obj.level_3)?.level_3 || [];
-
-        // Directly display API response strings
-        this.action = [...level1Data, ...level2Data, ...level3Data];
-      } else {
-        this.isMediaLoading = false;
-      }
-    },
-    error: (err) => {
-      this.isMediaLoading = false;
-      this.showToast("error", "Connection Failed", "Something went wrong!");
-    },
-  });
-}
+        this.showToast("error", "Connection Failed", "Something went wrong!");
+      },
+    });
+  }
 
   mailselectitem: any;
   openMailTooltip(event: MouseEvent, params: any) {
@@ -2799,23 +2802,29 @@ getEmailDataForVMSEvents() {
 
     this.rangeTooLarge = false;
 
-    // 🔹 Initial load happens on first emission.
-    // 🔹 "navigation" origin (Today/Arrows) should trigger immediate refresh.
-    // 🔹 "picker" origin should ONLY update state (waits for manual Submit).
+    // 🔥 FIX: Only load data when origin is 'navigation' or on first load
+    // Prevent double loading when origin is 'picker' (Submit button)
     const isInitial = !this.initialLoadCompleted;
     const isQuickNav = (event as any).origin === 'navigation';
 
     if (isInitial) {
       this.initialLoadCompleted = true;
-    }
-
-    if (isInitial || isQuickNav) {
+      // Load on first initialization
+      if (this.selectedFilter === "CLOSED") {
+        this.loadClosedAndEscalatedDetails();
+      } else {
+        this.loadPendingEvents();
+      }
+    } else if (isQuickNav) {
+      // Load only for navigation (Today/Arrows buttons)
       if (this.selectedFilter === "CLOSED") {
         this.loadClosedAndEscalatedDetails();
       } else {
         this.loadPendingEvents();
       }
     }
+    //  DO NOTHING for 'picker' origin (Submit button) - the API call will happen
+    // when the submit button is clicked in the main dashboard or applyHeaderFilters.
   }
 
   loadClosedAndEscalatedDetails(opts: { silent?: boolean } = {}): void {
@@ -2889,7 +2898,7 @@ getEmailDataForVMSEvents() {
               device: e?.unitId,
               cameraId: e?.cameraId,
               duration: e?.eventDuration,
-            // timezone: e?.timezoneValue,
+              // timezone: e?.timezoneValue,
               timezone: e?.timezone,
               eventStartTime: e?.eventStartTime,
               actionTag: e?.actionTag ?? e?.subActionTag,
@@ -2897,7 +2906,7 @@ getEmailDataForVMSEvents() {
               employeeInfo: {
                 name: empName,
                 level: empLevel,
-              profileImage: empProfileImage, // 👈 renderer uses this
+                profileImage: empProfileImage, // 👈 renderer uses this
               },
               alertType: alertColor,
               more: true,
@@ -3177,80 +3186,80 @@ getEmailDataForVMSEvents() {
   //     ),
   //   );
   // }
-private refreshDropdownListsFromPending() {
-  const rows = this.pendingRowData || [];
+  private refreshDropdownListsFromPending() {
+    const rows = this.pendingRowData || [];
 
-  this.filterLists.cities = this.uniq(rows.map((r) => r.cityName ?? r.city));
-  this.filterLists.sites = this.uniq(rows.map((r) => r.siteName));
+    this.filterLists.cities = this.uniq(rows.map((r) => r.cityName ?? r.city));
+    this.filterLists.sites = this.uniq(rows.map((r) => r.siteName));
 
-  this.filterLists.timezones = this.uniq(
-    rows.map((r) => r.timezone).filter((v) => v != null && v !== "")
-  );
+    this.filterLists.timezones = this.uniq(
+      rows.map((r) => r.timezone).filter((v) => v != null && v !== "")
+    );
 
-  this.filterLists.cameras = this.uniq(rows.map((r) => r.cameraId));
+    this.filterLists.cameras = this.uniq(rows.map((r) => r.cameraId));
 
-  this.filterLists.queueNames = this.uniq(rows.map((r) => r.queueName));
-  this.filterLists.queueLevels = this.uniq(rows.map((r) => r.queueLevel));
+    this.filterLists.queueNames = this.uniq(rows.map((r) => r.queueName));
+    this.filterLists.queueLevels = this.uniq(rows.map((r) => r.queueLevel));
 
-  // Employee dropdown (LEVEL)
-  this.filterLists.userLevels = this.uniq(
-    rows
-      .map((r) => r.employee?.level ?? r.userLevels ?? r.userLevel)
-      .filter((v) => v != null && v !== "")
-  );
+    // Employee dropdown (LEVEL)
+    this.filterLists.userLevels = this.uniq(
+      rows
+        .map((r) => r.employee?.level ?? r.userLevels ?? r.userLevel)
+        .filter((v) => v != null && v !== "")
+    );
 
-  // Action Tag dropdown
-  this.filterLists.eventTypes = this.uniq(
-    rows
-      .map((r) => r.subActionTag ?? r.actionTag)
-      .filter((v) => v != null && v !== "")
-  );
+    // Action Tag dropdown
+    this.filterLists.eventTypes = this.uniq(
+      rows
+        .map((r) => r.subActionTag ?? r.actionTag)
+        .filter((v) => v != null && v !== "")
+    );
 
-  // Alert Type dropdown
-  this.filterLists.consoleTypes = this.uniq(
-    rows
-      .map((r) => r.eventType ?? r.eventTag)
-      .filter((v) => v != null && v !== "")
-  );
-}
+    // Alert Type dropdown
+    this.filterLists.consoleTypes = this.uniq(
+      rows
+        .map((r) => r.eventType ?? r.eventTag)
+        .filter((v) => v != null && v !== "")
+    );
+  }
   private refreshDropdownListsFromClosed() {
-  const rows = this.rowData || [];
+    const rows = this.rowData || [];
 
-  this.filterLists.cities = this.uniq(rows.map((r) => r.cityName ?? r.city));
+    this.filterLists.cities = this.uniq(rows.map((r) => r.cityName ?? r.city));
 
-  this.filterLists.sites = Array.from(
-    new Map(
-      rows.map((r) => [r.siteId, { siteId: r.siteId, site: r.siteName }]),
-    ).values(),
-  );
+    this.filterLists.sites = Array.from(
+      new Map(
+        rows.map((r) => [r.siteId, { siteId: r.siteId, site: r.siteName }]),
+      ).values(),
+    );
 
-  this.filterLists.timezones = this.uniq(
-    rows.map((r) => r.timezone).filter((v) => v != null && v !== "")
-  );
+    this.filterLists.timezones = this.uniq(
+      rows.map((r) => r.timezone).filter((v) => v != null && v !== "")
+    );
 
-  this.filterLists.cameras = this.uniq(rows.map((r) => r.cameraId));
+    this.filterLists.cameras = this.uniq(rows.map((r) => r.cameraId));
 
-  // Employee dropdown (LEVEL)
-  this.filterLists.userLevels = this.uniq(
-    rows
-      .map((r) => r.employee?.level ?? r.userLevels ?? r.userLevel)
-      .filter((v) => v != null && v !== "")
-  );
+    // Employee dropdown (LEVEL)
+    this.filterLists.userLevels = this.uniq(
+      rows
+        .map((r) => r.employee?.level ?? r.userLevels ?? r.userLevel)
+        .filter((v) => v != null && v !== "")
+    );
 
-  // Action Tag dropdown
-  this.filterLists.eventTypes = this.uniq(
-    rows
-      .map((r) => r.subActionTag ?? r.actionTag)
-      .filter((v) => v != null && v !== "")
-  );
+    // Action Tag dropdown
+    this.filterLists.eventTypes = this.uniq(
+      rows
+        .map((r) => r.subActionTag ?? r.actionTag)
+        .filter((v) => v != null && v !== "")
+    );
 
-  // Alert Type dropdown
-  this.filterLists.consoleTypes = this.uniq(
-    rows
-      .map((r) => r.eventType ?? r.eventTag)
-      .filter((v) => v != null && v !== "")
-  );
-}
+    // Alert Type dropdown
+    this.filterLists.consoleTypes = this.uniq(
+      rows
+        .map((r) => r.eventType ?? r.eventTag)
+        .filter((v) => v != null && v !== "")
+    );
+  }
 
   private autoSizeAllColumns(skipHeader = false): void {
     // if (!this.gridApi) return;
@@ -3441,15 +3450,15 @@ private refreshDropdownListsFromPending() {
 
             // disableClick = 'onclick="event.stopPropagation(); return false;"';
           }else if (params.data?.mailColour === 3) {
-      // ✅ NEW: Handle mailColour = 3
-      tooltip = " Mail Failed";
-      color = "#ff0000"; // Red color
-    }  else if (params.data?.mailColour === null) {
-            tooltip = "Event already closed";
-            color = "gray";
+            // ✅ NEW: Handle mailColour = 3
+            tooltip = " Mail Failed";
+            color = "#ff0000"; // Red color
+          }else if (params.data?.alertTagId === null || params.data?.mailColour === null) {
+  tooltip = params.data?.alertTagId === null ? "Mail not available" : "Mail not sent";
+  color = "gray";
 
-            // disableClick = 'onclick="event.stopPropagation(); return false;"';
-          } else if (params.data?.mailColour === 0) {
+          disableClick = 'onclick="event.stopPropagation(); return false;"';
+} else if (params.data?.mailColour === 0) {
             color = "#2ea321";
           } else if (params.data?.mailColour === 2) {
             tooltip = "One time";
@@ -3633,69 +3642,69 @@ private refreshDropdownListsFromPending() {
 
   spinexcel: boolean = false;
   onFilterChange(updatedFilter: EventsFilterCriteria) {
-  this.currentFilter = updatedFilter;
-  this.applyTableFilters();
-}
-
-applyTableFilters(): void {
-  const rows =
-    this.selectedFilter === "PENDING"
-      ? [...this.pendingRowData]
-      : [...this.rowData];
-
-  const f = this.currentFilter || {};
-
-  const filtered = rows.filter((row: any) => {
-    // ---------- ACTION TAG - Use ID instead of string ----------
-    const actionTagMatch =
-      !f.actionTagId ||
-      f.actionTagId === null ||
-      f.actionTag === "All" ||
-      ((row.subActionTagId ?? row.actionTagId) === f.actionTagId);
-
-    // ---------- EMPLOYEE (LEVEL) ----------
-    const rowEmployeeLevel =
-      (row.employee?.level ?? row.userLevels ?? row.userLevel ?? "").toString().trim();
-
-    const employeeMatch =
-      !f.employee ||
-      f.employee === "All" ||
-      rowEmployeeLevel.toLowerCase() === f.employee.toLowerCase();
-
-    // ---------- ALERT TYPE ----------
-    const rowAlertType =
-      (row.eventType ?? row.eventTag ?? "").toString().trim();
-
-    const alertTypeMatch =
-      !f.consoleType ||
-      f.consoleType === "All" ||
-      rowAlertType.toLowerCase() === f.consoleType.toLowerCase();
-
-    // ---------- TIMEZONE ----------
-    const rowTimezone =
-      (row.timezone ?? "").toString().trim();
-
-    const timezoneMatch =
-      !f.timeZone ||
-      f.timeZone === "All" ||
-      rowTimezone.toLowerCase() === f.timeZone.toLowerCase();
-
-    return (
-      actionTagMatch &&
-      employeeMatch &&
-      alertTypeMatch &&
-      timezoneMatch
-    );
-  });
-
-  if (this.selectedFilter === "PENDING") {
-    this.pendingDisplayRows = filtered;
-  } else {
-    this.closedDisplayRows = filtered;
+    this.currentFilter = updatedFilter;
+    this.applyTableFilters();
   }
 
-  setTimeout(() => this.autoSizeAllColumns(), 0);
-}
+  applyTableFilters(): void {
+    const rows =
+      this.selectedFilter === "PENDING"
+        ? [...this.pendingRowData]
+        : [...this.rowData];
+
+    const f = this.currentFilter || {};
+
+    const filtered = rows.filter((row: any) => {
+      // ---------- ACTION TAG - Use ID instead of string ----------
+      const actionTagMatch =
+        !f.actionTagId ||
+        f.actionTagId === null ||
+        f.actionTag === "All" ||
+        ((row.subActionTagId ?? row.actionTagId) === f.actionTagId);
+
+      // ---------- EMPLOYEE (LEVEL) ----------
+      const rowEmployeeLevel =
+        (row.employee?.level ?? row.userLevels ?? row.userLevel ?? "").toString().trim();
+
+      const employeeMatch =
+        !f.employee ||
+        f.employee === "All" ||
+        rowEmployeeLevel.toLowerCase() === f.employee.toLowerCase();
+
+      // ---------- ALERT TYPE ----------
+      const rowAlertType =
+        (row.eventType ?? row.eventTag ?? "").toString().trim();
+
+      const alertTypeMatch =
+        !f.consoleType ||
+        f.consoleType === "All" ||
+        rowAlertType.toLowerCase() === f.consoleType.toLowerCase();
+
+      // ---------- TIMEZONE ----------
+      const rowTimezone =
+        (row.timezone ?? "").toString().trim();
+
+      const timezoneMatch =
+        !f.timeZone ||
+        f.timeZone === "All" ||
+        rowTimezone.toLowerCase() === f.timeZone.toLowerCase();
+
+      return (
+        actionTagMatch &&
+        employeeMatch &&
+        alertTypeMatch &&
+        timezoneMatch
+      );
+    });
+
+    if (this.selectedFilter === "PENDING") {
+      this.pendingDisplayRows = filtered;
+    } else {
+      this.closedDisplayRows = filtered;
+    }
+
+    setTimeout(() => this.autoSizeAllColumns(), 0);
+  }
   downloadExcel() {
     const payload = {
       fromDate: this.lastStartDateTime,
