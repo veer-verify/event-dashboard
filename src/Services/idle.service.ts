@@ -1,37 +1,35 @@
-import { Injectable, NgZone } from '@angular/core';
-import { Router } from '@angular/router';
-import { BehaviorSubject, Subject } from 'rxjs';
-import { AuthService } from 'src/app/login/login.service';
+import { Injectable, NgZone } from "@angular/core";
+import { Router } from "@angular/router";
+import { BehaviorSubject, Subject } from "rxjs";
+import { AuthService } from "src/app/login/login.service";
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: "root",
 })
 export class IdleService {
-
   isLoading = new BehaviorSubject(false);
   private timeoutId: any;
-  private readonly IDLE_TIME = 5 * 60 * 1000; // 5 minutes
+  private readonly IDLE_TIME = 20 * 60 * 1000; // 20 minutes
 
   constructor(
     private router: Router,
     private ngZone: NgZone,
-    private auth: AuthService
-  ) { }
+    private auth: AuthService,
+  ) {}
 
   startWatching() {
-
     this.resetTimer();
 
     const events = [
-      'mousemove',
-      'mousedown',
-      'keydown',
-      'scroll',
-      'touchstart'
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "scroll",
+      "touchstart",
     ];
 
-    events.forEach(event =>
-      document.addEventListener(event, () => this.resetTimer())
+    events.forEach((event) =>
+      document.addEventListener(event, () => this.resetTimer()),
     );
   }
 
@@ -51,7 +49,6 @@ export class IdleService {
   }
 
   logout1() {
-
     this.auth.logout();
   }
 }
