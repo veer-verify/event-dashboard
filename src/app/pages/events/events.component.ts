@@ -734,16 +734,16 @@ export class EventsComponent {
         : (this.rowData ?? []);
 
     // 1. Sites: Use dynamic list if available
-    if (this.allSitesList && this.allSitesList.length > 0) {
-      this.filterLists.sites = this.allSitesList.map(s => ({ siteId: s.siteId, site: s.siteName }));
-    } else {
+    // if (this.allSitesList && this.allSitesList.length > 0) {
+    //   this.filterLists.sites = this.allSitesList.map(s => ({ siteId: s.siteId, site: s.siteName }));
+    // } else {
       const siteRows = this.filterRowsForOptions(rows, "site");
       this.filterLists.sites = Array.from(
         new Map(
           siteRows.map((r) => [r.siteId, { siteId: r.siteId, site: r.siteName }]),
         ).values(),
       );
-    }
+    // }
 
     const timeZoneRows = this.filterRowsForOptions(rows, "timezone");
     this.filterLists.timezones = this.uniq(timeZoneRows.map((r) => r.timezone));
@@ -977,7 +977,9 @@ export class EventsComponent {
   closedColumnDefs: ColDef[] = [];
   pendingColumnDefs: ColDef[] = [];
 
-  defaultColDef: ColDef = { flex: 1, minWidth: 120, resizable: true,suppressMovable: true };
+  defaultColDef: ColDef = { flex: 1, minWidth: 120, resizable: true};
+
+  // suppressMovable: true 
 
   /** Minimal locale text to hide AG Grid labels we don't use */
   localeText = {
