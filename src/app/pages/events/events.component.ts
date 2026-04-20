@@ -977,7 +977,7 @@ export class EventsComponent {
   closedColumnDefs: ColDef[] = [];
   pendingColumnDefs: ColDef[] = [];
 
-  defaultColDef: ColDef = { flex: 1, minWidth: 120, resizable: true };
+  defaultColDef: ColDef = { flex: 1, minWidth: 120, resizable: true,suppressMovable: true };
 
   /** Minimal locale text to hide AG Grid labels we don't use */
   localeText = {
