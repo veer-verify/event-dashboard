@@ -277,9 +277,10 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
     {
       headerName: "ACTION TAG",
       field: "actionTag",
-      editable: (data: any) => {
-        return data.node.lastChild ? true : false
-      },
+      // editable: (data: any) => {
+      //   return data.node.lastChild ? true : false
+      // },
+       editable: (params: any) => params.data?.isEditing === true,
       headerClass: "custom-header",
       cellClass: "custom-cell",
       cellEditor: "agRichSelectCellEditor",
@@ -297,9 +298,10 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
     {
       headerName: "TAG",
       field: "subActionTag",
-      editable: (data: any) => {
-        return data.node.lastChild ? true : false
-      },
+      // editable: (data: any) => {
+      //   return data.node.lastChild ? true : false
+      // },
+       editable: (params: any) => params.data?.isEditing === true,
       headerClass: "custom-header",
       cellClass: "custom-cell",
       cellEditor: "agRichSelectCellEditor",
@@ -323,72 +325,189 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
       field: "notes",
       headerClass: "custom-header",
       cellClass: "custom-cell",
-      editable: (params) => params.data.isDuplicate && params.data.isEditing,
+      // editable: (params) => params.data.isDuplicate && params.data.isEditing,
+          editable: (params: any) => params.data?.isEditing === true
     },
-    {
-      headerName: "END OF SHIFT",
-      headerClass: "custom-header",
-      cellClass: "custom-cell",
-      cellRenderer: (params: any) => {
-        const container = document.createElement("div");
-        container.style.display = "flex";
-        container.style.gap = "6px";
+    // {
+    //   headerName: "END OF SHIFT",
+    //   headerClass: "custom-header",
+    //   cellClass: "custom-cell",
+    //   cellRenderer: (params: any) => {
+    //     const container = document.createElement("div");
+    //     container.style.display = "flex";
+    //     container.style.gap = "6px";
 
-        const rowIndex = params.node.rowIndex;
-        const lastRowIndex = params.api.getDisplayedRowCount() - 1;
-        const isDuplicate = !!params.data.isDuplicate;
-        const isEditing = !!params.data.isEditing;
+    //     const rowIndex = params.node.rowIndex;
+    //     const lastRowIndex = params.api.getDisplayedRowCount() - 1;
+    //     const isDuplicate = !!params.data.isDuplicate;
+    //     const isEditing = !!params.data.isEditing;
 
-        if (isDuplicate && isEditing) {
-          const saveBtn = document.createElement("button");
-          saveBtn.className = "action-btn save-btn";
-          saveBtn.innerText = "✓";
-          saveBtn.addEventListener("mousedown", (e) => {
-            e.stopPropagation();
-            params.api.stopEditing();
+    //     if (isDuplicate && isEditing) {
+    //       const saveBtn = document.createElement("button");
+    //       saveBtn.className = "action-btn save-btn";
+    //       saveBtn.innerText = "✓";
+    //       saveBtn.addEventListener("mousedown", (e) => {
+    //         e.stopPropagation();
+    //         params.api.stopEditing();
 
-            setTimeout(() => {
-              this.saveEscalation(params.node.data);
-            }, 0);
-          });
+    //         setTimeout(() => {
+    //           this.saveEscalation(params.node.data);
+    //         }, 0);
+    //       });
 
-          const cancelBtn = document.createElement("button");
-          cancelBtn.className = "action-btn delete-btn";
-          cancelBtn.innerText = "x";
-          cancelBtn.addEventListener("mousedown", (e) => {
-            e.stopPropagation();
-            params.api.applyTransaction({ remove: [params.data] });
-          });
+    //       const cancelBtn = document.createElement("button");
+    //       cancelBtn.className = "action-btn delete-btn";
+    //       cancelBtn.innerText = "x";
+    //       cancelBtn.addEventListener("mousedown", (e) => {
+    //         e.stopPropagation();
+    //         params.api.applyTransaction({ remove: [params.data] });
+    //       });
 
-          container.appendChild(saveBtn);
-          container.appendChild(cancelBtn);
-          return container;
-        }
+    //       container.appendChild(saveBtn);
+    //       container.appendChild(cancelBtn);
+    //       return container;
+    //     }
 
-        if (!isDuplicate && rowIndex === lastRowIndex) {
-          const editBtn = document.createElement("button");
-          editBtn.className = "action-btn1 edit-btn1";
+    //     if (!isDuplicate && rowIndex === lastRowIndex) {
+    //       const editBtn = document.createElement("button");
+    //       editBtn.className = "action-btn1 edit-btn1";
 
-          const pencilIcon = document.createElement("img");
-          pencilIcon.src = "assets/pencil.svg";
-          pencilIcon.alt = "Edit";
-          pencilIcon.style.width = "16px";
-          pencilIcon.style.height = "16px";
+    //       const pencilIcon = document.createElement("img");
+    //       pencilIcon.src = "assets/pencil.svg";
+    //       pencilIcon.alt = "Edit";
+    //       pencilIcon.style.width = "16px";
+    //       pencilIcon.style.height = "16px";
 
-          editBtn.appendChild(pencilIcon);
+    //       editBtn.appendChild(pencilIcon);
 
-          editBtn.addEventListener("click", () => {
-            this.createDuplicateRowFromLast(params);
-          });
+    //       editBtn.addEventListener("click", () => {
+    //         this.createDuplicateRowFromLast(params);
+    //       });
 
-          container.appendChild(editBtn);
-          return container;
-        }
+    //       container.appendChild(editBtn);
+    //       return container;
+    //     }
 
+    //     return container;
+    //   },
+    // },
+
+
+   {
+    headerName: "END OF SHIFT",
+    headerClass: "custom-header",
+    cellClass: "custom-cell",
+    editable: false,
+
+    cellRenderer: (params: any) => {
+      const container = document.createElement("div");
+      container.style.display = "flex";
+      container.style.gap = "6px";
+
+      const isEditing = !!params.data.isEditing;
+      const rowIndex = params.node.rowIndex;
+      const lastRowIndex = params.api.getDisplayedRowCount() - 1;
+
+      // =========================
+      // ✅ EDIT MODE (SAVE / CANCEL)
+      // =========================
+      if (isEditing) {
+
+        // 🔹 SAVE BUTTON
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "action-btn save-btn";
+        saveBtn.innerText = "✓";
+
+        saveBtn.addEventListener("mousedown", (e) => {
+          e.stopPropagation();
+
+          params.api.stopEditing();
+
+          setTimeout(() => {
+            const { _originalData, ...cleanData } = params.node.data;
+
+            this.saveEscalation(cleanData);
+
+            params.node.setData({
+              ...cleanData,
+              isEditing: false
+            });
+          }, 0);
+        });
+
+        // 🔹 CANCEL BUTTON (RESTORE ORIGINAL DATA)
+        const cancelBtn = document.createElement("button");
+        cancelBtn.className = "action-btn delete-btn";
+        cancelBtn.innerText = "x";
+
+        cancelBtn.addEventListener("mousedown", (e) => {
+          e.stopPropagation();
+
+          const original = params.node.data._originalData;
+
+          params.api.stopEditing(true); // cancel editor
+
+          if (original) {
+            params.node.setData({
+              ...original,
+              isEditing: false
+            });
+          } else {
+            params.node.setData({
+              ...params.node.data,
+              isEditing: false
+            });
+          }
+        });
+
+        container.appendChild(saveBtn);
+        container.appendChild(cancelBtn);
         return container;
-      },
-    },
+      }
+
+      // =========================
+      // ✅ SHOW PENCIL ONLY ON LAST ROW
+      // =========================
+      if (rowIndex === lastRowIndex) {
+        const editBtn = document.createElement("button");
+        editBtn.className = "action-btn1 edit-btn1";
+
+        const pencilIcon = document.createElement("img");
+        pencilIcon.src = "assets/pencil.svg";
+        pencilIcon.alt = "Edit";
+        pencilIcon.style.width = "16px";
+        pencilIcon.style.height = "16px";
+
+        editBtn.appendChild(pencilIcon);
+
+        editBtn.addEventListener("click", () => {
+          this.editRow(params);
+        });
+
+        container.appendChild(editBtn);
+      }
+
+      return container;
+    }
+  }
   ];
+
+editRow(params: any) {
+  // backup original row BEFORE editing
+  const originalCopy = { ...params.node.data };
+
+  params.node.setData({
+    ...params.node.data,
+    isEditing: true,
+    _originalData: originalCopy
+  });
+
+  // start editing
+  params.api.startEditingCell({
+    rowIndex: params.node.rowIndex,
+    colKey: "subActionTag" // change if needed
+  });
+}
 
   /** Create duplicate row from last row and put into edit mode */
   createDuplicateRowFromLast(params: any) {
