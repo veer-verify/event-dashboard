@@ -189,20 +189,25 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
 
   async onSiteDelete(site: DisplaySite, event: MouseEvent) {
     event.stopPropagation();
-    const confirmed = await this.notificationService.confirm("Are you sure ?");
+    const confirmed = await this.notificationService.confirm("Are you sure you want to remove this site from the queue? This action cannot be undone.");
     if (confirmed) {
       this.inactivateSite(site.siteId, this.data.id);
     }
   }
 
-  onCameraDelete(site: DisplaySite, cam: DisplayCamera, event: MouseEvent) {
+ async onCameraDelete(site: DisplaySite, cam: DisplayCamera, event: MouseEvent) {
     event.stopPropagation();
 
-    this.inactivateCamera(cam.cameraId, cam.queueSitesId, this.data.id);
+     const confirmed = await this.notificationService.confirm("Are you sure you want to remove this camera? This action cannot be undone.");
+    if (confirmed) {
+      
+          this.inactivateCamera(cam.cameraId, cam.queueSitesId, this.data.id);
+
+    }
   }
 
   async onUserDelete(user: DisplayUser) {
-    const confirmed = await this.notificationService.confirm("Are you sure ?");
+    const confirmed = await this.notificationService.confirm("Are you sure you want to remove this employee? This action cannot be undone.");
     if (confirmed) {
       this.inactivateUser(user.userId as number, this.data.id);
     }

@@ -10,11 +10,23 @@ import { ImagePipe } from "src/app/shared/image.pipe";
   imports: [CommonModule, ImagePipe, AsyncPipe],
   template: `
     <div style="display:flex;align-items:center;gap:8px;">
-      <img
+      <!-- <img
         [src]="
           (!hasError &&
           (value?.profileImage || value?.profileImageUrl)
             ? (((value.profileImage || value.profileImageUrl) | image | async) ||
+              'assets/icons/dummy_300x300.png')
+            : 'assets/icons/dummy_300x300.png')
+        "
+        (error)="onError()"
+        style="width:32px;height:32px;border-radius:50%;object-fit:cover;"
+      /> -->
+
+          <img
+        [src]="
+          (!hasError &&
+          (value?.profileImage || value?.profileImageUrl)
+            ? (((value.profileImage || value.profileImageUrl) ) ||
               'assets/icons/dummy_300x300.png')
             : 'assets/icons/dummy_300x300.png')
         "
