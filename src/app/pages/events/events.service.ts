@@ -348,6 +348,7 @@ export class EventsService {
   getEmailDataForVMSEvents(payload: any) {
     // let url = `${environment.guard_monitoring_url}/getEmailDataForClosedEvent_1_0`;
     let url = `${environment.guard_monitoring_url}/getEmailDataForVMSEvents_1_0`;
+       
 
     let params = new HttpParams();
     params = params.set("siteId", payload?.siteId);
