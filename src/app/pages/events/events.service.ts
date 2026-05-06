@@ -14,15 +14,9 @@ export class EventsService {
     private http: HttpClient,
   ) { }
 
-  // 🔹 events data endpoints
   private readonly eventReportFullData = `${environment.eventDataUrl}/getEventReportFullData_1_0`;
-  // private readonly eventReportFullData =
-  //   `http://192.168.0.244:8000/getEventReportFullData_1_0`;
-
 
   private readonly actionTagCategoriesUrl = `${environment.eventDataUrl}/getActionTagCategories_1_0`;
-
-  // private readonly eventReportCountsForActionTag = `${environment.eventDataUrl}/getEventReportCountsForActionTag_1_0`;    //// API Merged into getEventReportFullData
 
   private readonly getEventsMoreInfoUrl = `${environment.eventDataUrl}/getEventsMoreInfo_1_0`;
 
@@ -34,21 +28,19 @@ export class EventsService {
 
   private readonly consolePendingMessagesDataUrl = `${environment.eventDataUrl}/getConsolePendingMessages_1_0`;
 
-  // 🔹 MQ / queueManagement endpoints
   private readonly pendingMessagesUrl = `${environment.mqApiBaseUrl}/getEventsPendingMessages_1_0`;
 
   private readonly consolePendingMessagesUrl = `${environment.mqApiBaseUrl}/getConsolePendingMessages_1_0`;
 
   private readonly pendingEventsCountsUrl = `${environment.mqApiBaseUrl}/getPendingEventsCounts_1_0`;
-  // private readonly allSitesListUrl = `http://192.168.0.229:3004/vipsites/getSitesList_1_0`;
 
   private readonly allSitesListUrl = `${environment.vipSitesUrl}/getSitesList_1_0`;
 
+  private readonly liveInfoForSiteAndCameraUrl = `${environment.vipSitesUrl}/getLiveInfoForSiteAndCamera_1_0`;
 
-  private readonly liveInfoForSiteAndCameraUrl = `https://usstaging.ivisecurity.com/vipsites/getLiveInfoForSiteAndCamera_1_0`;
-  private readonly siteSpecificAlertCategoriesUrl = `https://usstaging.ivisecurity.com/guard_monitoring/getAlertCategoriesForSiteId_1_0`;
-  private readonly timezonesUrl = `https://usstaging.ivisecurity.com/events_data/getTimezones_1_0`;
-  private readonly employeeLevelsUrl = `https://usstaging.ivisecurity.com/events_data/getLevelsInfo_1_0`;
+  private readonly timezonesUrl = `${environment.eventDataUrl}/getTimezones_1_0`;
+
+  private readonly employeeLevelsUrl = `${environment.eventDataUrl}/getLevelsInfo_1_0`;
 
 
   /**
