@@ -5,34 +5,43 @@
       <!-- Section Header -->
       <div class="section-header">
         <h2>QUEUES</h2>
-        <button class="createbutton" (click)="onCreateQueueClick()">
-          + CREATE QUEUE
-        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <i class="pi pi-info-circle" style="font-size: 1rem; color: #888; cursor: pointer;"
+            (click)="op.toggle($event)"></i>
+          <button class="createbutton" (click)="onCreateQueueClick()">
+            + CREATE QUEUE
+          </button>
+          <button class="createbutton" style="background: #ffffff; color: #000000; border: 1px solid #000000;"
+            (click)="onFlowManagementClick()">
+            FLOW MANAGEMENT
+          </button>
+        </div>
       </div>
+
+      <p-overlayPanel #op [showCloseIcon]="false" [style]="{width: '260px'}">
+        <ng-template pTemplate>
+          <div style="font-family: 'Neometric Regular'; font-size: 14px; line-height: 1.4; color: #333;">
+            Creating a queue does not actually create a queue in RabbitMQ; it only adds a record to the database.
+          </div>
+        </ng-template>
+      </p-overlayPanel>
 
       <!-- Escalated Cards & Search -->
       <div class="calender-section-body">
         <div class="escalated-row">
           <!-- Escalated Cards -->
-          <div
-            class="calender-escalated-card"
-            *ngFor="let e of secondEscalatedDetails; let i = index"
-            [ngClass]="{ 'hidden-card': i >= 3 }"
-            [ngStyle]="{ 'background-color': i === 0 ? '#ed3237' : 'white' }"
-          >
-            <span
-              class="label"
-              [ngStyle]="{
-                color: i === 0 ? 'white' : '#000000',
-                opacity: i === 0 ? '1' : '0.6',
-              }"
-            >
+          <div class="calender-escalated-card" *ngFor="let e of secondEscalatedDetails; let i = index"
+            [ngClass]="{ 'active-filter': statusFilter === e.label }" [ngStyle]="{ 
+              'background-color': statusFilter === e.label ? e.color : 'white',
+              'cursor': 'pointer'
+            }" (click)="setStatusFilter(e.label)">
+            <span class="label" [ngStyle]="{
+                color: statusFilter === e.label ? 'white' : '#000000',
+                opacity: statusFilter === e.label ? '1' : '0.6'
+              }">
               {{ e.label }}
             </span>
-            <span
-              class="value"
-              [ngStyle]="{ color: i === 0 ? 'white' : 'red' }"
-            >
+            <span class="value" [ngStyle]="{ color: statusFilter === e.label ? 'white' : e.color }">
               {{ e.value }}
             </span>
           </div>
@@ -42,40 +51,20 @@
 
           <!-- Search Box -->
           <div class="calender-search">
-            <input
-              type="text"
-              placeholder="Search here"
-              class="search-input"
-              [(ngModel)]="searchTerm"
-              (input)="onFilterTextBoxChanged()"
-            />
+            <input type="text" placeholder="Search here" class="search-input" [(ngModel)]="searchTerm"
+              (input)="onFilterTextBoxChanged()" />
           </div>
         </div>
       </div>
 
       <!-- AG Grid Table -->
       <div *ngIf="selectedFilter === 'CLOSED'" class="table-section m-t-20">
-        <ag-grid-angular
-          style="height: 77vh"
-          class="ag-theme-alpine"
-          theme="legacy"
-          [rowData]="rowData"
-          [columnDefs]="columnDefs"
-          [defaultColDef]="defaultColDef"
-          [pagination]="true"
-          [paginationPageSize]="15"
-          [rowHeight]="40"
-          [headerHeight]="30"
-          [enableCellTextSelection]="true"
-          [enableRangeSelection]="true"
-          [copyHeadersToClipboard]="true"
-          [paginationPageSizeSelector]="[15, 50, 100]"
-          [localeText]="localeText"
-          [quickFilterMatcher]="quickFilterMatcher"
-          (gridReady)="onGridReady($event)"
-          (cellClicked)="onCellClicked($event)"
-          [sideBar]=""
-        ></ag-grid-angular>
+        <ag-grid-angular style="height: 77vh" class="ag-theme-alpine" theme="legacy" [rowData]="rowData"
+          [columnDefs]="columnDefs" [defaultColDef]="defaultColDef" [pagination]="true" [paginationPageSize]="15"
+          [rowHeight]="40" [headerHeight]="30" [enableCellTextSelection]="true" [enableRangeSelection]="true"
+          [copyHeadersToClipboard]="true" [paginationPageSizeSelector]="[15, 50, 100]" [localeText]="localeText"
+          [quickFilterMatcher]="quickFilterMatcher" (gridReady)="onGridReady($event)"
+          (cellClicked)="onCellClicked($event)" [sideBar]=""></ag-grid-angular>
       </div>
     </div>
 
@@ -87,33 +76,20 @@
       <div class="popup-header">
         <div class="popup-header-grid">
           <div class="col col-1">
-            <img
-              class="calenderimage flip-horizontal1"
-              src="assets/headericons/direction-wueues.svg"
-              alt=""
-            />
+            <img class="calenderimage flip-horizontal1" src="assets/headericons/direction-wueues.svg" alt="" />
           </div>
           <div class="col col-8">
             <p class="label nomargin">{{ selectedItem?.name }}</p>
           </div>
           <div class="col col-1">
-            <img
-              class="calenderimage"
-              (click)="prevItem()"
-              src="assets/arrow-circle-left-groups.svg"
-              alt=""
-            />
+            <img class="calenderimage" (click)="prevItem()" src="assets/arrow-circle-left-groups.svg" alt="" />
           </div>
           <div class="col col-1">
             <p class="nomargin">{{ currentIndex + 1 }}/{{ rowData.length }}</p>
           </div>
           <div class="col col-1">
-            <img
-              class="calenderimage flip-horizontal"
-              (click)="nextItem()"
-              src="assets/arrow-circle-left-groups.svg"
-              alt=""
-            />
+            <img class="calenderimage flip-horizontal" (click)="nextItem()" src="assets/arrow-circle-left-groups.svg"
+              alt="" />
           </div>
         </div>
       </div>
@@ -121,246 +97,293 @@
       <!-- Popup Body -->
       <div class="popup-body">
         <div class="escalated-content-section">
-          <app-groups-popup
-            *ngIf="selectedItem"
-            [data]="selectedItem"
-            [sites]="sites"
-            (sectionChange)="onSectionChange($event)"
-            (refreshRequested)="onQueueStatusChanged($event)"
-          ></app-groups-popup>
+          <app-groups-popup *ngIf="selectedItem" [data]="selectedItem" [sites]="sites" [flows]="groupedFlows"
+            [loading]="loadingDetails" (sectionChange)="onSectionChange($event)"
+            (refreshRequested)="onQueueStatusChanged($event)"></app-groups-popup>
         </div>
       </div>
     </div>
 
     <!-- ADD Section (Dynamic for Site/Camera/Employee/Queue) -->
-    <div
-      class="right-section"
-      *ngIf="currentSection !== 'default'"
-      [ngClass]="'add-section'"
-    >
+    <div class="right-section" *ngIf="currentSection !== 'default'" [ngClass]="'add-section'">
       <!-- Header -->
       <div class="popup-header">
         <p class="label nomargin">
           {{
-            currentSection.toLowerCase() === "queue"
-              ? "CREATE QUEUE"
-              : currentSection.toLowerCase() === "camera"
-                ? "ADD SITE & CAMERA"
-                : "ADD " + (currentSection | titlecase | uppercase)
+          currentSection.toLowerCase() === "queue"
+          ? "CREATE QUEUE"
+          : currentSection.toLowerCase() === "camera"
+          ? "ADD SITE & CAMERA"
+          : currentSection === "flow_list"
+          ? "FLOW MANAGEMENT"
+          : currentSection === "flow_builder"
+          ? (isUpdateMode ? "UPDATE FLOW" : "CREATE FLOW")
+          : currentSection === "flow_assign"
+          ? "ASSIGN FLOW TO CAMERAS"
+          : "ADD " + (currentSection | titlecase | uppercase)
           }}
         </p>
-        <img
-          class="calenderimage"
-          (click)="goBack()"
-          src="assets/close-filled.svg"
-          alt=""
-        />
+        <img class="calenderimage"
+          (click)="currentSection.startsWith('flow_') && currentSection !== 'flow_list' ? onFlowManagementClick() : goBack()"
+          src="assets/close-filled.svg" alt="" />
       </div>
 
       <!-- Popup Body -->
       <div class="popup-body">
         <!-- ADD Site / Camera Form -->
-        <form
-          class="add-form"
-          *ngIf="currentSection === 'site' || currentSection === 'camera'"
-        >
+        <form class="add-form" *ngIf="currentSection === 'site' || currentSection === 'camera'">
           <div class="form-group">
             <label for="group">Select Queue</label>
-            <select id="group" class="form-control" disabled>
-              <option [value]="selectedItem?.id">
-                {{ selectedItem?.name }}
-              </option>
-            </select>
+            <p-dropdown [options]="[{ label: selectedItem?.name, value: selectedItem?.id }]"
+              [(ngModel)]="selectedItem.id" [ngModelOptions]="{ standalone: true }" [disabled]="true"
+              [style]="{ width: '100%' }"></p-dropdown>
           </div>
 
           <div class="form-group">
             <label for="site">Select Site</label>
-            <p-dropdown
-              [options]="sitesDropdown"
-              placeholder="Select Site"
-              [(ngModel)]="selectedSiteId"
-              [ngModelOptions]="{ standalone: true }"
-              optionLabel="label"
-              optionValue="value"
-              (onChange)="onSiteChange($event.value)"
-              [style]="{ width: '100%' }"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              filterPlaceholder="Search site"
-            ></p-dropdown>
+            <p-dropdown [options]="sitesDropdown" placeholder="Select Site" [(ngModel)]="selectedSiteId"
+              [ngModelOptions]="{ standalone: true }" optionLabel="label" optionValue="value"
+              (onChange)="onSiteChange($event.value)" [style]="{ width: '100%' }" [filter]="true" filterBy="label"
+              [showClear]="true" filterPlaceholder="Search site"></p-dropdown>
           </div>
           <!-- Show camera dropdown as soon as a site is selected -->
           <div class="form-group" *ngIf="selectedSiteId">
             <label for="camera">Select Cameras</label>
-            <p-multiSelect
-              [options]="camerasDropdown"
-              placeholder="Select Cameras"
-              [(ngModel)]="selectedCameraIds"
-              [ngModelOptions]="{ standalone: true }"
-              optionLabel="label"
-              optionValue="value"
-              [style]="{ width: '100%' }"
-              display="chip"
-              [disabled]="!camerasDropdown.length"
-            ></p-multiSelect>
+            <p-multiSelect [options]="camerasDropdown" placeholder="Select Cameras" [(ngModel)]="selectedCameraIds"
+              [ngModelOptions]="{ standalone: true }" optionLabel="label" optionValue="value"
+              [style]="{ width: '100%' }" display="chip" [disabled]="!camerasDropdown.length"></p-multiSelect>
           </div>
 
           <div class="form-actions">
-            <button type="button" class="btn cancel-btn" (click)="goBack()">
+            <button type="button" class="btn cancel-btn" (click)="goBack()" [disabled]="loadingCamera">
               Cancel
             </button>
-            <button type="submit" (click)="addSiteCamera()" class="btn add-btn">
-              Add
+            <button type="submit" (click)="addSiteCamera()" class="btn add-btn" [disabled]="loadingCamera">
+              {{ loadingCamera ? 'Adding...' : 'Add' }}
             </button>
           </div>
         </form>
 
         <!-- ADD Employee Form -->
-        <div *ngIf="currentSection === 'employee'">
-          <form class="add-form">
-            <div class="form-group">
-              <label for="group">Select Queue</label>
-              <select id="group" class="form-control" disabled>
-                <option [value]="selectedItem?.id">
-                  {{ selectedItem?.name }}
-                </option>
-              </select>
-            </div>
+        <form class="add-form" *ngIf="currentSection === 'employee'">
+          <div class="form-group">
+            <label for="group">Select Queue</label>
+            <p-dropdown [options]="[{ label: selectedItem?.name, value: selectedItem?.id }]"
+              [(ngModel)]="selectedItem.id" [ngModelOptions]="{ standalone: true }" [disabled]="true"
+              [style]="{ width: '100%' }"></p-dropdown>
+          </div>
 
-            <div class="form-group">
-              <input
-                type="text"
-                placeholder="Search employees"
-                [(ngModel)]="searchUserTerm"
-                [ngModelOptions]="{ standalone: true }"
-                (input)="currentPage = 1"
-                class="form-control"
-              />
-            </div>
+          <div class="form-group">
+            <label for="dept">Select Department</label>
+            <p-dropdown [options]="departments" placeholder="Select Department" [(ngModel)]="selectedDept"
+              [ngModelOptions]="{ standalone: true }" optionLabel="label" optionValue="value"
+              (onChange)="onDepartmentChange()" [style]="{ width: '100%' }" [filter]="true" filterBy="label"
+              [showClear]="true" filterPlaceholder="Search department"></p-dropdown>
+          </div>
 
-            <div class="form-groups select-all">
-              <label> Employee ({{ users.length }}) </label>
-              <label class="selectall-text">
-                <input
-                  type="checkbox"
-                  #selectAllCheckbox
-                  [checked]="areAllFilteredUsersSelected()"
-                  (change)="toggleSelectAll(selectAllCheckbox.checked)"
-                />
-                Select All
-              </label>
-            </div>
+          <div class="form-group">
+            <input type="text" placeholder="Search employees" [(ngModel)]="searchUserTerm"
+              [ngModelOptions]="{ standalone: true }" (input)="currentPage = 1" class="form-control" />
+          </div>
 
-            <div
-              class="escalated-card-container"
-              style="max-height: 400px; overflow-y: auto"
-            >
-              <div class="escalated-card" *ngFor="let user of filteredUsers">
-                <div class="escalated-card-content">
-                  <input
-                    #checkbox
-                    type="checkbox"
-                    [checked]="selectedUserIds.includes(user.userId)"
-                    (change)="
-                      toggleUserSelection(user.userId, checkbox.checked)
-                    "
-                  />
+          <div class="form-groups select-all">
+            <label> Employee ({{ users.length }}) </label>
+            <label class="selectall-text">
+              <input type="checkbox" #selectAllCheckbox [checked]="areAllFilteredUsersSelected()"
+                (change)="toggleSelectAll(selectAllCheckbox.checked)" />
+              Select All
+            </label>
+          </div>
 
-                  <!-- ✅ Use renderer with API profileImageUrl -->
-                  <app-profile-image-renderer
-                    [data]="{
+          <div class="escalated-card-container">
+            <div class="escalated-card" *ngFor="let user of filteredUsers">
+              <div class="escalated-card-content">
+                <input #checkbox type="checkbox" [checked]="selectedUserIds.includes(user.userId)"
+                  (change)="toggleUserSelection(user.userId, checkbox.checked)" class="custom-checkbox" />
+
+                <!-- ✅ Use renderer with API profileImageUrl -->
+                <app-profile-image-renderer [data]="{
                       userName: user.userName || user.User_Name,
                       profileImageUrl: user.profileImageUrl,
                       profileImage: user.profileImage,
-                    }"
-                    [showLabel]="false"
-                  ></app-profile-image-renderer>
+                    }" [showLabel]="false"></app-profile-image-renderer>
 
-                  <div class="nameemail">
-                    <h4 class="labelmargin">{{ user.userName }}</h4>
-                    <p class="labelmail">
-                      {{ user.email }} | {{ user.userContact }}
-                    </p>
-                  </div>
+                <div class="nameemail">
+                  <h4 class="labelmargin">{{ user.userName }}</h4>
+                  <p class="labelmail">
+                    {{ user.email }} | {{ user.userContact }}
+                  </p>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div class="form-actions">
-              <button type="button" class="btn cancel-btn" (click)="goBack()">
-                Cancel
-              </button>
-              <button
-                type="submit"
-                (click)="addSelectedUsers()"
-                class="btn add-btn"
-              >
-                Add
-              </button>
-            </div>
-          </form>
-        </div>
+          <div class="form-actions">
+            <button type="button" class="btn cancel-btn" (click)="goBack()" [disabled]="loadingUser">
+              Cancel
+            </button>
+            <button type="submit" (click)="addSelectedUsers()" class="btn add-btn" [disabled]="loadingUser">
+              {{ loadingUser ? 'Adding...' : 'Add' }}
+            </button>
+          </div>
+        </form>
 
         <!-- ADD Queue Form -->
         <form class="add-form" *ngIf="currentSection === 'queue'">
           <div class="form-group">
             <label for="queueName">Queue Name</label>
-            <input
-              id="queueName"
-              name="queueName"
-              class="form-control"
-              [(ngModel)]="newQueue.queueName"
-              required
-            />
+            <input id="queueName" name="queueName" class="form-control" [(ngModel)]="newQueue.queueName" required />
           </div>
 
-          <div class="form-group">
-            <label for="queueLevel">Queue Level</label>
-            <p-dropdown
-              [options]="levelsData"
-              [(ngModel)]="newQueue.levelId"
-              [ngModelOptions]="{ standalone: true }"
-              optionLabel="levelName"
-              optionValue="levelId"
-              placeholder="Select Level"
-              [style]="{ width: '100%', height: '35px' }"
-            ></p-dropdown>
-          </div>
-          <div class="form-group">
-            <label for="queueCategory">Category</label>
-            <p-dropdown
-              [options]="queueCategories"
-              [(ngModel)]="newQueue.category"
-              [ngModelOptions]="{ standalone: true }"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Select Category"
-              [style]="{ width: '100%', height: '35px' }"
-            ></p-dropdown>
+          <div class="form-group-row" style="display: flex; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group" style="flex: 1; margin: 0;">
+              <label for="queueLevel">Queue Level</label>
+              <p-dropdown [options]="levelsData" [(ngModel)]="newQueue.levelId" [ngModelOptions]="{ standalone: true }"
+                optionLabel="levelName" optionValue="levelId" placeholder="Select Level"
+                [style]="{ width: '100%', height: '35px' }"></p-dropdown>
+            </div>
+            <div class="form-group" style="flex: 1; margin: 0;">
+              <label for="queueCategory">Category</label>
+              <p-dropdown [options]="queueCategories" [(ngModel)]="newQueue.category"
+                [ngModelOptions]="{ standalone: true }" optionLabel="label" optionValue="value"
+                placeholder="Select Category" [style]="{ width: '100%', height: '35px' }"></p-dropdown>
+            </div>
           </div>
 
-          <div class="form-actions row">
-            <div class="col-6">
-              <button
-                type="button"
-                (click)="goBack()"
-                class="btn cancel-btn w-100"
-              >
-                Cancel
-              </button>
-            </div>
-            <div class="col-6">
-              <button
-                type="submit"
-                (click)="createQueue()"
-                class="btn add-btn w-100"
-              >
-                Create
-              </button>
-            </div>
+          <div class="form-actions">
+            <button type="button" (click)="goBack()" class="btn cancel-btn">
+              Cancel
+            </button>
+            <button type="submit" (click)="createQueue()" class="btn add-btn">
+              Create
+            </button>
           </div>
         </form>
+
+        <!-- === FLOW LISTING === -->
+        <div class="flow-management-container" *ngIf="currentSection === 'flow_list'">
+          <div class="flow-actions-top">
+            <button class="btn add-btn" (click)="isUpdateMode = false; onSectionChange('flow_builder')">+ NEW
+              FLOW</button>
+          </div>
+
+          <div class="flow-list">
+            <div *ngIf="loadingFlows" class="loading-state">
+              <i class="pi pi-spin pi-spinner"></i> Loading flows...
+            </div>
+
+            <div *ngIf="!loadingFlows && groupedFlows.length === 0" class="empty-state">
+              No flows found. Click "+ NEW FLOW" to create one.
+            </div>
+
+            <div class="flow-card" *ngFor="let flow of groupedFlows">
+              <div class="flow-card-header">
+                <span class="flow-id">Flow {{ flow.flowId }} ({{ flow.category }})</span>
+                <div class="flow-card-actions">
+                  <i class="pi pi-pencil" (click)="editFlow(flow)"></i>
+                  <i class="pi pi-trash" (click)="confirmInactivateFlow(flow.flowId)"></i>
+                </div>
+              </div>
+              <div class="flow-path-puzzle">
+                <div class="puzzle-piece"
+                  *ngFor="let step of flow.steps; let i = index; let first = first; let last = last"
+                  [ngClass]="'level-' + (step.levelId || (i+1))" [class.first]="first" [class.last]="last">
+                  <div class="notch-top"></div>
+                  <div class="notch-bottom"></div>
+                  <span class="puz-name">{{ step.queueName }}</span>
+                  <span class="puz-level">{{ getLevelLabel(step.levelId || (i+1)) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- === FLOW BUILDER (CREATE/UPDATE) === -->
+        <form class="add-form" *ngIf="currentSection === 'flow_builder'">
+          <div class="form-group">
+            <label>Category</label>
+            <p-dropdown [options]="queueCategories" [(ngModel)]="newFlow.category" [ngModelOptions]="{standalone: true}"
+              [style]="{width: '100%'}"></p-dropdown>
+          </div>
+
+          <div class="flow-steps-builder">
+            <label>Flow Steps</label>
+            <div class="builder-step" *ngFor="let step of newFlow.steps; let i = index">
+              <div class="step-number">Level {{ step.levelId }}</div>
+              <p-dropdown [options]="getAvailableQueues(step.qId)" [(ngModel)]="step.qId"
+                [ngModelOptions]="{standalone: true}" placeholder="Select Queue" [filter]="true"
+                [style]="{width: '100%'}"></p-dropdown>
+              <i class="pi pi-times-circle" *ngIf="newFlow.steps.length > 1" (click)="removeFlowStep(i)"></i>
+            </div>
+            <button type="button" class="btn-link" *ngIf="newFlow.steps.length < 4" (click)="addFlowStep()">+ Add
+              Level</button>
+          </div>
+
+          <div class="flow-preview" *ngIf="newFlow.steps.length > 0">
+            <label>Preview:</label>
+            <div class="flow-path-puzzle mini">
+              <div class="puzzle-piece"
+                *ngFor="let step of newFlow.steps; let i = index; let first = first; let last = last"
+                [ngClass]="'level-' + (step.levelId || (i+1))" [class.first]="first" [class.last]="last">
+                <div class="notch-top"></div>
+                <div class="notch-bottom"></div>
+                <span class="puz-name">{{ getQueueName(step.qId) || '?' }}</span>
+                <span class="puz-level">{{ getLevelLabel(step.levelId || (i+1)) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn cancel-btn" (click)="onFlowManagementClick()">Cancel</button>
+            <button type="submit" class="btn add-btn" (click)="saveFlow()">{{ isUpdateMode ? 'Update' : 'Create' }}
+              Flow</button>
+          </div>
+        </form>
+
+        <!-- === ASSIGN FLOW TO CAMERAS === -->
+        <div class="flow-assign-container" *ngIf="currentSection === 'flow_assign'">
+          <div class="form-group">
+            <label>Select Flow</label>
+            <p-dropdown [options]="groupedFlows" [(ngModel)]="selectedFlowIdForAssign" optionLabel="flowId"
+              optionValue="flowId" placeholder="Select Flow" [style]="{width: '100%'}">
+              <ng-template let-flow pTemplate="selectedItem">
+                <div *ngIf="flow" style="display: flex; flex-direction: column;">
+                  <span style="font-weight: 700;">Flow {{ flow.flowId }} ({{ flow.category }})</span>
+                  <span style="font-size: 11px; color: #666;">{{ flow.pathString }}</span>
+                </div>
+              </ng-template>
+              <ng-template let-flow pTemplate="item">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <span style="font-weight: 700;">Flow {{ flow.flowId }} ({{ flow.category }})</span>
+                  <span style="font-size: 11px; color: #888; white-space: normal;">{{ flow.pathString }}</span>
+                </div>
+              </ng-template>
+            </p-dropdown>
+          </div>
+
+          <div class="camera-selection-header">
+            <label>Select Cameras</label>
+            <p-dropdown [options]="sitesDropdown" placeholder="Filter by Site"
+              (onChange)="onSiteSelectForAssign($event.value)" [style]="{width: '100%'}"></p-dropdown>
+          </div>
+
+          <div class="form-group">
+            <input type="text" placeholder="Search cameras..." [(ngModel)]="searchCameraTerm" class="form-control" />
+          </div>
+
+          <div class="camera-list-box">
+            <div class="camera-item" *ngFor="let cam of filteredCamerasForFlow">
+              <input type="checkbox" [checked]="selectedCameraIdsForFlow.includes(cam.cameraId)"
+                (change)="toggleCameraSelectionForFlow(cam.cameraId, $any($event.target).checked)">
+              <span>{{ cam.cameraId }} - {{ cam.cameraName }}</span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn cancel-btn" (click)="onFlowManagementClick()">Cancel</button>
+            <button type="submit" class="btn add-btn" (click)="assignFlow()">Assign Flow</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

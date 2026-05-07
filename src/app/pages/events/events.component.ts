@@ -29,7 +29,7 @@ import { EventsService } from "./events.service";
 import { ESCALATED_COLORS } from "src/app/shared/constants/chart-colors";
 import { OverlayPanel } from "primeng/overlaypanel";
 import { OverlayPanelModule } from "primeng/overlaypanel";
-import { CopyCellRendererComponent } from "./copy-cell-renderer.component";
+import { CopyCellRendererComponent } from "../../shared/renderers/copy-cell-renderer.component";
 import {
   Subscription,
   interval,
@@ -49,10 +49,10 @@ import {
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { NotificationService } from "src/app/shared/notification.service";
 
-import { ProfileImageRendererComponent } from "./profile-image-renderer.component";
+import { ProfileImageRendererComponent } from "../../shared/renderers/profile-image-renderer.component";
 
-import { RefreshStatusPanelComponent } from "./refresh-status-panel.component";
-import { ImagePipe } from "src/app/shared/image.pipe"; // adjust path
+import { RefreshStatusPanelComponent } from "../../shared/renderers/refresh-status-panel.component";
+import { ImagePipe } from "../../shared/image.pipe"; // adjust path
 import { IdleService } from "src/Services/idle.service";
 import {
   MatFormField,
@@ -737,12 +737,12 @@ export class EventsComponent {
     // if (this.allSitesList && this.allSitesList.length > 0) {
     //   this.filterLists.sites = this.allSitesList.map(s => ({ siteId: s.siteId, site: s.siteName }));
     // } else {
-      const siteRows = this.filterRowsForOptions(rows, "site");
-      this.filterLists.sites = Array.from(
-        new Map(
-          siteRows.map((r) => [r.siteId, { siteId: r.siteId, site: r.siteName }]),
-        ).values(),
-      );
+    const siteRows = this.filterRowsForOptions(rows, "site");
+    this.filterLists.sites = Array.from(
+      new Map(
+        siteRows.map((r) => [r.siteId, { siteId: r.siteId, site: r.siteName }]),
+      ).values(),
+    );
     // }
 
     const timeZoneRows = this.filterRowsForOptions(rows, "timezone");
@@ -977,7 +977,7 @@ export class EventsComponent {
   closedColumnDefs: ColDef[] = [];
   pendingColumnDefs: ColDef[] = [];
 
-  defaultColDef: ColDef = { flex: 1, minWidth: 120, resizable: true};
+  defaultColDef: ColDef = { flex: 1, minWidth: 120, resizable: true };
 
   // suppressMovable: true 
 
@@ -3451,16 +3451,16 @@ export class EventsComponent {
             color = "#1955af";
 
             // disableClick = 'onclick="event.stopPropagation(); return false;"';
-          }else if (params.data?.mailColour === 3) {
+          } else if (params.data?.mailColour === 3) {
             // ✅ NEW: Handle mailColour = 3
             tooltip = " Mail Failed";
             color = "#ff0000"; // Red color
-          }else if (params.data?.alertTagId === null || params.data?.mailColour === null) {
-  tooltip = params.data?.alertTagId === null ? "Mail not available" : "Mail not sent";
-  color = "gray";
+          } else if (params.data?.alertTagId === null || params.data?.mailColour === null) {
+            tooltip = params.data?.alertTagId === null ? "Mail not available" : "Mail not sent";
+            color = "gray";
 
-          disableClick = 'onclick="event.stopPropagation(); return false;"';
-} else if (params.data?.mailColour === 0) {
+            disableClick = 'onclick="event.stopPropagation(); return false;"';
+          } else if (params.data?.mailColour === 0) {
             color = "#2ea321";
           } else if (params.data?.mailColour === 2) {
             tooltip = "One time";

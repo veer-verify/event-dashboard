@@ -34,6 +34,9 @@ export class GroupsService {
   private readonly listUsersByDepartmentUrl =
     `${environment.eventDataUrl}/listUsersByDepartment_1_0`;
 
+  private readonly getDepartmentsUrl =
+    `${environment.userDetailsUrl}/getDepartments_1_0`;
+
   private readonly addQueueUsersUrl =
     `${environment.eventDataUrl}/addQueueUsers_1_0`;
 
@@ -49,22 +52,40 @@ export class GroupsService {
   private readonly inActiveQueueCameraMappingUrl =
     `${environment.eventDataUrl}/inActiveQueueCameraMapping_1_0`;
 
+  // Flow Management APIs
+  private readonly getEventsFlowUrl =
+    `${environment.eventDataUrl}/getEventsFlow_1_0`;
+
+  private readonly createEventFlowUrl =
+    `${environment.eventDataUrl}/createEventFlow_1_0`;
+
+  private readonly updateEventFlowUrl =
+    `${environment.eventDataUrl}/updateEventFlow_1_0`;
+
+  private readonly inactiveEventFlowUrl =
+    `${environment.eventDataUrl}/inactiveEventFlow_1_0`;
+
+  private readonly assignEventFlowToCamerasUrl =
+    `${environment.eventDataUrl}/assignEventFlowToCameras_1_0`;
+
   constructor(private http: HttpClient) { }
 
-  // First API: Get all queues
   getGroups(): Observable<any> {
-    return this.http.get<any>(this.getQueuesUrl);
+    const headers = new HttpHeaders({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    return this.http.get<any>(this.getQueuesUrl, { headers });
   }
 
   // Second API: Get sites and users for a queue
   getGroupSitesAndUsers(queueId: number): Observable<any> {
-    // console.log(queueId, "groupservice");
     const url = `${this.getQueueSitesAndUsersUrl}?queueId=${queueId}`;
     return this.http.get<any>(url);
   }
 
   postQueues(data: any): Observable<any> {
-    console.log("Payload before hitting API:", data);
     const headers = new HttpHeaders({
       "Content-Type": "application/json",
     });
@@ -89,8 +110,16 @@ export class GroupsService {
     return this.http.post(this.addSiteCameraForQueueUrl, data, { headers });
   }
 
-  getUsersByDepartment(): Observable<any> {
-    return this.http.get<any>(this.listUsersByDepartmentUrl);
+  getDepartments(): Observable<any> {
+    return this.http.get<any>(this.getDepartmentsUrl);
+  }
+
+  getUsersByDepartment(deptName?: string): Observable<any> {
+    let url = this.listUsersByDepartmentUrl;
+    if (deptName) {
+      url += `?deptName=${deptName}`;
+    }
+    return this.http.get<any>(url);
   }
 
   // POST selected users to queue
@@ -107,7 +136,6 @@ export class GroupsService {
     const url =
       `${this.inActiveQueueUserMappingUrl}?userId=${userId}` +
       `&queueId=${queueId}&modifiedBy=${modifiedBy}`;
-    console.log("Calling API URL:", url);
     return this.http.put(url, null);
   }
 
@@ -119,7 +147,6 @@ export class GroupsService {
     const url =
       `${this.inActiveQueueSiteMappingUrl}?siteId=${siteId}` +
       `&queueId=${queueId}&modifiedBy=${modifiedBy}`;
-    console.log("Calling API URL:", url);
     return this.http.put(url, null);
   }
 
@@ -131,7 +158,6 @@ export class GroupsService {
     const url =
       `${this.inActiveQueueUrl}?queueId=${queueId}` +
       `&status=${status}&modifiedBy=${modifiedBy}`;
-    console.log("Calling API URL:", url);
     return this.http.put(url, null);
   }
 
@@ -144,5 +170,35 @@ export class GroupsService {
       `${this.inActiveQueueCameraMappingUrl}?cameraId=${cameraId}` +
       `&queueSitesId=${queueSitesId}&modifiedBy=${modifiedBy}`;
     return this.http.put(url, {}); // body is empty per API spec
+  }
+
+  // Flow Management Methods
+  getFlows(): Observable<any> {
+    const headers = new HttpHeaders({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    return this.http.get<any>(this.getEventsFlowUrl, { headers });
+  }
+
+  createFlow(data: any): Observable<any> {
+    const headers = { "Content-Type": "application/json" };
+    return this.http.post(this.createEventFlowUrl, data, { headers });
+  }
+
+  updateFlow(data: any): Observable<any> {
+    const headers = { "Content-Type": "application/json" };
+    return this.http.put(this.updateEventFlowUrl, data, { headers });
+  }
+
+  inactivateFlow(flowId: number, modifiedBy: number): Observable<any> {
+    const url = `${this.inactiveEventFlowUrl}?flowId=${flowId}&modifiedBy=${modifiedBy}`;
+    return this.http.put(url, null);
+  }
+
+  assignFlowToCameras(data: any): Observable<any> {
+    const headers = { "Content-Type": "application/json" };
+    return this.http.put(this.assignEventFlowToCamerasUrl, data, { headers });
   }
 }

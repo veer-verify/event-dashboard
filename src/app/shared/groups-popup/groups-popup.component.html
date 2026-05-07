@@ -13,6 +13,19 @@
       </label>
     </div>
 
+    <!-- 🔹 Flow Assignment Section -->
+    <div class="flow-assign-mini" *ngIf="isActive">
+      <select class="flow-select" [(ngModel)]="selectedFlowId">
+        <option [ngValue]="null" disabled selected>Select Flow</option>
+        <option *ngFor="let flow of flows" [ngValue]="flow.flowId">
+          Flow {{ flow.flowId }} ({{ flow.category }}): {{ flow.pathString }}
+        </option>
+      </select>
+      <button class="update-flow-btn" (click)="assignFlowToAllCameras()" [disabled]="loadingAssign">
+        {{ loadingAssign ? 'Updating...' : 'Update Flow' }}
+      </button>
+    </div>
+
     <button class="plus-btn" *ngIf="isActive" (click)="openPopup(data)">+</button>
 
     <div class="popup-menu" *ngIf="showPopup">
@@ -72,7 +85,12 @@
             <div class="site-id-col"></div>
 
             <div class="site-name-col camera-name-cell">
-              {{ cam.cameraId }} - {{ cam.cameraName }}
+              <div class="cam-info-line">
+                <span class="cam-name">{{ cam.cameraId }} - {{ cam.cameraName }}</span>
+                <span class="flow-badge" *ngIf="cam.flowId" [title]="'Assigned Flow: ' + cam.flowId">
+                  <i class="pi pi-directions"></i> {{ getFlowPath(cam.flowId) }}
+                </span>
+              </div>
             </div>
 
             <div class="camera-count-col"></div>
@@ -134,5 +152,13 @@
     <ng-template #noEmployeesTpl>
       <div class="empty-row">No employees available</div>
     </ng-template>
+  </div>
+
+  <!-- 🔹 Loading Overlay -->
+  <div class="loading-overlay" *ngIf="loading">
+    <div class="spinner-container">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: #ed3237;"></i>
+      <span>Loading details...</span>
+    </div>
   </div>
 </div>

@@ -14,9 +14,7 @@ import { HttpClientModule } from "@angular/common/http";
 import { GroupsService } from "src/app/pages/groups/groups.service";
 import { ImagePipe } from "src/app/shared/image.pipe";
 import { NotificationService } from "src/app/shared/notification.service";
-
-// ✅ ADD import
-import { ProfileImageRendererComponent } from "src/app/pages/events/profile-image-renderer.component";
+import { ProfileImageRendererComponent } from "../renderers/profile-image-renderer.component";
 
 interface DisplayCamera {
   cameraId: string | number;
@@ -24,6 +22,7 @@ interface DisplayCamera {
   status: string;
   queueSitesId: number;
   queueId: number;
+  flowId?: number | null; // 👈 Add this
 }
 
 interface DisplaySite {
@@ -39,12 +38,12 @@ interface DisplaySite {
 
 interface DisplayUser {
   userId: number | string;
-  User_Name?: string;     // keep
-  userName?: string;      // ✅ support new api shape
+  User_Name?: string;
+  userName?: string;
   email: string;
   status: string;
-  profileImage?: string | null;      // keep
-  profileImageUrl?: string | null;   // ✅ support new api shape
+  profileImage?: string | null;
+  profileImageUrl?: string | null;
 }
 
 @Component({
@@ -58,8 +57,7 @@ interface DisplayUser {
     MatDatepickerModule,
     CommonModule,
     HttpClientModule,
-    // ImagePipe,
-    ProfileImageRendererComponent, // ✅ ADD
+    ProfileImageRendererComponent,
   ],
 })
 export class GroupsPopupComponent implements OnChanges, OnInit {
@@ -69,6 +67,8 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
   @Input() sites: any[] = [];
   @Input() camera: any[] = [];
   @Input() data: any;
+  @Input() flows: any[] = [];
+  @Input() loading: boolean = false; // 👈 Add loading input
 
   @Output() sectionChange = new EventEmitter<string>();
   @Output() close = new EventEmitter<void>();
@@ -80,6 +80,8 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
   }
 
   showPopup = false;
+  selectedFlowId: number | null = null;
+  loadingAssign: boolean = false;
 
   sitesDisplay: DisplaySite[] = [];
   usersDisplay: DisplayUser[] = [];
@@ -95,12 +97,10 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
     const raw =
       localStorage.getItem("verifai_user") ||
       sessionStorage.getItem("verifai_user");
-    // console.log("Stored user data:", raw);
 
     if (raw) {
       try {
         this.currentUser = JSON.parse(raw);
-        // console.log("Current user in Groups:", this.currentUser);
       } catch (e) {
         console.error("Error parsing stored user data", e);
       }
@@ -117,6 +117,7 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
 
   ngOnChanges(): void {
     if (this.data) {
+      this.selectedFlowId = null; // 👈 Reset selection on data change
       this.updateSitesAndUsers(this.data);
     }
   }
@@ -136,18 +137,11 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
     this.showPopup = false;
   }
 
-  toggleStatus(isActive: boolean) {
-    if (this.data) {
-      this.data.status = isActive ? "ACTIVE" : "INACTIVE";
-    }
-  }
-
   onStatusToggle(event: Event) {
     if (!this.data || !this.data.id) return;
 
     this.notificationService
-      .confirm(`This action will disable all queues and remove queue access for users.`,{acceptLabel:"Yes",rejectLabel:"No"}
-      )
+      .confirm(`This action will disable all queues and remove queue access for users.`, { acceptLabel: "Yes", rejectLabel: "No" })
       .then((res: any) => {
         const input = event.target as HTMLInputElement;
         const isActive = input.checked;
@@ -159,22 +153,13 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
             .toggleQueueStatus(this.data.id, status, modifiedBy)
             .subscribe({
               next: (res) => {
-                const msg =
-                  res?.message ||
-                  res?.msg ||
-                  res?.statusMessage ||
-                  `Queue marked as ${status}`;
                 this.data.status = status;
                 this.refreshRequested.emit(this.data.id);
-                this.showSuccess("Update Queue Status", msg);
+                this.showSuccess("Update Queue Status", res.message || `Queue marked as ${status}`);
               },
               error: (err) => {
-                const msg =
-                  err?.error?.message ||
-                  err?.error?.msg ||
-                  "Failed to update queue status";
                 input.checked = !isActive;
-                this.showError("Update Queue Status Failed", msg);
+                this.showError("Update Queue Status Failed", err.error?.message || "Failed");
               },
             });
         } else {
@@ -183,166 +168,126 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
       });
   }
 
+  assignFlowToAllCameras() {
+    if (!this.selectedFlowId) {
+      this.showError("Flow Assignment", "Please select a flow first");
+      return;
+    }
+
+    // Extract all camera IDs from all sites
+    const allCameraIds: string[] = [];
+    this.sitesDisplay.forEach(site => {
+      site.cameras.forEach(cam => {
+        if (cam.cameraId) allCameraIds.push(String(cam.cameraId));
+      });
+    });
+
+    if (allCameraIds.length === 0) {
+      this.showError("Flow Assignment", "No cameras found in this queue to assign");
+      return;
+    }
+
+    this.loadingAssign = true;
+    const payload = {
+      cameraIds: allCameraIds,
+      flowId: this.selectedFlowId,
+      modifiedBy: this.currentUser?.UserId || 0
+    };
+
+    this.groupsService.assignFlowToCameras(payload).subscribe({
+      next: (res) => {
+        this.loadingAssign = false;
+        this.showSuccess("Flow Assignment", res.message || "Flow assigned successfully");
+        this.selectedFlowId = null;
+
+        // 🔹 Refresh the camera list to show updated flow IDs
+        this.groupsService.getGroupSitesAndUsers(this.data.id).subscribe({
+          next: (refreshRes) => {
+            this.updateSitesAndUsers(refreshRes);
+            this.refreshRequested.emit(this.data.id);
+          }
+        });
+      },
+      error: (err) => {
+        this.loadingAssign = false;
+        this.showError("Flow Assignment Failed", err.error?.message || "Failed to assign flow");
+      }
+    });
+  }
+
+  getFlowPath(flowId: number | null | undefined): string {
+    if (!flowId) return '';
+    const flow = this.flows.find(f => f.flowId == flowId);
+    return flow ? flow.pathString : `Flow ${flowId}`;
+  }
+
   toggleSiteExpand(site: DisplaySite) {
     site.expanded = !site.expanded;
   }
 
   async onSiteDelete(site: DisplaySite, event: MouseEvent) {
     event.stopPropagation();
-    const confirmed = await this.notificationService.confirm("Are you sure you want to remove this site from the queue? This action cannot be undone.");
-    if (confirmed) {
-      this.inactivateSite(site.siteId, this.data.id);
-    }
+    const confirmed = await this.notificationService.confirm("Are you sure you want to remove this site from the queue?");
+    if (confirmed) this.inactivateSite(site.siteId, this.data.id);
   }
 
- async onCameraDelete(site: DisplaySite, cam: DisplayCamera, event: MouseEvent) {
+  async onCameraDelete(site: DisplaySite, cam: DisplayCamera, event: MouseEvent) {
     event.stopPropagation();
-
-     const confirmed = await this.notificationService.confirm("Are you sure you want to remove this camera? This action cannot be undone.");
-    if (confirmed) {
-      
-          this.inactivateCamera(cam.cameraId, cam.queueSitesId, this.data.id);
-
-    }
+    const confirmed = await this.notificationService.confirm("Are you sure you want to remove this camera?");
+    if (confirmed) this.inactivateCamera(cam.cameraId, cam.queueSitesId, this.data.id);
   }
 
   async onUserDelete(user: DisplayUser) {
-    const confirmed = await this.notificationService.confirm("Are you sure you want to remove this employee? This action cannot be undone.");
-    if (confirmed) {
-      this.inactivateUser(user.userId as number, this.data.id);
-    }
+    const confirmed = await this.notificationService.confirm("Are you sure you want to remove this employee?");
+    if (confirmed) this.inactivateUser(user.userId as number, this.data.id);
   }
 
-  inactivateCamera(
-    cameraId: string | number,
-    queueSitesId: number,
-    queueId: number,
-  ) {
+  inactivateCamera(cameraId: string | number, queueSitesId: number, queueId: number) {
     const modifiedBy = this.currentUser?.UserId || 0;
-    const cameraIdStr = String(cameraId);
-
-    this.groupsService
-      .inactivateQueuesCamera(cameraIdStr, queueSitesId, modifiedBy)
-      .subscribe({
-        next: (res: any) => {
-          const msg =
-            res?.message ||
-            res?.msg ||
-            res?.statusMessage ||
-            "Camera removed from queue";
-
-          this.groupsService.getGroupSitesAndUsers(queueId).subscribe({
-            next: (refreshRes) => {
-              this.updateSitesAndUsers(refreshRes);
-              this.refreshRequested.emit(queueId);
-              this.showSuccess("Remove Camera", msg);
-            },
-            error: () => {
-              this.showError(
-                "Refresh Failed",
-                "Failed to refresh camera data.",
-              );
-            },
-          });
-        },
-        error: (err) => {
-          const msg =
-            err?.error?.message ||
-            err?.error?.msg ||
-            "Failed to remove camera from queue";
-          this.showError("Remove Camera Failed", msg);
-        },
-      });
+    this.groupsService.inactivateQueuesCamera(String(cameraId), queueSitesId, modifiedBy).subscribe({
+      next: (res: any) => {
+        this.groupsService.getGroupSitesAndUsers(queueId).subscribe(refreshRes => {
+          this.updateSitesAndUsers(refreshRes);
+          this.refreshRequested.emit(queueId);
+          this.showSuccess("Remove Camera", res.message || "Success");
+        });
+      },
+      error: (err) => this.showError("Remove Camera Failed", err.error?.message || "Error")
+    });
   }
 
   inactivateSite(siteId: number | string, queueId: number) {
     const modifiedBy = this.currentUser?.UserId || 0;
-    const siteIdNum = Number(siteId);
-
-    this.groupsService
-      .inactivateQueuesSite(siteIdNum, queueId, modifiedBy)
-      .subscribe({
-        next: (res) => {
-          const msg =
-            res?.message ||
-            res?.msg ||
-            res?.statusMessage ||
-            "Site removed from queue";
-
-          this.groupsService.getGroupSitesAndUsers(queueId).subscribe({
-            next: (refreshRes) => {
-              this.updateSitesAndUsers(refreshRes);
-              this.refreshRequested.emit(queueId);
-              this.showSuccess("Remove Site", msg);
-            },
-            error: () => {
-              this.showError("Refresh Failed", "Failed to refresh site data.");
-            },
-          });
-        },
-        error: (err) => {
-          const msg =
-            err?.error?.message ||
-            err?.error?.msg ||
-            "Failed to remove site from queue";
-          this.showError("Remove Site Failed", msg);
-        },
-      });
+    this.groupsService.inactivateQueuesSite(Number(siteId), queueId, modifiedBy).subscribe({
+      next: (res) => {
+        this.groupsService.getGroupSitesAndUsers(queueId).subscribe(refreshRes => {
+          this.updateSitesAndUsers(refreshRes);
+          this.refreshRequested.emit(queueId);
+          this.showSuccess("Remove Site", res.message || "Success");
+        });
+      },
+      error: (err) => this.showError("Remove Site Failed", err.error?.message || "Error")
+    });
   }
 
   inactivateUser(userId: number, queueId: number) {
     const modifiedBy = this.currentUser?.UserId || 0;
-
-    this.groupsService
-      .inactivateQueuesUser(userId, queueId, modifiedBy)
-      .subscribe({
-        next: (res) => {
-          const msg =
-            res?.message ||
-            res?.msg ||
-            res?.statusMessage ||
-            "Employee removed from queue";
-
-          this.groupsService.getGroupSitesAndUsers(queueId).subscribe({
-            next: (refreshRes) => {
-              this.updateSitesAndUsers(refreshRes);
-              this.refreshRequested.emit(queueId);
-              this.showSuccess("Remove Employee", msg);
-            },
-            error: () => {
-              this.showError(
-                "Refresh Failed",
-                "Failed to refresh employee data.",
-              );
-            },
-          });
-        },
-        error: (error) => {
-          const msg =
-            error?.error?.message ||
-            error?.error?.msg ||
-            "Failed to remove employee from queue";
-          this.showError("Remove Employee Failed", msg);
-        },
-      });
+    this.groupsService.inactivateQueuesUser(userId, queueId, modifiedBy).subscribe({
+      next: (res) => {
+        this.groupsService.getGroupSitesAndUsers(queueId).subscribe(refreshRes => {
+          this.updateSitesAndUsers(refreshRes);
+          this.refreshRequested.emit(queueId);
+          this.showSuccess("Remove Employee", res.message || "Success");
+        });
+      },
+      error: (err) => this.showError("Remove Employee Failed", err.error?.message || "Error")
+    });
   }
 
   private updateSitesAndUsers(res: any) {
-    // console.log("Raw API response:", res);
+    const queueUsers = res.groupUsers || res.queueUsers || [];
+    const queuesData = res.groupSites || res.queuesData || [];
 
-    const queueUsers = Array.isArray(res.groupUsers)
-      ? res.groupUsers
-      : Array.isArray(res.queueUsers)
-        ? res.queueUsers
-        : [];
-
-    const queuesData = Array.isArray(res.groupSites)
-      ? res.groupSites
-      : Array.isArray(res.queuesData)
-        ? res.queuesData
-        : [];
-
-    // ✅ USERS (support BOTH shapes)
     this.usersDisplay = queueUsers.map((user: any) => ({
       userId: user.userId || "N/A",
       User_Name: user.User_Name || null,
@@ -353,19 +298,19 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
       profileImageUrl: user.profileImageUrl || null,
     }));
 
-    // SITES + CAMERAS
     this.sitesDisplay = queuesData.map((site: any) => {
-      const cameras: DisplayCamera[] = Array.isArray(site.cameraInfo)
+      const cameras = Array.isArray(site.cameraInfo)
         ? site.cameraInfo.map((cam: any) => ({
           cameraId: cam.cameraId,
           cameraName: cam.cameraName || "Unnamed Camera",
           status: cam.status || "ACTIVE",
           queueSitesId: cam.queueSitesId ?? site.queueSitesId,
           queueId: site.queueId,
+          flowId: cam.eventsLevelQueueFlowId || cam.flowId || null, // 👈 Map the new field
         }))
         : [];
 
-      const displaySite: DisplaySite = {
+      return {
         siteId: site.siteId || "N/A",
         siteName: site.siteName || "N/A",
         queueId: site.queueId || "N/A",
@@ -375,8 +320,6 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
         cameras,
         expanded: false,
       };
-
-      return displaySite;
     });
   }
 

@@ -10,6 +10,7 @@ export const environment = {
   eventDataUrl: "https://usstaging.ivisecurity.com/events_data",
   guard_monitoring_url: `https://usstaging.ivisecurity.com/guard_monitoring`,
   vipSitesUrl: `https://usstaging.ivisecurity.com/vipsites`,
+    userDetailsUrl: `https://usstaging.ivisecurity.com/userDetails`,
   loggingEnabled: true,
 
 

@@ -16,7 +16,7 @@ import { DialogModule } from "primeng/dialog";
 import { FormsModule } from "@angular/forms";
 import { ButtonModule } from "primeng/button";
 import { EventsService } from "src/app/pages/events/events.service";
-import { ProfileImageRendererComponent } from "src/app/pages/events/profile-image-renderer.component";
+import { ProfileImageRendererComponent } from "../renderers/profile-image-renderer.component";
 
 import { NotificationService } from "src/app/shared/notification.service";
 
@@ -280,7 +280,7 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
       // editable: (data: any) => {
       //   return data.node.lastChild ? true : false
       // },
-       editable: (params: any) => params.data?.isEditing === true,
+      editable: (params: any) => params.data?.isEditing === true,
       headerClass: "custom-header",
       cellClass: "custom-cell",
       cellEditor: "agRichSelectCellEditor",
@@ -301,7 +301,7 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
       // editable: (data: any) => {
       //   return data.node.lastChild ? true : false
       // },
-       editable: (params: any) => params.data?.isEditing === true,
+      editable: (params: any) => params.data?.isEditing === true,
       headerClass: "custom-header",
       cellClass: "custom-cell",
       cellEditor: "agRichSelectCellEditor",
@@ -326,7 +326,7 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
       headerClass: "custom-header",
       cellClass: "custom-cell",
       // editable: (params) => params.data.isDuplicate && params.data.isEditing,
-          editable: (params: any) => params.data?.isEditing === true
+      editable: (params: any) => params.data?.isEditing === true
     },
     // {
     //   headerName: "END OF SHIFT",
@@ -393,121 +393,121 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
     // },
 
 
-   {
-    headerName: "END OF SHIFT",
-    headerClass: "custom-header",
-    cellClass: "custom-cell",
-    editable: false,
+    {
+      headerName: "END OF SHIFT",
+      headerClass: "custom-header",
+      cellClass: "custom-cell",
+      editable: false,
 
-    cellRenderer: (params: any) => {
-      const container = document.createElement("div");
-      container.style.display = "flex";
-      container.style.gap = "6px";
+      cellRenderer: (params: any) => {
+        const container = document.createElement("div");
+        container.style.display = "flex";
+        container.style.gap = "6px";
 
-      const isEditing = !!params.data.isEditing;
-      const rowIndex = params.node.rowIndex;
-      const lastRowIndex = params.api.getDisplayedRowCount() - 1;
+        const isEditing = !!params.data.isEditing;
+        const rowIndex = params.node.rowIndex;
+        const lastRowIndex = params.api.getDisplayedRowCount() - 1;
 
-      // =========================
-      // ✅ EDIT MODE (SAVE / CANCEL)
-      // =========================
-      if (isEditing) {
+        // =========================
+        // ✅ EDIT MODE (SAVE / CANCEL)
+        // =========================
+        if (isEditing) {
 
-        // 🔹 SAVE BUTTON
-        const saveBtn = document.createElement("button");
-        saveBtn.className = "action-btn save-btn";
-        saveBtn.innerText = "✓";
+          // 🔹 SAVE BUTTON
+          const saveBtn = document.createElement("button");
+          saveBtn.className = "action-btn save-btn";
+          saveBtn.innerText = "✓";
 
-        saveBtn.addEventListener("mousedown", (e) => {
-          e.stopPropagation();
+          saveBtn.addEventListener("mousedown", (e) => {
+            e.stopPropagation();
 
-          params.api.stopEditing();
+            params.api.stopEditing();
 
-          setTimeout(() => {
-            const { _originalData, ...cleanData } = params.node.data;
+            setTimeout(() => {
+              const { _originalData, ...cleanData } = params.node.data;
 
-            this.saveEscalation(cleanData);
+              this.saveEscalation(cleanData);
 
-            params.node.setData({
-              ...cleanData,
-              isEditing: false
-            });
-          }, 0);
-        });
+              params.node.setData({
+                ...cleanData,
+                isEditing: false
+              });
+            }, 0);
+          });
 
-        // 🔹 CANCEL BUTTON (RESTORE ORIGINAL DATA)
-        const cancelBtn = document.createElement("button");
-        cancelBtn.className = "action-btn delete-btn";
-        cancelBtn.innerText = "x";
+          // 🔹 CANCEL BUTTON (RESTORE ORIGINAL DATA)
+          const cancelBtn = document.createElement("button");
+          cancelBtn.className = "action-btn delete-btn";
+          cancelBtn.innerText = "x";
 
-        cancelBtn.addEventListener("mousedown", (e) => {
-          e.stopPropagation();
+          cancelBtn.addEventListener("mousedown", (e) => {
+            e.stopPropagation();
 
-          const original = params.node.data._originalData;
+            const original = params.node.data._originalData;
 
-          params.api.stopEditing(true); // cancel editor
+            params.api.stopEditing(true); // cancel editor
 
-          if (original) {
-            params.node.setData({
-              ...original,
-              isEditing: false
-            });
-          } else {
-            params.node.setData({
-              ...params.node.data,
-              isEditing: false
-            });
-          }
-        });
+            if (original) {
+              params.node.setData({
+                ...original,
+                isEditing: false
+              });
+            } else {
+              params.node.setData({
+                ...params.node.data,
+                isEditing: false
+              });
+            }
+          });
 
-        container.appendChild(saveBtn);
-        container.appendChild(cancelBtn);
+          container.appendChild(saveBtn);
+          container.appendChild(cancelBtn);
+          return container;
+        }
+
+        // =========================
+        // ✅ SHOW PENCIL ONLY ON LAST ROW
+        // =========================
+        if (rowIndex === lastRowIndex) {
+          const editBtn = document.createElement("button");
+          editBtn.className = "action-btn1 edit-btn1";
+
+          const pencilIcon = document.createElement("img");
+          pencilIcon.src = "assets/pencil.svg";
+          pencilIcon.alt = "Edit";
+          pencilIcon.style.width = "16px";
+          pencilIcon.style.height = "16px";
+
+          editBtn.appendChild(pencilIcon);
+
+          editBtn.addEventListener("click", () => {
+            this.editRow(params);
+          });
+
+          container.appendChild(editBtn);
+        }
+
         return container;
       }
-
-      // =========================
-      // ✅ SHOW PENCIL ONLY ON LAST ROW
-      // =========================
-      if (rowIndex === lastRowIndex) {
-        const editBtn = document.createElement("button");
-        editBtn.className = "action-btn1 edit-btn1";
-
-        const pencilIcon = document.createElement("img");
-        pencilIcon.src = "assets/pencil.svg";
-        pencilIcon.alt = "Edit";
-        pencilIcon.style.width = "16px";
-        pencilIcon.style.height = "16px";
-
-        editBtn.appendChild(pencilIcon);
-
-        editBtn.addEventListener("click", () => {
-          this.editRow(params);
-        });
-
-        container.appendChild(editBtn);
-      }
-
-      return container;
     }
-  }
   ];
 
-editRow(params: any) {
-  // backup original row BEFORE editing
-  const originalCopy = { ...params.node.data };
+  editRow(params: any) {
+    // backup original row BEFORE editing
+    const originalCopy = { ...params.node.data };
 
-  params.node.setData({
-    ...params.node.data,
-    isEditing: true,
-    _originalData: originalCopy
-  });
+    params.node.setData({
+      ...params.node.data,
+      isEditing: true,
+      _originalData: originalCopy
+    });
 
-  // start editing
-  params.api.startEditingCell({
-    rowIndex: params.node.rowIndex,
-    colKey: "subActionTag" // change if needed
-  });
-}
+    // start editing
+    params.api.startEditingCell({
+      rowIndex: params.node.rowIndex,
+      colKey: "subActionTag" // change if needed
+    });
+  }
 
   /** Create duplicate row from last row and put into edit mode */
   createDuplicateRowFromLast(params: any) {

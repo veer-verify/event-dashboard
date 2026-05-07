@@ -26,7 +26,7 @@ import { ImagePipe } from "src/app/shared/image.pipe";
         [src]="
           (!hasError &&
           (value?.profileImage || value?.profileImageUrl)
-            ? (((value.profileImage || value.profileImageUrl) ) ||
+            ? (((value.profileImage || value.profileImageUrl) | image | async) ||
               'assets/icons/dummy_300x300.png')
             : 'assets/icons/dummy_300x300.png')
         "

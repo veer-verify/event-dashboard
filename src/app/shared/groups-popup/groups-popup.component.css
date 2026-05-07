@@ -2,8 +2,7 @@
 
 @font-face {
   font-family: "Neometric Regular";
-  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Regular.woff")
-    format("woff");
+  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Regular.woff") format("woff");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -11,8 +10,7 @@
 
 @font-face {
   font-family: "Neometric Medium";
-  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Medium-(Regular).woff")
-    format("woff");
+  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Medium-(Regular).woff") format("woff");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
@@ -20,8 +18,7 @@
 
 @font-face {
   font-family: "Neometric Bold";
-  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Regular.woff")
-    format("woff");
+  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Regular.woff") format("woff");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -29,8 +26,7 @@
 
 @font-face {
   font-family: "Neometric Alt Bold";
-  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Alt-Bold-(Regular).woff")
-    format("woff");
+  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Alt-Bold-(Regular).woff") format("woff");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -38,8 +34,7 @@
 
 @font-face {
   font-family: "Nasalization";
-  src: url("src/assets/fonts/neometric-2-webfont/NASALIZA.woff")
-    format("woff");
+  src: url("src/assets/fonts/neometric-2-webfont/NASALIZA.woff") format("woff");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -53,11 +48,25 @@
 
 /* ========== CONTAINER & COMMON ========== */
 
+/* Make the Angular host element fill the flex parent */
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .popup-container {
+  position: relative;
+  /* 👈 Important for confining absolute children */
   max-width: 1200px;
-  /* margin: auto; */
   background: #fff;
   border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -65,6 +74,19 @@ h2 {
   font-size: 12px;
   margin: 0 0 10px;
   font-family: "Neometric Alt Bold";
+}
+
+/* Global Interactive Elements Cursor */
+button,
+.createbutton,
+.calenderimage,
+.camera-delete-btn,
+.delete-btn,
+.arrow,
+.site-row,
+.employee-row,
+[role="button"] {
+  cursor: pointer !important;
 }
 
 .report-header {
@@ -175,6 +197,65 @@ h2 {
 .slider {
   position: absolute;
   cursor: pointer;
+  z-index: 100;
+}
+
+/* 🔹 Flow Assignment Styles */
+.flow-assign-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8f9fa;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  margin-left: auto;
+  margin-right: 15px;
+}
+
+.flow-select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+  background: white;
+  min-width: 200px;
+  max-width: 300px;
+  outline: none;
+  cursor: pointer;
+}
+
+.flow-select:focus {
+  border-color: #f52b3b;
+}
+
+.update-flow-btn {
+  background: #f52b3b;
+  color: white;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.update-flow-btn:hover:not(:disabled) {
+  background: #d41f2d;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.update-flow-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
   top: 0;
   left: 0;
   right: 0;
@@ -197,7 +278,7 @@ h2 {
   border-radius: 50%;
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
   background-color: #53bf8b;
   transform: translateX(15px);
 }
@@ -206,11 +287,11 @@ input:checked + .slider:before {
   border-radius: 20px;
 }
 
-.switch input:not(:checked) + .slider {
+.switch input:not(:checked)+.slider {
   opacity: 0.5;
 }
 
-.switch input:checked + .slider {
+.switch input:checked+.slider {
   opacity: 1;
 }
 
@@ -234,7 +315,8 @@ input:checked + .slider:before {
 
 .site-list {
   margin-top: 4px;
-  min-height: 120px; /* keep same height even if no data */
+  max-height: 50vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -255,7 +337,14 @@ input:checked + .slider:before {
 }
 
 .camera-row {
-  padding: 4px 0 4px 0;
+  padding: 6px 0;
+  transition: background-color 0.2s;
+  border-left: 3px solid #ed3237;
+  /* Visual indicator of nested item */
+}
+
+.camera-row:hover {
+  background-color: #f5f5f5;
 }
 
 /* columns (flex like table) */
@@ -298,9 +387,69 @@ input:checked + .slider:before {
 }
 
 .camera-name-cell {
+  flex: 1;
+  padding: 0 4px;
+}
+
+.cam-info-line {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
+.cam-name {
   font-family: "Neometric Medium";
   font-size: 12px;
-  color: #a0a0a0;
+  font-weight: 200;
+  color: #000000;
+  opacity: 0.6;
+}
+
+.flow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eef2f7;
+  color: #1955af;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  width: fit-content;
+  border: 1px solid #d0dbe9;
+}
+
+.flow-badge i {
+  font-size: 10px;
+}
+
+/* 🔹 Loading Overlay Styles */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  border-radius: 12px;
+  backdrop-filter: blur(2px);
+}
+
+.spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  font-family: "Neometric Medium";
+  font-size: 14px;
+  color: #333;
 }
 
 /* chevron arrow */
@@ -354,22 +503,37 @@ input:checked + .slider:before {
 /* ========== EMPLOYEE INFO ========== */
 
 .employee-list {
-  margin-top: 8px;
-  min-height: 120px; /* keep same height even if no employees */
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  align-content: start;
+  padding: 4px 2px;
+  max-height: 42vh;
+  overflow-y: auto;
 }
 
 .employee-row {
-  border-bottom: 1px solid #f0f0f0;
-  padding: 6px 0;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+}
+
+.employee-row:hover {
+  border-color: #ed3237;
+  box-shadow: 0 4px 12px rgba(237, 50, 55, 0.1);
+  transform: translateY(-2px);
 }
 
 .employee-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
 }
 
 .user-info {
@@ -395,9 +559,12 @@ input:checked + .slider:before {
   font-size: 12px;
 }
 
-.camera-list{
-      height: 42vh;
-    overflow-y: scroll;
+.camera-list {
+  max-height: 35vh;
+  overflow-y: auto;
+  background-color: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 
