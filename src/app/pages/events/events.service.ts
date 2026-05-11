@@ -1,6 +1,7 @@
 import { Injectable } from "@angular/core";
 import { HttpClient, HttpParams } from "@angular/common/http";
-import { Observable } from "rxjs";
+import { Observable, Subject, of } from "rxjs";
+import { shareReplay, tap } from "rxjs/operators";
 import { environment } from "src/environments/environment";
 import * as moment from "moment";
 import { DatePipe } from "@angular/common";
@@ -9,11 +10,70 @@ import { DatePipe } from "@angular/common";
   providedIn: "root",
 })
 export class EventsService {
+  private pendingCountsSocket: WebSocket | null = null;
+  private pendingCountsReconnectTimer: any = null;
+  public pendingCountsData$ = new Subject<any>();
   constructor(
     private datePipe: DatePipe,
     private http: HttpClient,
   ) { }
 
+  private alertCategoriesCache = new Map<number, Observable<any>>();
+  private emailDataCache = new Map<string, Observable<any>>();
+  private eventMoreInfoCache = new Map<number, Observable<any>>();
+  
+  public clearCache(): void {
+    this.alertCategoriesCache.clear();
+    this.emailDataCache.clear();
+    this.eventMoreInfoCache.clear();
+  }
+
+
+  startPendingCountsWebSocket(): void {
+    if (this.pendingCountsSocket) {
+      return;
+    }
+
+    const wsUrl = `${environment.mqApiBaseUrl}/wsEventsPendingCounts_1_0`
+      .replace("https://", "wss://")
+      .replace("http://", "ws://");
+
+
+    this.pendingCountsSocket = new WebSocket(wsUrl);
+
+    this.pendingCountsSocket.onmessage = (event) => {
+      try {
+        const res = JSON.parse(event.data);
+        this.pendingCountsData$.next(res);
+      } catch (err) {
+        console.error("Failed to parse WebSocket message", err);
+      }
+    };
+
+    this.pendingCountsSocket.onerror = () => {
+      this.stopPendingCountsWebSocket();
+    };
+
+    this.pendingCountsSocket.onclose = () => {
+      this.pendingCountsSocket = null;
+      // Reconnect logic
+      this.pendingCountsReconnectTimer = setTimeout(() => {
+        this.startPendingCountsWebSocket();
+      }, 5000);
+    };
+  }
+
+  stopPendingCountsWebSocket(): void {
+    if (this.pendingCountsReconnectTimer) {
+      clearTimeout(this.pendingCountsReconnectTimer);
+      this.pendingCountsReconnectTimer = null;
+    }
+
+    if (this.pendingCountsSocket) {
+      this.pendingCountsSocket.close();
+      this.pendingCountsSocket = null;
+    }
+  }
   private readonly eventReportFullData = `${environment.eventDataUrl}/getEventReportFullData_1_0`;
 
   private readonly actionTagCategoriesUrl = `${environment.eventDataUrl}/getActionTagCategories_1_0`;
@@ -41,6 +101,31 @@ export class EventsService {
   private readonly timezonesUrl = `${environment.eventDataUrl}/getTimezones_1_0`;
 
   private readonly employeeLevelsUrl = `${environment.eventDataUrl}/getLevelsInfo_1_0`;
+
+ private readonly cameraWisePendingCountsUrl = `${environment.mqApiBaseUrl}/getCameraWisePendingCounts_1_0`;
+
+ private readonly downloadSingleEventExcelUrl = `${environment.eventDataUrl}/downloadSingleEventFullExcelReport_1_0`;
+  private readonly downloadSingleEventPdfUrl = `${environment.eventDataUrl}/downloadSingleEventPdfReport_1_0`;
+
+  downloadSingleEventExcel(eventId: string): Observable<any> {
+    const params = new HttpParams().set("eventId", eventId);
+    return this.http.get(this.downloadSingleEventExcelUrl, {
+      params,
+      responseType: "arraybuffer",
+      observe: "response"
+    });
+  }
+
+  downloadSingleEventPdf(eventId: string, logoType: string): Observable<any> {
+    const params = new HttpParams()
+      .set("eventId", eventId)
+      .set("logoType", logoType);
+    return this.http.get(this.downloadSingleEventPdfUrl, {
+      params,
+      responseType: "arraybuffer",
+      observe: "response"
+    });
+  }
 
 
   /**
@@ -177,10 +262,13 @@ export class EventsService {
     return this.http.get<any>(this.consoleEventsCountsUrl);
   }
 
-  getActionTagCategories(): Observable<any> {
-    return this.http.get<any>(this.actionTagCategoriesUrl);
+  getActionTagCategories(userLevel?: number): Observable<any> {
+    let params = new HttpParams();
+    if (userLevel !== undefined && userLevel !== null) {
+      params = params.set("userLevel", String(userLevel));
+    }
+    return this.http.get<any>(this.actionTagCategoriesUrl, { params });
   }
-
   getTimezones(): Observable<any> {
     return this.http.get<any>(this.timezonesUrl);
   }
@@ -198,9 +286,9 @@ export class EventsService {
   }
 
 
-  getPendingEventsCounts_1_0(): Observable<any> {
-    return this.http.get<any>(this.pendingEventsCountsUrl);
-  }
+  // getPendingEventsCounts_1_0(): Observable<any> {
+  //   return this.http.get<any>(this.pendingEventsCountsUrl);
+  // }
 
   // ✅ From events data
   getConsolePendingMessages_1_0(): Observable<any> {
@@ -211,7 +299,10 @@ export class EventsService {
   getEventsPendingMessages_1_0(): Observable<any> {
     return this.http.get<any>(`${this.pendingMessagesUrl}`);
   }
-
+ getCameraWisePendingCounts_1_0(queueName: string): Observable<any> {
+    const params = new HttpParams().set("queueName", queueName);
+    return this.http.get<any>(this.cameraWisePendingCountsUrl, { params });
+  }
   // getActionTagCategories(): Observable<any> {
   //   return this.http.get<any>(this.actionTagCategoriesUrl);
   // }
@@ -266,9 +357,18 @@ export class EventsService {
   //   return this.http.get<any>(url, { params });
   // }
 
-  getEventMoreInfo(eventId: number): Observable<any> {
+ getEventMoreInfo(eventId: number): Observable<any> {
+    if (this.eventMoreInfoCache.has(eventId)) {
+      return this.eventMoreInfoCache.get(eventId)!;
+    }
+
     const url = `${this.getEventsMoreInfoUrl}?eventId=${eventId}`;
-    return this.http.get<any>(url);
+    const request$ = this.http.get<any>(url).pipe(
+      shareReplay(1)
+    );
+
+    this.eventMoreInfoCache.set(eventId, request$);
+    return request$;
   }
 
   addComment(event: {
@@ -279,26 +379,35 @@ export class EventsService {
   }): Observable<any> {
     return this.http.post<any>(this.addCommentForEventUrl, event, {
       headers: { "Content-Type": "application/json" },
-    });
+     }).pipe(
+      tap(() => {
+        // Invalidate cache
+        if (event.eventsId) this.eventMoreInfoCache.delete(Number(event.eventsId));
+      })
+    );
   }
 
-  putEventsMoreInfo(event: {
-    eventsId: string;
-    userlevel: number;
-    user: number;
-    alarm: string;
-    landingTime: string;
-    receivedTime: string;
-    reviewStartTime: string;
-    reviewEndTime: string;
-    actionTag: number;
-    subActionTag: number;
-    notes: string;
-  }): Observable<any> {
-    console.log(event, "kk");
-    return this.http.put<any>(this.updateEventsMoreInfoUrl, event, {
-      headers: { "Content-Type": "application/json" },
+
+
+  putEventsMoreInfo(event: any): Observable<any> {
+    // The backend now expects Form data for the update logic
+    const formData = new FormData();
+    Object.keys(event).forEach(key => {
+      if (event[key] !== undefined && event[key] !== null) {
+        formData.append(key, event[key]);
+      }
     });
+
+    // Log FormData entries for verification
+    formData.forEach((value, key) => {
+    });
+
+    return this.http.put<any>(this.updateEventsMoreInfoUrl, formData).pipe(
+      tap(() => {
+        // Invalidate cache
+        if (event.eventId) this.eventMoreInfoCache.delete(Number(event.eventId));
+      })
+    );
   }
 
   timezoneDropdown() {
@@ -345,8 +454,12 @@ export class EventsService {
     return moment.tz(timezone).day();
   }
 
-  getEmailDataForVMSEvents(payload: any) {
-    // let url = `${environment.guard_monitoring_url}/getEmailDataForClosedEvent_1_0`;
+ getEmailDataForVMSEvents(payload: any): Observable<any> {
+    const cacheKey = `${payload?.siteId}-${payload?.cameraId}-${payload?.alertTypeId}-${payload?.subTypeId}`;
+    
+    if (this.emailDataCache.has(cacheKey)) {
+      return this.emailDataCache.get(cacheKey)!;
+    }
     let url = `${environment.guard_monitoring_url}/getEmailDataForVMSEvents_1_0`;
        
 
@@ -364,7 +477,13 @@ export class EventsService {
     );
     params = params.set("callingSystemDetail", "dashboard");
 
-    return this.http.get(url, { params: params });
+
+    const request$ = this.http.get(url, { params: params }).pipe(
+      shareReplay(1)
+    );
+
+    this.emailDataCache.set(cacheKey, request$);
+    return request$;
   }
 
   public getTimeByTimezone(timezone: string = "Asia/Kolkata", time?: any) {
@@ -372,7 +491,7 @@ export class EventsService {
   }
 
   sendResolution(payload: any) {
-    console.log(payload);
+    // console.log(payload);
     let url = `${environment.guard_monitoring_url}/sendResolutionEmail_1_0`;
     // let url = `${environment.guard_monitoring_url}/eventsGenericEmail_2_0`;
 
@@ -423,16 +542,30 @@ export class EventsService {
   }
 
 
-  getAlertCategoriesForSiteId(siteIdOrPayload: any) {
+
+  getAlertCategoriesForSiteId(siteIdOrPayload: any): Observable<any> {
+    const siteId = (typeof siteIdOrPayload === 'object') ? siteIdOrPayload?.siteId : siteIdOrPayload;
+    
+    if (siteId && this.alertCategoriesCache.has(siteId)) {
+      return this.alertCategoriesCache.get(siteId)!;
+    }
+
     let url = `${environment.guard_monitoring_url}/getAlertCategoriesForSiteId_1_0`;
     let params = new HttpParams();
 
-    const siteId = (typeof siteIdOrPayload === 'object') ? siteIdOrPayload?.siteId : siteIdOrPayload;
+    // const siteId = (typeof siteIdOrPayload === 'object') ? siteIdOrPayload?.siteId : siteIdOrPayload;
 
     if (siteId) {
       params = params.set("siteId", siteId);
     }
 
-    return this.http.get<any>(url, { params });
+   const request$ = this.http.get<any>(url, { params }).pipe(
+      shareReplay(1)
+    );
+
+    if (siteId) {
+      this.alertCategoriesCache.set(siteId, request$);
+    }
+    return request$;
   }
 }

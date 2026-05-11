@@ -84,6 +84,14 @@ export const routes: Routes = [
         (m) => m.ProductsComponent,
       ),
   },
+    {
+    path: "404",
+    loadComponent: () =>
+      import("./pages/not-found/not-found.component").then(
+        (m) => m.NotFoundComponent,
+      ),
+  },
+  { path: "**", redirectTo: "/404" },
 ];
 
 @NgModule({

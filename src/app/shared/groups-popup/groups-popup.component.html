@@ -138,13 +138,33 @@
             </div>
           </div>
 
-          <button
-            class="delete-btn"
-            *ngIf="(user.status || '').toLowerCase() === 'active'"
-            (click)="onUserDelete(user)"
-          >
-            ✕
-          </button>
+          <div class="user-actions">
+            <div class="routing-controls" *ngIf="user.routingType">
+              <select class="routing-type-select"
+                      [(ngModel)]="user.routingType"
+                      (change)="onRoutingTypeChange(user)">
+                <option value="vms">LIVE-VMS -> LIVE-VMS</option>
+                <option value="console">LIVE-VMS -> EVENTS-CONSOLE</option>
+              </select>
+
+              <select class="routing-queue-select"
+                      *ngIf="user.routingType === 'console'"
+                      [(ngModel)]="user.routingQueueId"
+                      (change)="onRoutingTypeChange(user)">
+                <option [ngValue]="null">Select Queue</option>
+                <option *ngFor="let q of filteredRoutingQueues" [ngValue]="q.id">
+                  {{ q.name }}
+                </option>
+              </select>
+            </div>
+            <button
+              class="delete-btn"
+              *ngIf="(user.status || '').toLowerCase() === 'active'"
+              (click)="onUserDelete(user)"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       </div>
     </ng-container>

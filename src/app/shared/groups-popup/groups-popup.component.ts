@@ -14,7 +14,7 @@ import { HttpClientModule } from "@angular/common/http";
 import { GroupsService } from "src/app/pages/groups/groups.service";
 import { ImagePipe } from "src/app/shared/image.pipe";
 import { NotificationService } from "src/app/shared/notification.service";
-import { ProfileImageRendererComponent } from "../renderers/profile-image-renderer.component";
+import { ProfileImageRendererComponent } from "src/app/shared/renderers/profile-image-renderer.component";
 
 interface DisplayCamera {
   cameraId: string | number;
@@ -44,6 +44,8 @@ interface DisplayUser {
   status: string;
   profileImage?: string | null;
   profileImageUrl?: string | null;
+  routingType?: string | null;
+  routingQueueId?: number | null;
 }
 
 @Component({
@@ -68,6 +70,7 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
   @Input() camera: any[] = [];
   @Input() data: any;
   @Input() flows: any[] = [];
+  @Input() allQueues: any[] = [];
   @Input() loading: boolean = false; // 👈 Add loading input
 
   @Output() sectionChange = new EventEmitter<string>();
@@ -77,6 +80,10 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
 
   get isActive(): boolean {
     return (this.data?.status ?? "").toString().toLowerCase() === "active";
+  }
+
+  get filteredRoutingQueues(): any[] {
+    return this.allQueues.filter(q => q.category === 'Console' && q.level === 2);
   }
 
   showPopup = false;
@@ -141,7 +148,7 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
     if (!this.data || !this.data.id) return;
 
     this.notificationService
-      .confirm(`This action will disable all queues and remove queue access for users.`, { acceptLabel: "Yes", rejectLabel: "No" })
+      .confirm(`This action will disable all queues and remove queue access for users.`,{acceptLabel:"Yes",rejectLabel:"No"})
       .then((res: any) => {
         const input = event.target as HTMLInputElement;
         const isActive = input.checked;
@@ -221,6 +228,39 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
     return flow ? flow.pathString : `Flow ${flowId}`;
   }
 
+  formatRoutingType(type: string | null | undefined): string {
+    if (!type) return '';
+    const t = type.toLowerCase();
+    if (t === 'vms') return 'LIVE-VMS -> LIVE-VMS';
+    if (t === 'console') return 'LIVE-VMS -> EVENTS-CONSOLE';
+    return type.toUpperCase();
+  }
+
+  onRoutingTypeChange(user: DisplayUser) {
+    if (!this.data?.id || !user.userId || !user.routingType) return;
+
+    // Reset routingQueueId if routingType is vms
+    if (user.routingType === 'vms') {
+      user.routingQueueId = null;
+    }
+
+    const payload = {
+      queueId: this.data.id,
+      userId: user.userId,
+      routingType: user.routingType,
+      routingQueueId: user.routingQueueId || null
+    };
+
+    this.groupsService.updateQueueUserRoutingType(payload).subscribe({
+      next: (res) => {
+        this.showSuccess("Update Routing Type", res.message || "Routing type updated successfully");
+      },
+      error: (err) => {
+        this.showError("Update Routing Type Failed", err.error?.message || "Failed to update routing type");
+      }
+    });
+  }
+
   toggleSiteExpand(site: DisplaySite) {
     site.expanded = !site.expanded;
   }
@@ -296,6 +336,8 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
       status: user.status || "N/A",
       profileImage: user.profileImage || null,
       profileImageUrl: user.profileImageUrl || null,
+      routingType: user.routingType || null,
+      routingQueueId: user.routingQueueId || null,
     }));
 
     this.sitesDisplay = queuesData.map((site: any) => {

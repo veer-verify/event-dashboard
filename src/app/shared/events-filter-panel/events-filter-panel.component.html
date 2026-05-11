@@ -119,7 +119,7 @@
       <span class="events-filter-duration-max">1440</span>
     </div>
 
-    <div class="duration-display-box">
+      <div class="duration-display-box">
       <span class="duration-display-value">{{
         formatDuration(model.minDuration)
       }}</span>
@@ -211,31 +211,7 @@
     </select>
   </div>
 
-  <!-- Queue Name -->
-  <div class="events-filter-group" *ngIf="queuesChecked || consolesChecked">
-    <!-- <label class="events-filter-label">Select Queue Name</label> -->
-    <select
-      class="events-filter-select"
-      [(ngModel)]="model.queueName"
-      (ngModelChange)="onCriteriaChanged()"
-    >
-      <option value="All">Queue Name</option>
-      <option *ngFor="let q of queues" [value]="q">{{ q }}</option>
-    </select>
-  </div>
 
-  <!-- Queue Level -->
-  <div class="events-filter-group" *ngIf="queuesChecked || consolesChecked">
-    <!-- <label class="events-filter-label">Select Queue Level</label> -->
-    <select
-      class="events-filter-select"
-      [(ngModel)]="model.queueLevel"
-      (ngModelChange)="onCriteriaChanged()"
-    >
-      <option value="All">Queue Level</option>
-      <option *ngFor="let lvl of queueLevels" [value]="lvl">{{ lvl }}</option>
-    </select>
-  </div>
 
   <!-- Footer buttons -->
   <div class="events-filter-actions">

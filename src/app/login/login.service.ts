@@ -4,6 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import * as CryptoJS from 'crypto-js';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
+import { EventsService } from '../pages/events/events.service';
 
 
 export interface LoginResponse {
@@ -43,7 +44,7 @@ export class AuthService {
   /** 🔹 Encryption key (must match backend) */
   private readonly encryptionKey = 'verifai';
 
-  constructor(private http: HttpClient, private router: Router) { }
+  constructor(private http: HttpClient, private router: Router,private eventsService: EventsService) { }
 
   /** =========================
    * AES Encrypt Password -> Base64
@@ -180,6 +181,7 @@ export class AuthService {
     sessionStorage.removeItem(this.USER_KEY);
     sessionStorage.removeItem(this.TOKEN_KEY);
   
+    this.eventsService.stopPendingCountsWebSocket();
     this.router.navigate(['/login'], { replaceUrl: true });
   }
 }

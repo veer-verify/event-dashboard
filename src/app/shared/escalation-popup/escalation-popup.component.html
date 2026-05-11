@@ -1,11 +1,11 @@
 <!-- ===================== ESCALATION DETAILS VIEW ===================== -->
-<div class="popup-container" *ngIf="!isAddCommentView">
+<div class="popup-container" *ngIf="!isAddCommentView && !isEmailPreviewView">
   <div class="section">
     <!-- BASIC INFO -->
     <div class="basic-info" *ngIf="selectedEvent">
       <h2>BASIC INFO</h2>
       <div class="info-table">
-        <div class="row" *ngFor="let info of basicInfoFields">
+        <div class="row" *ngFor="let info of formattedBasicInfoData; trackBy: trackByBasicInfo">
           <div class="label">{{ info.label }}</div>
           <div class="colon">:</div>
           <div class="value">
@@ -13,26 +13,23 @@
               *ngIf="info.field === 'eventType'"
               class="dot"
               [ngStyle]="{
-                'background-color': getEventDotColor(selectedEvent[info.field])
+                'background-color': getEventDotColor(info.value)
               }"
             ></span>
-
-            <ng-container
-              *ngIf="
-                info.label.toLowerCase().includes('time');
-                else normalValue
-              "
-            >
-              {{
-                selectedEvent[info.field]
-                  ? formatDateTime(selectedEvent[info.field])
-                  : info.default || "--"
-              }}
-            </ng-container>
-
-            <ng-template #normalValue>
-              {{ selectedEvent[info.field] || info.default || "--" }}
-            </ng-template>
+            {{ info.value }}
+          </div>
+        </div>
+        
+        <div class="row" *ngIf="isPending">
+          <div class="label">Object Detection</div>
+          <div class="colon">:</div>
+          <div class="value" style="display: flex; align-items: center;">
+            <div class="object-tags" style="margin-bottom: 0;">
+              <div class="object-tag" *ngFor="let obj of parsedObjects">
+                <span class="obj-val">{{ obj }}</span>
+              </div>
+              <span *ngIf="parsedObjects.length === 0" class="no-data" style="margin: 0; font-size: inherit;">--</span>
+            </div>
           </div>
         </div>
       </div>
@@ -42,11 +39,12 @@
     <div class="alarm-events">
       <h2>ALARM EVENTS ON</h2>
       <ag-grid-angular
-        style="width: 100%; height: 250px"
+        style="width: 100%; min-height: 150px;"
+        domLayout="autoHeight"
         theme="legacy"
         class="ag-theme-alpine"
         [rowData]="alarmRowData"
-        [columnDefs]="alarmColumnDefs"
+        [columnDefs]="activeAlarmColumnDefs"
         [defaultColDef]="defaultColDef"
         [enableCellTextSelection]="true"
         [enableRangeSelection]="true"
@@ -59,24 +57,70 @@
     </div>
   </div>
 
-  <!-- DURATION -->
-  <div class="total-duration" *ngIf="selectedEvent">
-    <span *ngIf="selectedEvent.eventDuration">
-      TOTAL DURATION : {{ selectedEvent.eventDuration }}
-    </span>
-    <span>INDIA {{ selectedEvent.indiaDuration || "00:00:00" }}</span>
-    <span>US {{ selectedEvent.usDuration || "00:00:00" }}</span>
+  <!-- PENDING SPECIFIC DETAILS (Redesign) -->
+  <div class="pending-details-section" *ngIf="isPending && selectedEvent">
+    <div class="report-header">
+      <h2>MEDIA GALLERY</h2>
+    </div>
+    <div class="media-gallery">
+      <div class="media-group" *ngIf="imageUrls.length > 0">
+        <h3>IMAGES</h3>
+        <div class="media-grid">
+          <a *ngFor="let url of imageUrls" href="#" (click)="openImagePopup(url, $event)" class="media-item">
+            <ng-container *ngIf="(url | image | async) as resolved; else imgLoading">
+              <img [src]="resolved" alt="Event Image" onerror="this.onerror=null; this.src='assets/image.png'" />
+            </ng-container>
+            <ng-template #imgLoading>
+              <div class="img-loader">
+                <div class="mini-spinner"></div>
+              </div>
+            </ng-template>
+          </a>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="div">
-    <p class="borderline"></p>
+  <ng-container *ngIf="!isPending">
+    <!-- DURATION -->
+    <div class="total-duration" *ngIf="selectedEvent">
+      <span *ngIf="selectedEvent.eventDuration">
+        TOTAL DURATION : {{ selectedEvent.eventDuration }}
+      </span>
+      <span>INDIA {{ selectedEvent.indiaDuration || "00:00:00" }}</span>
+      <span>US {{ selectedEvent.usDuration || "00:00:00" }}</span>
+    </div>
+  </ng-container>
+
+  <div class="div" style="margin-top: 5px; margin-bottom: 5px;">
+    <hr class="borderline" style="margin: 0; border: none; border-bottom: 1px solid rgba(0,0,0,0.25);" />
   </div>
 
   <!-- ======================= ESCALATION REPORT ======================= -->
-  <div class="report-header">
-    <h2>ESCALATION REPORT</h2>
+  <div class="report-header" style="margin-top: 10px;">
+    <h2 style="margin: 0;">ESCALATION REPORT</h2>
 
-    <div class="timezone">
+    <!-- DOWNLOAD ACTIONS (Closed only) -->
+    <div class="report-actions" *ngIf="!isPending" style="display: flex; align-items: center; gap: 15px;">
+      <div class="action-item" (click)="downloadExcel()" title="Download Excel" style="cursor: pointer; display: flex; align-items: center;">
+        <img src="assets/icons/logo.png" alt="Excel" width="22" height="22" />
+      </div>
+
+      <div class="action-item pdf-container" style="position: relative; display: flex; align-items: center; gap: 8px;">
+        <i class="pi pi-file-pdf" (click)="showPdfOptions = !showPdfOptions" title="Download PDF" style="cursor: pointer; font-size: 1.4rem; color: #e91e63;"></i>
+        
+        <div class="pdf-dropdown" *ngIf="showPdfOptions" style="display: flex; align-items: center; gap: 5px; background: #f8f9fa; border: 1px solid #ddd; padding: 4px 8px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+          <select [(ngModel)]="selectedLogoType" style="padding: 2px 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px;">
+            <option *ngFor="let type of logoTypes" [value]="type">{{ type }}</option>
+          </select>
+          <button (click)="downloadPdf()" style="padding: 2px 8px; font-size: 11px; background: #1955af; color: white; border: none; border-radius: 3px; cursor: pointer;">
+            GO
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="timezone" *ngIf="!isPending">
       <label>
         <input
           type="radio"
@@ -123,7 +167,7 @@
     theme="legacy"
     class="ag-theme-alpine"
     [rowData]="escalationRowData"
-    [columnDefs]="escalationColumnDefs"
+    [columnDefs]="activeEscalationColumnDefs"
     [defaultColDef]="{ resizable: true }"
     [pagination]="true"
     [enableCellTextSelection]="true"
@@ -136,112 +180,212 @@
   >
   </ag-grid-angular>
 
-  <!-- ======================= COMMENTS ======================= -->
-  <!-- ======================= COMMENTS ======================= -->
-  <div class="report-header">
-    <h2>COMMENTS</h2>
-    <div class="timezone">
-      <!-- instead of addComments(), call a small handler that notifies parent -->
-      <p-button class="today-btn" (onClick)="handleAddClick()">
-        + ADD
-      </p-button>
-    </div>
-  </div>
-
-  <div class="div">
-    <p class="borderline"></p>
-  </div>
-
-  <ag-grid-angular
-    #commentGrid
-    style="width: 100%"
-    theme="legacy"
-    class="ag-theme-alpine"
-    [rowData]="commentRowData"
-    [columnDefs]="commentColumnDefs"
-    [defaultColDef]="{ resizable: true }"
-    [pagination]="true"
-    [paginationPageSize]="3"
-    [enableCellTextSelection]="true"
-    [enableRangeSelection]="true"
-    [copyHeadersToClipboard]="true"
-    [paginationPageSizeSelector]="[3, 20, 50, 100]"
-    domLayout="autoHeight"
-    (gridReady)="onCommentGridReady($event)"
-  >
-  </ag-grid-angular>
-</div>
-
-<!-- ===================== ADD COMMENT VIEW ===================== -->
-<div class="add-comment-container" *ngIf="isAddCommentView">
-  <div class="add-comment-header">
-    <div class="add-comment-header-left">
-      <button
-        type="button"
-        class="icon-circle-btn"
-        (click)="onCancelAddComment()"
-        aria-label="Back"
-      >
-        ←
-      </button>
-      <span class="add-comment-title">ADD COMMENT</span>
+  <!-- ======================= ACTIONS TAKEN ======================= -->
+  <ng-container *ngIf="!isPending">
+    <div class="report-header" style="margin-top: 20px;">
+      <h2>ACTIONS TAKEN</h2>
     </div>
 
-    <button
-      type="button"
-      class="icon-circle-btn"
-      (click)="onCancelAddComment()"
-      aria-label="Close"
+    <div class="div">
+      <p class="borderline"></p>
+    </div>
+
+    <ag-grid-angular
+      style="width: 100%"
+      theme="legacy"
+      class="ag-theme-alpine"
+      [rowData]="actionsTakenRowData"
+      [columnDefs]="actionsTakenColumnDefs"
+      [defaultColDef]="{ resizable: true }"
+      [pagination]="true"
+      [paginationPageSize]="3"
+      [enableCellTextSelection]="true"
+      [enableRangeSelection]="true"
+      [copyHeadersToClipboard]="true"
+      [paginationPageSizeSelector]="[3, 20, 50, 100]"
+      domLayout="autoHeight"
+      (gridReady)="$event.api.sizeColumnsToFit()"
     >
-      ✕
-    </button>
+    </ag-grid-angular>
+  </ng-container>
+
+  <!-- ======================= COMMENTS ======================= -->
+  <ng-container *ngIf="!isPending">
+    <div class="report-header">
+      <h2>COMMENTS</h2>
+      <div class="timezone">
+        <!-- instead of addComments(), call a small handler that notifies parent -->
+        <p-button class="today-btn" (onClick)="handleAddClick()">
+          + ADD
+        </p-button>
+      </div>
+    </div>
+
+    <div class="div">
+      <p class="borderline"></p>
+    </div>
+
+    <ag-grid-angular
+      #commentGrid
+      style="width: 100%"
+      theme="legacy"
+      class="ag-theme-alpine"
+      [rowData]="commentRowData"
+      [columnDefs]="commentColumnDefs"
+      [defaultColDef]="{ resizable: true }"
+      [pagination]="true"
+      [paginationPageSize]="3"
+      [enableCellTextSelection]="true"
+      [enableRangeSelection]="true"
+      [copyHeadersToClipboard]="true"
+      [paginationPageSizeSelector]="[3, 20, 50, 100]"
+      domLayout="autoHeight"
+      (gridReady)="onCommentGridReady($event)"
+    >
+    </ag-grid-angular>
+  </ng-container>
+</div>
+
+
+
+<!-- ===================== IMAGE LIGHTBOX DIALOG ===================== -->
+<p-dialog
+  [(visible)]="isImagePopupVisible"
+  [modal]="true"
+  [dismissableMask]="true"
+  [showHeader]="false"
+  [style]="{width: '90vw', height: '90vh', background: 'transparent'}"
+  [contentStyle]="{padding: '0', overflow: 'hidden', position: 'relative', width: '100%', height: '100%', display: 'flex', 'align-items': 'center', 'justify-content': 'center', background: 'rgba(0,0,0,0.9)'}"
+>
+  <button 
+    class="close-btn" 
+    (click)="closeImagePopup()" 
+    style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; z-index: 10; transition: background 0.2s;"
+    onmouseover="this.style.background='rgba(255,255,255,0.4)'"
+    onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+    ✕
+  </button>
+  <ng-container *ngIf="(selectedImageUrl | image | async) as resolved; else lightboxLoading">
+    <img [src]="resolved" style="width: 100%; height: 100%; object-fit: contain; display: block;" onerror="this.onerror=null; this.src='assets/image.png'" />
+  </ng-container>
+  <ng-template #lightboxLoading>
+    <div class="img-loader">
+      <div class="mini-spinner" style="width: 40px; height: 40px; border-width: 3px;"></div>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- ===================== EMAIL PREVIEW VIEW ===================== -->
+<div class="email-preview-view-container" *ngIf="isEmailPreviewView">
+  <div class="preview-header">
+    <div class="header-left">
+      <button class="back-btn" (click)="closeEmailPreview()">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <h2 style="margin: 0; font-size: 16px;">EMAIL PREVIEW</h2>
+    </div>
   </div>
 
-  <div class="add-comment-body">
-    <!-- Tag -->
-    <div class="form-group">
-      <label class="form-label">Tag</label>
-      <select
-        class="select-input"
-        [(ngModel)]="addCommentForm.tag"
-        name="commentTag"
-      >
-        <option [ngValue]="null">Select</option>
-        <option *ngFor="let t of commentTags" [ngValue]="t.value">
-          {{ t.label }}
-        </option>
-      </select>
-    </div>
+  <div *ngIf="isEmailPreviewLoading" class="center-box" style="display: flex; justify-content: center; align-items: center; min-height: 400px;">
+    <div class="spinner"></div>
+  </div>
 
-    <!-- Comment text -->
-    <div class="form-group">
-      <label class="form-label">Comment</label>
-      <textarea
-        class="textarea-input"
-        rows="6"
-        placeholder="Text Here"
-        [(ngModel)]="addCommentForm.notes"
-        name="commentNotes"
-      ></textarea>
-    </div>
+  <div class="email-wrapper" *ngIf="!isEmailPreviewLoading && emailPreviewData">
+    <div style="overflow-y: auto; max-height: 80vh; background: #fff; border: 1px solid #dcdcdc; margin: 0 auto; max-width: 900px;">
+      <div class="email-logo">
+        <img [src]="emailPreviewData?.logoUrl" alt="no image" />
+      </div>
 
-    <!-- Buttons -->
-    <div class="add-comment-actions">
-      <button
-        type="button"
-        class="btn btn-outline"
-        (click)="onCancelAddComment()"
-      >
-        CANCEL
-      </button>
+      <div class="email-site">
+        <div class="site-name">{{ selectedItem?.eventDetails?.[0]?.siteName }}</div>
+      </div>
 
-      <button
-        type="button"
-        class="btn btn-primary"
-        (click)="onSubmitAddComment()"
-      >
-        ADD
-      </button>
+      <div class="email-alert">
+        {{ emailPreviewData?.emailSubject }}
+      </div>
+
+      <div class="email-body-section">
+        <table class="email-table">
+          <tr>
+            <td class="label">To</td>
+            <td class="value">
+              {{ emailPreviewData?.recipientEmails?.length ? emailPreviewData.recipientEmails.join(", ") : "-" }}
+            </td>
+          </tr>
+          <tr>
+            <td class="label">Cc</td>
+            <td class="value">
+              {{ emailPreviewData?.Cc?.length ? emailPreviewData.Cc.join(", ") : "-" }}
+            </td>
+          </tr>
+          <tr>
+            <td class="label">Date & Time</td>
+            <td class="value">
+              {{ emailPreviewData?.emailFields?.DATE }} - {{ emailPreviewData?.emailFields?.TIME }}
+            </td>
+          </tr>
+        </table>
+
+        <hr class="divider" />
+
+        <table class="email-table">
+          <tr>
+            <td class="label">Description</td>
+            <td class="value description">
+              {{ emailPreviewData?.emailBody }}
+            </td>
+          </tr>
+        </table>
+
+        <table class="email-table">
+          <tr>
+            <td class="label">Camera</td>
+            <td class="value">{{ selectedItem?.eventDetails?.[0]?.cameraName }}</td>
+          </tr>
+        </table>
+
+        <hr class="divider" />
+
+        <!-- EVENT IMAGE (from main table) -->
+        <div class="email-image" *ngIf="emailPreviewData?.imageUrls?.length || imageUrls?.length">
+          <ng-container *ngIf="( (emailPreviewData?.imageUrls?.[0] || imageUrls?.[0]) | image | async) as resolved; else imgLoading">
+            <img [src]="resolved" alt="Event Snapshot" style="width: 300px; height: 300px; object-fit: cover; border: 1px solid #ccc;" />
+          </ng-container>
+          <ng-template #imgLoading>
+            <div class="center-box" style="height: 300px; width: 300px; margin: 0 auto; background: #fafafa; border: 1px solid #eee; display: flex; justify-content: center; align-items: center;">
+              <div class="spinner"></div>
+            </div>
+          </ng-template>
+        </div>
+
+        <hr class="divider" *ngIf="emailPreviewData?.imageUrls?.length || imageUrls?.length" />
+
+        <table class="email-table">
+          <tr>
+            <td class="label">Actions Taken</td>
+            <td class="value">{{ currentPreviewRow?.actionsTaken || "-" }}</td>
+          </tr>
+        </table>
+
+        <table class="email-table">
+          <tr>
+            <td class="label">Notes</td>
+            <td class="value">{{ currentPreviewRow?.notes || "-" }}</td>
+          </tr>
+        </table>
+
+        <div class="email-footer-text">
+          Please review the information above.<br /><br />
+          Call <b>(844) 438-4847 (ext. 1)</b> or email
+          <b>support&#64;ivisecurity.com</b>
+        </div>
+      </div>
+      <div class="email-gradient"></div>
     </div>
+  </div>
+
+  <div *ngIf="!isEmailPreviewLoading && !emailPreviewData" class="center-box" style="display: flex; justify-content: center; align-items: center; min-height: 200px;">
+    <p>No email preview data available</p>
   </div>
 </div>
+

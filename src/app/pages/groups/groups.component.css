@@ -400,10 +400,27 @@ button,
   align-items: center;
 }
 
+.escalated-card.disabled-card {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background-color: #f9f9f9;
+  border-color: #eee;
+}
+
+.escalated-card.disabled-card:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: #eee;
+}
+
+.custom-checkbox:disabled {
+  cursor: not-allowed;
+}
+
 .escalated-card:hover {
   border-color: #ed3237;
   box-shadow: 0 4px 12px rgba(237, 50, 55, 0.1);
-  transform: translateY(-2px);
+  transform: translateY(-0.1px);
 }
 
 .escalated-card-content {

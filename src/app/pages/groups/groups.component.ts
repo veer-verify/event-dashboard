@@ -15,7 +15,7 @@ import { OverlayPanelModule } from 'primeng/overlaypanel';
 
 import { NotificationService } from 'src/app/shared/notification.service';
 
-import { ProfileImageRendererComponent } from "../../shared/renderers/profile-image-renderer.component";
+import { ProfileImageRendererComponent } from "src/app/shared/renderers/profile-image-renderer.component";
 
 // Register module
 ModuleRegistry.registerModules([QuickFilterModule]);
@@ -671,28 +671,32 @@ export class GroupsComponent implements OnInit, OnDestroy {
 
   // Check if all visible (filtered) users are selected
   areAllFilteredUsersSelected(): boolean {
-    const filteredIds = this.filteredUsers.map((u) => u.userId);
+    const filterableIds = this.filteredUsers
+      .filter((u) => u.canBeAdded !== 'F')
+      .map((u) => u.userId);
     return (
-      filteredIds.every((id) => this.selectedUserIds.includes(id)) &&
-      filteredIds.length > 0
+      filterableIds.every((id) => this.selectedUserIds.includes(id)) &&
+      filterableIds.length > 0
     );
   }
 
   // Toggle select/deselect all visible users
   toggleSelectAll(isChecked: boolean) {
-    const filteredIds = this.filteredUsers.map((u) => u.userId);
+    const filterableIds = this.filteredUsers
+      .filter((u) => u.canBeAdded !== 'F')
+      .map((u) => u.userId);
 
     if (isChecked) {
-      // Add all filtered users that are not already selected
-      filteredIds.forEach((id) => {
+      // Add all filterable users that are not already selected
+      filterableIds.forEach((id) => {
         if (!this.selectedUserIds.includes(id)) {
           this.selectedUserIds.push(id);
         }
       });
     } else {
-      // Remove all filtered users from selected
+      // Remove all filterable users from selected
       this.selectedUserIds = this.selectedUserIds.filter(
-        (id) => !filteredIds.includes(id)
+        (id) => !filterableIds.includes(id)
       );
     }
   }
@@ -913,10 +917,19 @@ export class GroupsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const category = this.selectedItem?.category;
+    let routingType = "";
+    if (category === "Console" || category === "Timed-Out") {
+      routingType = "console";
+    } else if (category === "Manual") {
+      routingType = "vms";
+    }
+
     const payload = {
       queueId: this.selectedItem?.id || 0,
       userId: this.selectedUserIds,
       createdBy: this.currentUser?.UserId || 0,
+      routingType: routingType
     };
 
     this.loadingUser = true;
@@ -1101,8 +1114,16 @@ export class GroupsComponent implements OnInit, OnDestroy {
   loadUsers() {
     this.groupsService.getUsersByDepartment(this.selectedDept).subscribe({
       next: (res: any) => {
-        // Correctly map the userDetails array
-        this.users = Array.isArray(res.userDetails) ? res.userDetails : [];
+        // Correctly map the userDetails array and remove duplicates by userId
+        const rawUsers = Array.isArray(res.userDetails) ? res.userDetails : [];
+        const seenIds = new Set();
+        this.users = rawUsers.filter((user: any) => {
+          if (seenIds.has(user.userId)) {
+            return false;
+          }
+          seenIds.add(user.userId);
+          return true;
+        });
         this.selectedUserIds = []; // reset selection
       },
       error: (err) => console.error("Error fetching users:", err),

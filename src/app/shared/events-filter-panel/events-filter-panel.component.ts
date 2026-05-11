@@ -158,7 +158,7 @@ export class EventsFilterPanelComponent implements OnChanges {
   };
 
   onCriteriaChanged(): void {
-    console.log(this.model)
+    // console.log(this.model)
     this.criteriaChange.emit({ ...this.model });
   }
 

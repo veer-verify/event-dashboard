@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule, UpperCasePipe } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { CardModule } from 'primeng/card';
@@ -54,6 +54,7 @@ export class DashboardComponent implements OnInit {
   timezones: any[] = [];
   timeZone = "";
 
+  @ViewChild(CalendarComponent) calendarComponent!: CalendarComponent;
   constructor(
     private dashboardService: DashboardService,
     private eventService: EventsService,
@@ -97,7 +98,33 @@ export class DashboardComponent implements OnInit {
     this.selectedTimezone = this.timezones.find(
       (el) => el.timezoneCode === this.timeZone,
     );
-    this.onDateRangeSelected(this.event);
+   }
+
+  applyFilters() {
+    if (this.calendarComponent) {
+      const start = this.calendarComponent.startDate;
+      const end = this.calendarComponent.endDate;
+
+      let startTime = this.formatTime24(start);
+      let endTime = this.formatTime24(end);
+
+      if (this.calendarComponent.wholeDay) {
+        startTime = "00:00:00";
+        endTime = "23:59:59";
+      }
+
+      const event = {
+        startDate: start,
+        startTime: startTime,
+        endDate: end,
+        endTime: endTime,
+      };
+      this.onDateRangeSelected(event);
+    }
+  }
+
+  private formatTime24(date: Date): string {
+    return date.toTimeString().split(" ")[0];
   }
 
   onDateRangeSelected(event: {

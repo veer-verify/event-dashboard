@@ -1,0 +1,31 @@
+<div class="not-found-container">
+  <div class="content-wrapper">
+    <div class="error-code">
+      <span>4</span>
+      <div class="circle">
+        <img src="assets/headericons/direction-wueues.svg" alt="App Logo" class="app-logo">
+      </div>
+      <span>4</span>
+    </div>
+    
+    <h1 class="error-title">Oops! Page Not Found</h1>
+    <p class="error-message">
+      The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.
+    </p>
+    
+    <div class="actions">
+      <button class="go-home-btn" routerLink="/dashboard">
+        <i class="pi pi-home"></i> BACK TO DASHBOARD
+      </button>
+      <button class="back-btn" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i> GO BACK
+      </button>
+    </div>
+  </div>
+  
+  <div class="background-decor">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+  </div>
+</div>
+    

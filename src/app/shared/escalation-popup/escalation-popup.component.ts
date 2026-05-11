@@ -8,15 +8,19 @@ import {
   OnInit,
   ChangeDetectionStrategy,
   signal,
+  HostListener,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { AgGridModule, ICellRendererAngularComp } from "ag-grid-angular";
 import { ColDef, GridApi, Column, IRichCellEditorParams, ICellRendererParams } from "ag-grid-community";
 import { DialogModule } from "primeng/dialog";
+import { OverlayPanelModule, OverlayPanel } from "primeng/overlaypanel";
 import { FormsModule } from "@angular/forms";
 import { ButtonModule } from "primeng/button";
+import { ViewChild } from "@angular/core";
 import { EventsService } from "src/app/pages/events/events.service";
-import { ProfileImageRendererComponent } from "../renderers/profile-image-renderer.component";
+import { ProfileImageRendererComponent } from "src/app/shared/renderers/profile-image-renderer.component";
+import { ImagePipe } from "src/app/shared/image.pipe";
 
 import { NotificationService } from "src/app/shared/notification.service";
 
@@ -30,8 +34,9 @@ import { NotificationService } from "src/app/shared/notification.service";
     FormsModule,
     AgGridModule,
     DialogModule,
+    OverlayPanelModule,
     ButtonModule,
-    // ProfileImageRendererComponent, // 👈 make renderer available here
+    ImagePipe,
   ],
   providers: [],
 })
@@ -48,10 +53,11 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
 
   // 👇 NEW: queueUsers from your queue API response
   @Input() queueUsers: any[] = [];
+  @Input() isPending = false;
 
   @Output() close = new EventEmitter<void>();
   @Output() refreshMoreInfo = new EventEmitter<number>();
-  @Output() addCommentClicked = new EventEmitter<void>();
+  @Output() addCommentClicked = new EventEmitter<any>();
 
   currentUser: any = null;
 
@@ -95,6 +101,13 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
 
   /** View toggle: false = ESCALATION DETAILS, true = ADD COMMENT **/
   isAddCommentView = false;
+  isEmailPreviewView = false;
+  emailPreviewData: any = null;
+  isEmailPreviewLoading = false;
+  currentPreviewRow: any = null;
+
+  formattedBasicInfoData: any[] = [];
+
 
   /** ADD COMMENT form model **/
   commentTags = [
@@ -108,10 +121,58 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
     notes: "",
   };
 
+  /** IMAGE LIGHTBOX STATE **/
+  isImagePopupVisible = false;
+  selectedImageUrl: string | null = null;
+  showPdfOptions = false;
+  selectedLogoType = 'ivis';
+  logoTypes = ['ivis', 'tid', 'verifai'];
+
+  openImagePopup(url: string, event: Event) {
+    event.preventDefault(); // prevent navigation
+    this.selectedImageUrl = url;
+    this.isImagePopupVisible = true;
+  }
+
+  closeImagePopup() {
+    this.isImagePopupVisible = false;
+    this.selectedImageUrl = null;
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  handleKeyDown(event: KeyboardEvent) {
+    if (!this.isImagePopupVisible) return;
+
+    if (event.key === 'ArrowRight' || event.key === '>' || event.key === '.') {
+      this.nextImage();
+    } else if (event.key === 'ArrowLeft' || event.key === '<' || event.key === ',') {
+      this.prevImage();
+    } else if (event.key === 'Escape') {
+      this.closeImagePopup();
+    }
+  }
+
+  nextImage() {
+    if (!this.imageUrls || this.imageUrls.length <= 1 || !this.selectedImageUrl) return;
+    const idx = this.imageUrls.indexOf(this.selectedImageUrl);
+    if (idx === -1) return;
+    const nextIdx = (idx + 1) % this.imageUrls.length;
+    this.selectedImageUrl = this.imageUrls[nextIdx];
+  }
+
+  prevImage() {
+    if (!this.imageUrls || this.imageUrls.length <= 1 || !this.selectedImageUrl) return;
+    const idx = this.imageUrls.indexOf(this.selectedImageUrl);
+    if (idx === -1) return;
+    const prevIdx = (idx - 1 + this.imageUrls.length) % this.imageUrls.length;
+    this.selectedImageUrl = this.imageUrls[prevIdx];
+  }
+
   // Row data for escalation and alarm events
   escalationRowData: any[] = [];
   alarmRowData: any[] = [];
   commentRowData: any[] = [];
+  actionsTakenRowData: any[] = [];
 
   selectedTZ: "MT" | "CT" | "IST" = "MT";
 
@@ -120,6 +181,9 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
   commentGridColumnApi!: Column;
 
   selectedEvent: any = null;
+  parsedObjects: any[] = [];
+  imageUrls: string[] = [];
+  videoUrls: string[] = [];
 
   constructor(
     private eventsService: EventsService,
@@ -133,12 +197,10 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
     const raw =
       localStorage.getItem("verifai_user") ||
       sessionStorage.getItem("verifai_user");
-    console.log("Stored user data:", raw);
 
     if (raw) {
       try {
         this.currentUser = JSON.parse(raw);
-        console.log("Current user in Groups:", this.currentUser);
       } catch (e) {
         console.error("Error parsing stored user data", e);
       }
@@ -146,7 +208,7 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
   }
 
   handleAddClick() {
-    this.addCommentClicked.emit();
+    this.addCommentClicked.emit({ row: null, mode: 'add' });
   }
 
   /* -------- Toast helpers (PrimeNG) -------- */
@@ -160,6 +222,63 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
 
   private showWarn(summary: string, detail?: string) {
     this.notificationService.warn(summary, detail);
+  }
+
+  downloadExcel() {
+    const eventId = this.selectedEvent?.eventId || this.selectedEvent?.eventsId || this.selectedEvent?.id;
+    if (!eventId) {
+      this.showError("Download Failed", "Event ID not found");
+      return;
+    }
+
+    this.eventsService.downloadSingleEventExcel(eventId).subscribe({
+      next: (response: any) => {
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = `Event_${eventId}_Report.xlsx`;
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename="?(.+)"?/);
+          if (match?.[1]) filename = match[1];
+        }
+
+        const blob = new Blob([response.body], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        link.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => this.showError("Download Failed", "Failed to download Excel report")
+    });
+  }
+
+  downloadPdf() {
+    const eventId = this.selectedEvent?.eventId || this.selectedEvent?.eventsId || this.selectedEvent?.id;
+    if (!eventId) {
+      this.showError("Download Failed", "Event ID not found");
+      return;
+    }
+
+    this.eventsService.downloadSingleEventPdf(eventId, this.selectedLogoType).subscribe({
+      next: (response: any) => {
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = `Event_${eventId}_Report_${this.selectedLogoType}.pdf`;
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename="?(.+)"?/);
+          if (match?.[1]) filename = match[1];
+        }
+
+        const blob = new Blob([response.body], { type: "application/pdf" });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        link.click();
+        window.URL.revokeObjectURL(url);
+        this.showPdfOptions = false;
+      },
+      error: (err) => this.showError("Download Failed", "Failed to download PDF report")
+    });
   }
 
   // ------------------------ TZ Handling ------------------------
@@ -207,15 +326,32 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
   selectedCategoryId: number | null = null;
 
   private loadActionTags() {
+    const cached = localStorage.getItem("actionTagCategories");
+    if (cached) {
+      try {
+        this.actionTagCategories = JSON.parse(cached);
+        this.refreshTimeColumns();
+        return; // Skip API call if data exists in cache
+      } catch (e) {
+        console.error("Error parsing cached action tags", e);
+      }
+    }
+
     this.eventsService
       .getActionTagCategories()
       .subscribe((res: any) => {
-        this.actionTagCategories = res?.actionTagCategories || [];
-        this.refreshTimeColumns()
+        const cats = res?.actionTagCategories || [];
+        this.actionTagCategories = cats;
+        localStorage.setItem("actionTagCategories", JSON.stringify(cats));
+        this.refreshTimeColumns();
       });
   }
 
-  onActionTagChange(categoryId: number) {
+  onActionTagChange(categoryId: number | null) {
+    if (categoryId === null) {
+      this.filteredSubActionTags = [];
+      return;
+    }
     const selectedCategory = this.actionTagCategories.find(
       cat => cat.categoryId === +categoryId
     );
@@ -242,6 +378,17 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
       headerClass: "custom-header",
       cellClass: "custom-cell",
       editable: false,
+      valueFormatter: (params: any) => {
+        const val = params.value !== null && params.value !== undefined ? Number(params.value) : -1;
+        switch (val) {
+          case 1: return "SCR";
+          case 2: return "PD";
+          case 3: return "D";
+          case 4: return "OB";
+          case 0: return "ADMIN";
+          default: return params.value || "";
+        }
+      }
     },
     {
       headerName: "RECEIVE AT",
@@ -277,47 +424,31 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
     {
       headerName: "ACTION TAG",
       field: "actionTag",
-      // editable: (data: any) => {
-      //   return data.node.lastChild ? true : false
-      // },
-      editable: (params: any) => params.data?.isEditing === true,
       headerClass: "custom-header",
       cellClass: "custom-cell",
-      cellEditor: "agRichSelectCellEditor",
-      cellEditorParams: () => {
-        return {
-          values: this.actionTagCategories.map((item: any) => item.categoryName)
-        };
-      },
+      editable: false,
       valueFormatter: (params: any) => {
-        const match = this.actionTagCategories.find((s) => s.categoryName === params.value);
-        this.currentActionTag = match;
-        return match ? match.categoryName : '';
+        const val = params.value;
+        const cat = this.actionTagCategories.find(c => Number(c.categoryId) === Number(val));
+        if (cat) return cat.categoryName;
+        return (val !== null && val !== undefined) ? val.toString() : "";
       }
     },
     {
-      headerName: "TAG",
+      headerName: "SUB ACTION TAG",
       field: "subActionTag",
-      // editable: (data: any) => {
-      //   return data.node.lastChild ? true : false
-      // },
-      editable: (params: any) => params.data?.isEditing === true,
       headerClass: "custom-header",
       cellClass: "custom-cell",
-      cellEditor: "agRichSelectCellEditor",
-      cellEditorParams: () => {
-        const [sub] = this.actionTagCategories.filter((item) => item.categoryId === this.currentActionTag?.categoryId);
-        return {
-          values: sub?.actionTagSubCategories.map((item: any) => item.subCategoryName)
-        };
-      },
+      editable: false,
       valueFormatter: (params: any) => {
-        const [sub] = this.actionTagCategories.filter((item) => item.categoryId === this.currentActionTag?.categoryId);
-        const match = sub?.actionTagSubCategories.find(
-          (s: any) => s.subCategoryName === params.value
-        );
-        this.currentSubActionTag = match;
-        return match ? match.name : '';
+        const val = params.value;
+        const row = params.data;
+        const cat = this.actionTagCategories.find(c => Number(c.categoryId) === Number(row.actionTag));
+        if (cat && cat.actionTagSubCategories) {
+          const sub = cat.actionTagSubCategories.find((s: any) => Number(s.subCategoryId || s.id) === Number(val));
+          if (sub) return sub.subCategoryName || sub.name;
+        }
+        return (val !== null && val !== undefined) ? val.toString() : "";
       }
     },
     {
@@ -325,168 +456,42 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
       field: "notes",
       headerClass: "custom-header",
       cellClass: "custom-cell",
-      // editable: (params) => params.data.isDuplicate && params.data.isEditing,
-      editable: (params: any) => params.data?.isEditing === true
+      editable: false
     },
-    // {
-    //   headerName: "END OF SHIFT",
-    //   headerClass: "custom-header",
-    //   cellClass: "custom-cell",
-    //   cellRenderer: (params: any) => {
-    //     const container = document.createElement("div");
-    //     container.style.display = "flex";
-    //     container.style.gap = "6px";
-
-    //     const rowIndex = params.node.rowIndex;
-    //     const lastRowIndex = params.api.getDisplayedRowCount() - 1;
-    //     const isDuplicate = !!params.data.isDuplicate;
-    //     const isEditing = !!params.data.isEditing;
-
-    //     if (isDuplicate && isEditing) {
-    //       const saveBtn = document.createElement("button");
-    //       saveBtn.className = "action-btn save-btn";
-    //       saveBtn.innerText = "✓";
-    //       saveBtn.addEventListener("mousedown", (e) => {
-    //         e.stopPropagation();
-    //         params.api.stopEditing();
-
-    //         setTimeout(() => {
-    //           this.saveEscalation(params.node.data);
-    //         }, 0);
-    //       });
-
-    //       const cancelBtn = document.createElement("button");
-    //       cancelBtn.className = "action-btn delete-btn";
-    //       cancelBtn.innerText = "x";
-    //       cancelBtn.addEventListener("mousedown", (e) => {
-    //         e.stopPropagation();
-    //         params.api.applyTransaction({ remove: [params.data] });
-    //       });
-
-    //       container.appendChild(saveBtn);
-    //       container.appendChild(cancelBtn);
-    //       return container;
-    //     }
-
-    //     if (!isDuplicate && rowIndex === lastRowIndex) {
-    //       const editBtn = document.createElement("button");
-    //       editBtn.className = "action-btn1 edit-btn1";
-
-    //       const pencilIcon = document.createElement("img");
-    //       pencilIcon.src = "assets/pencil.svg";
-    //       pencilIcon.alt = "Edit";
-    //       pencilIcon.style.width = "16px";
-    //       pencilIcon.style.height = "16px";
-
-    //       editBtn.appendChild(pencilIcon);
-
-    //       editBtn.addEventListener("click", () => {
-    //         this.createDuplicateRowFromLast(params);
-    //       });
-
-    //       container.appendChild(editBtn);
-    //       return container;
-    //     }
-
-    //     return container;
-    //   },
-    // },
-
-
     {
       headerName: "END OF SHIFT",
       headerClass: "custom-header",
       cellClass: "custom-cell",
       editable: false,
-
       cellRenderer: (params: any) => {
         const container = document.createElement("div");
         container.style.display = "flex";
         container.style.gap = "6px";
+        container.style.justifyContent = "center";
 
-        const isEditing = !!params.data.isEditing;
+        // ✅ Only show pencil for the LAST row
         const rowIndex = params.node.rowIndex;
         const lastRowIndex = params.api.getDisplayedRowCount() - 1;
+        if (rowIndex !== lastRowIndex) return container;
 
-        // =========================
-        // ✅ EDIT MODE (SAVE / CANCEL)
-        // =========================
-        if (isEditing) {
+        const editBtn = document.createElement("button");
+        editBtn.className = "action-btn1 edit-btn1";
+        editBtn.style.border = "none";
+        editBtn.style.background = "transparent";
+        editBtn.style.cursor = "pointer";
 
-          // 🔹 SAVE BUTTON
-          const saveBtn = document.createElement("button");
-          saveBtn.className = "action-btn save-btn";
-          saveBtn.innerText = "✓";
+        const pencilIcon = document.createElement("img");
+        pencilIcon.src = "assets/pencil.svg";
+        pencilIcon.alt = "Edit";
+        pencilIcon.style.width = "16px";
+        pencilIcon.style.height = "16px";
 
-          saveBtn.addEventListener("mousedown", (e) => {
-            e.stopPropagation();
+        editBtn.appendChild(pencilIcon);
+        editBtn.addEventListener("click", () => {
+          this.addCommentClicked.emit({ row: params.data, mode: 'update' });
+        });
 
-            params.api.stopEditing();
-
-            setTimeout(() => {
-              const { _originalData, ...cleanData } = params.node.data;
-
-              this.saveEscalation(cleanData);
-
-              params.node.setData({
-                ...cleanData,
-                isEditing: false
-              });
-            }, 0);
-          });
-
-          // 🔹 CANCEL BUTTON (RESTORE ORIGINAL DATA)
-          const cancelBtn = document.createElement("button");
-          cancelBtn.className = "action-btn delete-btn";
-          cancelBtn.innerText = "x";
-
-          cancelBtn.addEventListener("mousedown", (e) => {
-            e.stopPropagation();
-
-            const original = params.node.data._originalData;
-
-            params.api.stopEditing(true); // cancel editor
-
-            if (original) {
-              params.node.setData({
-                ...original,
-                isEditing: false
-              });
-            } else {
-              params.node.setData({
-                ...params.node.data,
-                isEditing: false
-              });
-            }
-          });
-
-          container.appendChild(saveBtn);
-          container.appendChild(cancelBtn);
-          return container;
-        }
-
-        // =========================
-        // ✅ SHOW PENCIL ONLY ON LAST ROW
-        // =========================
-        if (rowIndex === lastRowIndex) {
-          const editBtn = document.createElement("button");
-          editBtn.className = "action-btn1 edit-btn1";
-
-          const pencilIcon = document.createElement("img");
-          pencilIcon.src = "assets/pencil.svg";
-          pencilIcon.alt = "Edit";
-          pencilIcon.style.width = "16px";
-          pencilIcon.style.height = "16px";
-
-          editBtn.appendChild(pencilIcon);
-
-          editBtn.addEventListener("click", () => {
-            this.editRow(params);
-          });
-
-          container.appendChild(editBtn);
-        }
-
+        container.appendChild(editBtn);
         return container;
       }
     }
@@ -538,16 +543,15 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
   }
 
   saveEscalation(data: any) {
-    console.log(data)
     if (!this.selectedEvent) {
       console.error("No event selected");
       this.showError("Update Escalation", "No event selected.");
       return;
     }
 
-    const eventId = Number(this.selectedItem?.eventDetails?.[0]?.eventId);
+    const eventId = Number(this.selectedItem?.eventDetails?.[0]?.eventId || this.selectedItem?.eventId);
     if (!eventId) {
-      console.error("Invalid eventId:", this.selectedItem?.eventDetails?.[0]);
+      console.error("Invalid eventId:", this.selectedItem);
       this.showError("Update Escalation", "Invalid event ID for this record.");
       return;
     }
@@ -562,26 +566,39 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
       return;
     }
 
-    const payload = {
-      eventsId: String(eventId),
+    let payload: any;
 
-      // ✅ IMPORTANT: set userlevel from login
-      userlevel: loggedInUserLevelId,
+    if (!this.isPending && data.id) {
+      // ✅ CLOSED Tab: Update existing record using ID
+      payload = {
+        id: Number(data.id),
+        eventId: Number(eventId),
+        eventsId: String(eventId),
+        actionTag: this.currentActionTag?.categoryId,
+        subActionTag: this.currentSubActionTag?.subCategoryId,
+        notes: data.notes || "",
+      };
+    } else {
+      // ✅ PENDING Tab or New Record: Create new entry (Old Logic)
+      payload = {
+        eventId: Number(eventId),
+        eventsId: String(eventId),
 
-      user: this.currentUser?.UserId || 0,
-      alarm: "N",
-      landingTime: data.receiveAt || "",
-      receivedTime: "",
-      reviewStartTime: data.reviewStart || "",
-      reviewEndTime: data.reviewEnd || "",
-      // actionTag: this.mapActionTag(data.actionTag),
-      // subActionTag: Number(data.subActionTag),
-      actionTag: this.currentActionTag?.categoryId,
-      subActionTag: this.currentSubActionTag?.subCategoryId,
-      notes: data.notes || "",
-    };
+        // ✅ IMPORTANT: set userlevel from login
+        userlevel: loggedInUserLevelId,
 
-    console.log("Sending escalation update payload:", payload);
+        user: this.currentUser?.UserId || 0,
+        alarm: "N",
+        landingTime: data.receiveAt || "",
+        receivedTime: "",
+        reviewStartTime: data.reviewStart || "",
+        reviewEndTime: data.reviewEnd || "",
+        actionTag: this.currentActionTag?.categoryId,
+        subActionTag: this.currentSubActionTag?.subCategoryId,
+        notes: data.notes || "",
+      };
+    }
+
 
     this.eventsService.putEventsMoreInfo(payload).subscribe({
       next: (res) => {
@@ -593,16 +610,37 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
 
         this.showSuccess("Update Escalation", msg);
 
-        // ✅ Update UI row so userLevel changes immediately in the table
-        data.userLevel = loggedInUserLevelId;
-        data.levelId = loggedInUserLevelId; // keep both in sync if your row uses levelId too
+        const finish = () => {
+          // ✅ Update UI row so userLevel changes immediately in the table
+          data.userLevel = loggedInUserLevelId;
+          data.levelId = loggedInUserLevelId;
+          data.isEditing = false;
+          data.isDuplicate = false;
+          this.escalationGridApi.applyTransaction({ update: [data] });
+          this.refreshMoreInfo.emit(eventId);
+        };
 
-        data.isEditing = false;
-        data.isDuplicate = false;
-
-        this.escalationGridApi.applyTransaction({ update: [data] });
-
-        this.refreshMoreInfo.emit(eventId);
+        // ✅ NEW: If notes are present, also add as a comment (as requested)
+        if (data.notes && data.notes.trim()) {
+          const commentPayload = {
+            eventsId: String(eventId),
+            commentsInfo: data.notes.trim(),
+            createdBy: this.currentUser?.UserId || 0,
+            remarks: "",
+          };
+          this.eventsService.addComment(commentPayload).subscribe({
+            next: () => {
+              finish();
+            },
+            error: (err) => {
+              console.error("Failed to add automatic comment", err);
+              this.showError("Comment Failed", "Update succeeded but adding comment failed.");
+              finish();
+            }
+          });
+        } else {
+          finish();
+        }
       },
       error: (err) => {
         const msg =
@@ -629,33 +667,11 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
   // ------------------------ ALARM COLUMNS ------------------------
   alarmColumnDefs: ColDef[] = [
     {
-      headerName: "Time",
+      headerName: "DETERRED TIME",
       field: "deterredTime",
       headerClass: "custom-header",
       cellClass: "custom-cell",
     },
-    // {
-    //   headerName: "USER",
-    //   field: "user",
-    //   headerClass: "custom-header",
-    //   cellStyle: {
-    //     textAlign: "center",
-    //     display: "flex",
-    //     justifyContent: "center",
-    //     alignItems: "center",
-    //   },
-    //   cellClass: "custom-cell",
-    //   cellRenderer: (params: any) => {
-    //     const imgUrl = params.data.userName
-    //       ? `https://i.pravatar.cc/30?u=${params.data.userName}`
-    //       : "https://i.pravatar.cc/30?img=1";
-
-    //     return `
-    //       <img src="${imgUrl}" alt="user"
-    //         style="width: 24px; height: 24px; border-radius: 50%; margin-top: 15px" />
-    //     `;
-    //   },
-    // },
     {
       headerName: "USER",
       field: "user",
@@ -667,14 +683,8 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
     {
       headerName: "DESCRIPTION",
       field: "description",
-      headerClass: "custom-header",
-      cellClass: "custom-cell",
-      cellStyle: {
-        textAlign: "center",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      },
+      headerClass: ["custom-header", "center-header"],
+      cellClass: ["custom-cell", "center-cell"],
       cellRenderer: (params: any) => {
         const value = params.value;
         let iconUrl = "";
@@ -686,12 +696,19 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
           case "P":
             iconUrl = "assets/alarm-warning-fill-success.svg";
             break;
+          case "R":
+            iconUrl = "assets/alarm-warning-fill-restricted.svg";
+            break;
+          case "F":
+            iconUrl = "assets/alarm-warning-fill-failed.svg";
+            break;
           case "":
             iconUrl = "";
             break;
         }
 
-        return `<img src="${iconUrl}" alt="${value}" style="width:17px; margin-top: 15px; height:17px;" />`;
+        if (!iconUrl) return value || "";
+        return `<div style="display:flex; justify-content:center; align-items:center; height:100%;"><img src="${iconUrl}" alt="${value}" style="width:20px; height:20px;" /></div>`;
       },
     },
     {
@@ -702,35 +719,87 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
     },
   ];
 
+  get activeAlarmColumnDefs(): ColDef[] {
+    if (this.isPending) {
+      return [
+        {
+          headerName: "DETERRENT TIME",
+          field: "activityDetTime",
+          headerClass: "custom-header",
+          cellClass: "custom-cell",
+        },
+        {
+          headerName: "USER",
+          field: "user",
+          headerClass: "custom-header",
+          cellClass: "custom-cell",
+          cellRenderer: ProfileImageRendererComponent,
+          editable: false,
+        },
+        {
+          headerName: "ALARM",
+          field: "alarm",
+          headerClass: ["custom-header", "center-header"],
+          cellClass: ["custom-cell", "center-cell"],
+          cellRenderer: (params: any) => {
+            const value = params.value;
+            let iconUrl = "";
+            switch (value) {
+              case "N": iconUrl = "assets/alarm-warning-fill-copy.svg"; break;
+              case "P": iconUrl = "assets/alarm-warning-fill-success.svg"; break;
+              case "R": iconUrl = "assets/alarm-warning-fill-restricted.svg"; break;
+              case "F": iconUrl = "assets/alarm-warning-fill-failed.svg"; break;
+            }
+            if (!iconUrl) return value || "";
+            return `<div style="display:flex; justify-content:center; align-items:center; height:100%;"><img src="${iconUrl}" alt="${value}" style="width:20px; height:20px;" /></div>`;
+          },
+        }
+      ] as ColDef[];
+    }
+    return this.alarmColumnDefs;
+  }
+
+  get activeEscalationColumnDefs(): ColDef[] {
+    if (this.isPending) {
+      return this.escalationColumnDefs.filter(c => c.headerName !== "END OF SHIFT");
+    }
+    return this.escalationColumnDefs;
+  }
+
   // ------------------------ BASIC INFO ------------------------
   basicInfoFields: { label: string; field: string; default?: string }[] = [
     { label: "Escalation ID", field: "eventId" },
     { label: "Ticket No.", field: "ticketNo", default: "--" },
     { label: "Site Name", field: "siteName" },
-    { label: "Camera Name", field: "cameraName" },
-    { label: "Camera Id", field: "cameraId" },
+    { label: "Camera Name/id", field: "cameraCombined" },
     { label: "Event Time (CT)", field: "eventTime_CT" },
     { label: "Event Time Customer", field: "eventStartTime" },
+    { label: "Event End Time", field: "eventEndTime" },
     { label: "Event Time (IN)", field: "eventTime_IN" },
     { label: "Type", field: "eventType", default: "--" },
     { label: "Country", field: "country" },
   ];
 
-  getEventDotColor(eventType: string): string {
-    switch (eventType) {
-      case "Manual Wall":
-        return "#FFC400";
-      case "Event Wall":
-        return "#53BF8B";
-      case "Manual Event":
-        return "#353636ff";
-      case "Missed Wall":
-        return "#FF0000";
-      case "Custom Event":
-        return "magenta";
-      default:
-        return "#ccc";
+  get activeBasicInfoFields() {
+    if (this.isPending) {
+      return [
+        { label: "Site Name", field: "siteName" },
+        { label: "Camera Name/id", field: "cameraCombined" },
+        { label: "Event Time Customer", field: "eventStartTime" },
+        { label: "Type", field: "eventType", default: "--" }
+      ];
     }
+    return this.basicInfoFields;
+  }
+
+  getEventDotColor(eventType: string): string {
+    const type = (eventType || "").toLowerCase();
+    if (type.includes("manual")) return "#FFC400";
+    if (type.includes("console") || type.includes("event wall")) return "#53BF8B";
+    if (type.includes("timed-out") || type.includes("missed wall")) return "#FF0000";
+    if (type.includes("custom event")) return "magenta";
+
+    return "#ccc";
   }
 
   defaultColDef: ColDef = {
@@ -743,18 +812,85 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
   ngOnChanges(changes: SimpleChanges) {
     if (!changes["selectedItem"] || !this.selectedItem) return;
 
-    console.log("API Data received in popup:", this.selectedItem);
 
-    // ✅ Build map: userId -> profileImage from queueUsers
+    this.selectedEvent = this.selectedItem.eventDetails?.[0] || null;
+
+    if (this.selectedEvent) {
+      let imgs: string[] = [];
+
+      // Extract images from videoUrl if any (often used for snapshots)
+      const vids = Array.isArray(this.selectedEvent.videoUrl)
+        ? this.selectedEvent.videoUrl
+        : [this.selectedEvent.videoUrl].filter(Boolean);
+
+      vids.forEach((v: string) => {
+        if (v && v.includes('/') && !imgs.includes(v)) imgs.push(v);
+      });
+
+      // Extract images from imageUrl field
+      if (this.selectedEvent.imageUrl) {
+        const urlList = String(this.selectedEvent.imageUrl)
+          .split(',')
+          .map(u => u.trim())
+          .filter(u => u.includes('/') && !imgs.includes(u));
+        imgs = [...imgs, ...urlList];
+      }
+
+      this.imageUrls = imgs;
+
+      // Handle pending-specific parsing
+      if (this.isPending) {
+        if (this.selectedEvent.objectName) {
+          try {
+            const obj = JSON.parse(this.selectedEvent.objectName);
+            this.parsedObjects = Object.values(obj);
+          } catch (e) {
+            this.parsedObjects = [];
+          }
+        } else {
+          this.parsedObjects = [];
+        }
+      }
+    }
+
+    // ✅ Build maps from all available sources
     const userImageMap = new Map<number, string>();
+    const userNameMap = new Map<number, string>();
+    const userLevelMap = new Map<number, string>();
+
+    // 1. From queueUsers (passed from site context)
     (this.queueUsers || []).forEach((u: any) => {
       const id = Number(u?.userId);
-      const img = u?.profileImage;
-      if (id && img) userImageMap.set(id, img);
+      if (id) {
+        if (u?.profileImage) userImageMap.set(id, u.profileImage);
+        if (u?.userName) userNameMap.set(id, u.userName);
+        if (u?.userLevel) userLevelMap.set(id, u.userLevel);
+      }
+    });
+
+    // 2. From eventAlarmInfo (from the API response)
+    (this.selectedItem.eventAlarmInfo || []).forEach((u: any) => {
+      const id = Number(u?.user ?? u?.userId);
+      if (id) {
+        if (u?.userImage && !userImageMap.has(id)) userImageMap.set(id, u.userImage);
+        if (u?.userName && !userNameMap.has(id)) userNameMap.set(id, u.userName);
+        if (u?.userLevel && !userLevelMap.has(id)) userLevelMap.set(id, u.userLevel);
+      }
+    });
+
+    // 3. From eventEscalationInfo (from the API response)
+    (this.selectedItem.eventEscalationInfo || []).forEach((u: any) => {
+      const id = Number(u?.user ?? u?.userId);
+      if (id) {
+        if (u?.userImage && !userImageMap.has(id)) userImageMap.set(id, u.userImage);
+        if (u?.userName && !userNameMap.has(id)) userNameMap.set(id, u.userName);
+        if (u?.userLevel && !userLevelMap.has(id)) userLevelMap.set(id, u.userLevel);
+      }
     });
 
     // ✅ ESCALATION ROWS (uses ProfileImageRendererComponent already)
-    this.escalationRowData = (this.selectedItem.eventEscalationInfo || []).map(
+    const escalationInfo = this.selectedItem.userLevelAlarmInfo || this.selectedItem.eventEscalationInfo || [];
+    this.escalationRowData = escalationInfo.map(
       (item: any) => {
         const userId = Number(item?.user ?? item?.userId ?? 0);
 
@@ -762,8 +898,8 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
           ...item,
           user: {
             profileImage: this.normalizeAvatarUrl(userImageMap.get(userId) || ""),
-            name: item.userName ?? String(item.user ?? ""),
-            level: item.userLevel ?? "",
+            name: item.userName ?? userNameMap.get(userId) ?? String(item.user ?? ""),
+            level: item.userLevel ?? userLevelMap.get(userId) ?? "",
           },
           isEditing: false,
           isDuplicate: false,
@@ -773,7 +909,8 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
 
     // ✅ ALARM ROWS (NOW ALSO uses ProfileImageRendererComponent)
     // IMPORTANT: alarmColumnDefs USER field must be `field: "user"` and `cellRenderer: ProfileImageRendererComponent`
-    this.alarmRowData = (this.selectedItem.eventAlarmInfo || []).map((item: any) => {
+    const alarmInfo = this.isPending ? escalationInfo : (this.selectedItem.eventAlarmInfo || []);
+    this.alarmRowData = alarmInfo.map((item: any) => {
       // Pick whatever your API has for alarm user id:
       // try user -> userId -> createdBy -> reviewerId (add/remove as needed)
       const userId = Number(
@@ -784,8 +921,8 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
         ...item,
         user: {
           profileImage: this.normalizeAvatarUrl(userImageMap.get(userId) || ""),
-          name: item.userName ?? String(item.userName ?? item.user ?? ""),
-          level: item.userLevel ?? "",
+          name: item.userName ?? userNameMap.get(userId) ?? String(item.user ?? ""),
+          level: item.userLevel ?? userLevelMap.get(userId) ?? "",
         },
       };
     });
@@ -801,22 +938,47 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
           profileImage: this.normalizeAvatarUrl(
             c.userImage || userImageMap.get(userId) || ""
           ),
-          name: c.name || "",
-          level: c.level || "",
+          name: c.name || userNameMap.get(userId) || "",
+          level: c.level || userLevelMap.get(userId) || "",
         },
-        name: c.name || "",
-        level: c.level || "",
+        name: c.name || userNameMap.get(userId) || "",
+        level: c.level || userLevelMap.get(userId) || "",
         submittedtime: this.formatDateTime(c.submittedTime || new Date()),
         notes: c.notes || "",
       };
     });
 
+    // ✅ ACTIONS TAKEN ROWS
+    const actionsTaken = this.selectedItem.actionsTaken || [];
+    this.actionsTakenRowData = actionsTaken.map((a: any) => {
+      const userId = Number(a?.userId || a?.user || 0);
+      return {
+        ...a,
+        user: {
+          profileImage: this.normalizeAvatarUrl(userImageMap.get(userId) || ""),
+          name: a.userName || userNameMap.get(userId) || String(userId || ""),
+          level: a.userLevel || userLevelMap.get(userId) || "",
+        }
+      };
+    });
+
     // ✅ Selected event details
     this.selectedEvent = (this.selectedItem.eventDetails || [])[0] || null;
+
+    this.updateFormattedBasicInfo();
   }
-  get formattedBasicInfo() {
-    return this.basicInfoFields.map((field) => {
-      let value = this.selectedEvent?.[field.field] ?? field.default ?? "--";
+
+  updateFormattedBasicInfo() {
+    this.formattedBasicInfoData = this.activeBasicInfoFields.map((field) => {
+      let value: any = "--";
+
+      if (field.field === 'cameraCombined') {
+        const name = this.selectedEvent?.cameraName || "";
+        const id = this.selectedEvent?.cameraId || "";
+        value = name && id ? `${name} - ${id}` : (name || id || "--");
+      } else {
+        value = this.selectedEvent?.[field.field] ?? field.default ?? "--";
+      }
 
       if (field.label.toLowerCase().includes("time") && value !== "--") {
         value = this.formatDateTime(value);
@@ -826,8 +988,24 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
     });
   }
 
+  trackByBasicInfo(index: number, item: any) {
+    return item.field;
+  }
+
+
+
   formatDateTime(dateInput: string | Date): string {
-    const d = new Date(dateInput);
+    if (!dateInput || dateInput === "--") return String(dateInput || "--");
+
+    // Attempt to standardize string for Safari/cross-browser
+    let parsedInput = dateInput;
+    if (typeof dateInput === "string") {
+      parsedInput = dateInput.replace(" ", "T");
+    }
+
+    const d = new Date(parsedInput);
+    if (isNaN(d.getTime())) return String(dateInput);
+
     const pad = (n: number) => n.toString().padStart(2, "0");
 
     const day = pad(d.getDate());
@@ -838,8 +1016,28 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
     const minutes = pad(d.getMinutes());
     const seconds = pad(d.getSeconds());
 
-    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   }
+
+  formatTimeOnly(dateInput: string | Date): string {
+    if (!dateInput || dateInput === "--") return String(dateInput || "--");
+
+    let parsedInput = dateInput;
+    if (typeof dateInput === "string") {
+      parsedInput = dateInput.replace(" ", "T");
+    }
+
+    const d = new Date(parsedInput);
+    if (isNaN(d.getTime())) return String(dateInput);
+
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const hours = pad(d.getHours());
+    const minutes = pad(d.getMinutes());
+    const seconds = pad(d.getSeconds());
+
+    return `${hours}:${minutes}:${seconds}`;
+  }
+
 
   // ------------------------ GRID READY ------------------------
   onGridReady(params: any) {
@@ -895,71 +1093,144 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
     },
   ];
 
-  // ------------------------ ADD COMMENT VIEW LOGIC ------------------------
-  openAddCommentView() {
-    this.addCommentForm = { tag: null, notes: "" };
-    this.isAddCommentView = true;
-  }
+  actionsTakenColumnDefs: ColDef[] = [
+    {
+      headerName: "USER",
+      field: "user",
+      headerClass: "custom-header",
+      cellClass: "custom-cell",
+      cellRenderer: ProfileImageRendererComponent,
+      editable: false,
+      minWidth: 250,
+      flex: 0
+    },
+    {
+      headerName: "MAIL TYPE",
+      field: "mailType",
+      headerClass: "custom-header",
+      cellClass: "custom-cell",
+    },
+    {
+      headerName: "SMS SENT",
+      field: "smsSentTime",
+      headerClass: "custom-header",
+      cellClass: "custom-cell",
+      valueFormatter: (params) => this.formatTimeOnly(params.value)
+    },
+    {
+      headerName: "MAIL SENT",
+      field: "mailSentTime",
+      headerClass: "custom-header",
+      cellClass: "custom-cell",
+      valueFormatter: (params) => this.formatTimeOnly(params.value)
+    },
+    {
+      headerName: "ACTIONS TAKEN",
+      field: "actionsTaken",
+      headerClass: "custom-header",
+      cellClass: ["custom-cell", "wrap-cell"],
+      tooltipField: "actionsTaken",
+      wrapText: true,
+      autoHeight: true,
+      flex: 3,
+      minWidth: 250
+    },
+    {
+      headerName: "NOTES",
+      field: "notes",
+      headerClass: "custom-header",
+      cellClass: "custom-cell",
+      valueFormatter: (params) => params.value === "null" ? "--" : params.value
+    },
+    {
+      headerName: "STATUS",
+      field: "status",
+      headerClass: ["custom-header", "center-header"],
+      cellClass: ["custom-cell", "center-cell"],
+      valueFormatter: (params) => {
+        const val = String(params.value).toUpperCase();
+        if (val === 'T') return 'Success';
+        if (val === 'F') return 'Failed';
+        return params.value || "";
+      }
+    },
+    {
+      headerName: "MAIL PREVIEW",
+      field: "mailPreview",
+      headerClass: "custom-header",
+      cellClass: "custom-cell",
+      cellRenderer: (params: any) => {
+        return `<span class="material-symbols-outlined" style="cursor:pointer; color:#1955af; font-size:20px;">mail</span>`;
+      },
+      onCellClicked: (params: any) => {
+        this.openMailPreview(params.event as MouseEvent, params.data);
+      },
+      maxWidth: 120,
+      flex: 0
+    }
+  ];
 
-  onCancelAddComment() {
-    this.isAddCommentView = false;
-  }
+  openMailPreview(event: MouseEvent, row: any) {
+    this.currentPreviewRow = row;
+    this.emailPreviewData = null;
+    this.isEmailPreviewLoading = true;
+    this.isEmailPreviewView = true; // Switch to preview view
 
-  onSubmitAddComment() {
-    if (!this.selectedEvent) {
-      console.error("No event selected");
-      this.showError("Add Comment", "No event selected.");
+    const eventDetails = this.selectedItem?.eventDetails?.[0];
+    if (!eventDetails) {
+      this.isEmailPreviewLoading = false;
       return;
     }
 
-    const eventId = Number(this.selectedItem?.eventDetails?.[0]?.eventId);
-    if (!eventId) {
-      console.error("Invalid eventId:", this.selectedItem?.eventDetails?.[0]);
-      this.showError("Add Comment", "Invalid event ID for this record.");
-      return;
-    }
-
-    const notes = (this.addCommentForm.notes || "").trim();
-    if (!notes) {
-      this.showWarn("Validation", "Comment cannot be empty.");
-      return;
-    }
-
-    const payload = {
-      eventsId: String(eventId),
-      commentsInfo: notes,
-      createdBy: this.currentUser?.UserId || 0,
-      remarks: "",
+    // Helper to find the best available ID from the row or event details
+    const findId = (row: any, details: any, primaryKey: string, secondaryKey: string, fallbackKey: string) => {
+      const val = row?.[primaryKey] || row?.[secondaryKey] || details?.[primaryKey] || details?.[secondaryKey] || details?.[fallbackKey];
+      return (val === undefined || val === null || val === 'undefined') ? null : val;
     };
 
-    console.log("Sending comment payload:", payload);
+    const alertTypeId = findId(row, eventDetails, 'alertTagId', 'actionTag', 'actionTagId');
+    const subTypeId = findId(row, eventDetails, 'subAlertTagId', 'subActionTag', 'subActionTagId');
 
-    this.eventsService.addComment(payload).subscribe({
-      next: (res) => {
-        console.log("Comment saved successfully", res);
+    const payload = {
+      siteId: eventDetails.siteId,
+      siteName: eventDetails.siteName,
+      cameraId: eventDetails.cameraId,
+      alertTypeId: alertTypeId,
+      subTypeId: subTypeId,
+      day: this.eventsService.weekdays[
+        eventDetails.eventStartTime ? new Date(eventDetails.eventStartTime).getDay() : 0
+      ],
+      hour: eventDetails.eventStartTime ? new Date(eventDetails.eventStartTime).getHours() : 0,
+      currentTime: eventDetails.eventStartTime,
+    };
 
-        const msg =
-          res?.message ||
-          res?.msg ||
-          res?.statusMessage ||
-          "Comment added successfully.";
+    // 1. Fetch Alert Categories (as requested)
+    if (eventDetails.siteId) {
+      this.eventsService.getAlertCategoriesForSiteId(eventDetails.siteId).subscribe({
+        next: (cats) => { },
+        error: (err) => console.error("Error fetching alert categories:", err)
+      });
+    }
 
-        this.showSuccess("Add Comment", msg);
-        this.isAddCommentView = false;
-        this.refreshMoreInfo.emit(eventId);
+    // 2. Fetch Email Data
+    this.eventsService.getEmailDataForVMSEvents(payload).subscribe({
+      next: (res: any) => {
+        this.emailPreviewData = res?.statusCode === 200 ? res.emailDetails : res;
+        this.isEmailPreviewLoading = false;
       },
       error: (err) => {
-        console.error("Error saving comment", err);
-
-        const msg =
-          err?.error?.message ||
-          err?.error?.msg ||
-          "Failed to save comment. Please try again.";
-
-        this.showError("Add Comment Failed", msg);
-      },
+        console.error("Error fetching email preview data:", err);
+        this.isEmailPreviewLoading = false;
+      }
     });
   }
+
+  closeEmailPreview() {
+    this.isEmailPreviewView = false;
+    this.emailPreviewData = null;
+  }
+
+
 }
 
 
@@ -983,7 +1254,6 @@ export class ColourCellRenderer implements ICellRendererAngularComp {
   value = signal<string>('');
 
   agInit(params: ICellRendererParams): void {
-    console.log(params)
     this.value.set(params.value);
   }
 

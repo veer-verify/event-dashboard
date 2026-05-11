@@ -52,6 +52,9 @@ export class GroupsService {
   private readonly inActiveQueueCameraMappingUrl =
     `${environment.eventDataUrl}/inActiveQueueCameraMapping_1_0`;
 
+  private readonly updateQueueUserRoutingTypeUrl =
+    `${environment.eventDataUrl}/updateQueueUserRoutingType_1_0`;
+
   // Flow Management APIs
   private readonly getEventsFlowUrl =
     `${environment.eventDataUrl}/getEventsFlow_1_0`;
@@ -200,5 +203,10 @@ export class GroupsService {
   assignFlowToCameras(data: any): Observable<any> {
     const headers = { "Content-Type": "application/json" };
     return this.http.put(this.assignEventFlowToCamerasUrl, data, { headers });
+  }
+
+  updateQueueUserRoutingType(payload: any): Observable<any> {
+    const headers = { "Content-Type": "application/json" };
+    return this.http.put(this.updateQueueUserRoutingTypeUrl, payload, { headers });
   }
 }

@@ -5,23 +5,23 @@ import { firstValueFrom } from "rxjs";
 @Pipe({
   name: "image",
   standalone: true,
-  pure: false, // IMPORTANT: because we resolve async data
+  pure: true, 
 })
 export class ImagePipe implements PipeTransform {
   private http = inject(HttpClient);
 
   // simple in-memory cache: url -> base64 string
-  private cache = new Map<string, Promise<string | null>>();
+  private static cache = new Map<string, Promise<string | null>>();
 
   transform(url: string | null | undefined): Promise<string | null> {
-    if (!url) return Promise.resolve(null);
+    if (!url) return Promise.resolve("assets/image.png");
 
-    if (this.cache.has(url)) {
-      return this.cache.get(url)!;
+    if (ImagePipe.cache.has(url)) {
+      return ImagePipe.cache.get(url)!;
     }
 
     const p = this.load(url);
-    this.cache.set(url, p);
+    ImagePipe.cache.set(url, p);
     return p;
   }
 
@@ -31,26 +31,33 @@ export class ImagePipe implements PipeTransform {
         sessionStorage.getItem("verifai_user") ||
         localStorage.getItem("verifai_user");
 
-      const user = rawUser ? JSON.parse(rawUser) : null;
-      const accessToken = user?.AccessToken;
+      let token = "";
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+        token = user.AccessToken || user.token || "";
+      }
 
-      const headers = accessToken
-        ? new HttpHeaders({ Authorization: `Bearer ${accessToken}` })
-        : new HttpHeaders();
+      if (!token) {
+        token = localStorage.getItem("verifai_token") || "";
+      }
+
+      const headers = new HttpHeaders({
+        Authorization: `Bearer ${token}`,
+      });
 
       const blob = await firstValueFrom(
         this.http.get(url, { headers, responseType: "blob" })
       );
 
-      return await new Promise<string>((resolve, reject) => {
+      return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(null);
+        reader.onerror = () => resolve("assets/image.png");
         reader.readAsDataURL(blob);
       });
     } catch (err) {
-      console.error("ImagePipe: failed to load image", url, err);
-      return null;
+      console.error("Image load failed", err);
+      return "assets/image.png"; // Fallback on error to stop spinner
     }
   }
 }

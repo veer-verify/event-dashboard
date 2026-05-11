@@ -461,6 +461,29 @@ circle.progress {
   height: 12px;
   object-fit: contain;
 }
+/* Submit Button */
+.submit-btn {
+  background: #ed3237;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: 'Neometric Bold';
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(237, 50, 55, 0.2);
+}
+
+/* .submit-btn:hover {
+  background: #d32025;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgba(237, 50, 55, 0.3);
+}
+
+.submit-btn:active {
+  transform: translateY(0);
+} */
 
 /* Chart Section */
 .chart-section-body {
