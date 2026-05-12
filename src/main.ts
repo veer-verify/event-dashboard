@@ -1,7 +1,7 @@
 // main.ts
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
-import { provideRouter, withHashLocation } from '@angular/router';
+import { PreloadAllModules, provideRouter, withHashLocation, withPreloading } from '@angular/router';
 import { importProvidersFrom } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -54,7 +54,7 @@ bootstrapApplication(AppComponent, {
       useClass: AuthTokenInterceptor,
       multi: true
     },
-    provideRouter(routes, withHashLocation()),
+    provideRouter(routes, withHashLocation(), withPreloading(PreloadAllModules)),
     provideAnimations(),
     importProvidersFrom(
       FormsModule,
