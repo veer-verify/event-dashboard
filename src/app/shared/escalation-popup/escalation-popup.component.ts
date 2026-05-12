@@ -64,7 +64,7 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
   /** Re-read user from storage if currentUser is not loaded yet */
   private getStoredUser(): any | null {
     const raw =
-      localStorage.getItem("verifai_user") ||
+      sessionStorage.getItem("verifai_user") ||
       sessionStorage.getItem("verifai_user");
 
     if (!raw) return null;
@@ -195,7 +195,7 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
 
     this.loadActionTags();
     const raw =
-      localStorage.getItem("verifai_user") ||
+      sessionStorage.getItem("verifai_user") ||
       sessionStorage.getItem("verifai_user");
 
     if (raw) {
@@ -326,7 +326,7 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
   selectedCategoryId: number | null = null;
 
   private loadActionTags() {
-    const cached = localStorage.getItem("actionTagCategories");
+    const cached = sessionStorage.getItem("actionTagCategories");
     if (cached) {
       try {
         this.actionTagCategories = JSON.parse(cached);
@@ -342,7 +342,7 @@ export class EscalationPopupComponent implements OnChanges, OnInit {
       .subscribe((res: any) => {
         const cats = res?.actionTagCategories || [];
         this.actionTagCategories = cats;
-        localStorage.setItem("actionTagCategories", JSON.stringify(cats));
+        sessionStorage.setItem("actionTagCategories", JSON.stringify(cats));
         this.refreshTimeColumns();
       });
   }

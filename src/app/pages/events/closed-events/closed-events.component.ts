@@ -1095,7 +1095,7 @@ export class ClosedEventsComponent implements OnInit, OnDestroy {
 
     // load logged-in user (for comments)
     const raw =
-      localStorage.getItem("verifai_user") ||
+      sessionStorage.getItem("verifai_user") ||
       sessionStorage.getItem("verifai_user");
     if (raw) {
       try {
@@ -1921,7 +1921,7 @@ export class ClosedEventsComponent implements OnInit, OnDestroy {
   ): void {
     const rawUser =
       sessionStorage.getItem("verifai_user") ||
-      localStorage.getItem("verifai_user");
+      sessionStorage.getItem("verifai_user");
 
     const user = rawUser ? JSON.parse(rawUser) : null;
     const token = user?.AccessToken;
@@ -2284,7 +2284,7 @@ export class ClosedEventsComponent implements OnInit, OnDestroy {
   downloaddisplayimage(url: any, type: any) {
     const rawUser =
       sessionStorage.getItem("verifai_user") ||
-      localStorage.getItem("verifai_user");
+      sessionStorage.getItem("verifai_user");
 
     const user = rawUser ? JSON.parse(rawUser) : null;
     const token = user?.AccessToken;
@@ -2318,7 +2318,7 @@ export class ClosedEventsComponent implements OnInit, OnDestroy {
 
   //   const rawUser =
   //     sessionStorage.getItem("verifai_user") ||
-  //     localStorage.getItem("verifai_user");
+  //     sessionStorage.getItem("verifai_user");
 
   //   const user = rawUser ? JSON.parse(rawUser) : null;
   //   const token = user?.AccessToken;

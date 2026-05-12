@@ -48,7 +48,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // user profile (your existing logic)
     const stored =
-      localStorage.getItem('verifai_user') ||
+      sessionStorage.getItem('verifai_user') ||
       sessionStorage.getItem('verifai_user');
 
     if (stored) {

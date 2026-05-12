@@ -53,7 +53,7 @@ export class LoginComponent {
           );
           if (!isAdmin) return alert("You are not an admin!");
           // 🔹 Decide which storage to use based on "Remember Me"
-          const storage = this.rememberMe ? localStorage : sessionStorage;
+          const storage = sessionStorage;
 
           // 🔹 Save the whole response object (user/session info)
           storage.setItem("verifai_user", JSON.stringify(res));

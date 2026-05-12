@@ -44,7 +44,7 @@ export class AuthService {
   /** 🔹 Encryption key (must match backend) */
   private readonly encryptionKey = 'verifai';
 
-  constructor(private http: HttpClient, private router: Router,private eventsService: EventsService) { }
+  constructor(private http: HttpClient, private router: Router, private eventsService: EventsService) { }
 
   /** =========================
    * AES Encrypt Password -> Base64
@@ -72,9 +72,7 @@ export class AuthService {
    * STORAGE HELPERS
    * ========================= */
   getStoredUser(): LoginResponse | null {
-    const raw =
-      localStorage.getItem(this.USER_KEY) ||
-      sessionStorage.getItem(this.USER_KEY);
+    const raw = sessionStorage.getItem(this.USER_KEY);
     return raw ? (JSON.parse(raw) as LoginResponse) : null;
   }
 
@@ -85,10 +83,7 @@ export class AuthService {
 
   /** ✅ Needed by your auth.guard.ts */
   isLoggedIn(): boolean {
-    const user =
-      localStorage.getItem(this.USER_KEY) ||
-      sessionStorage.getItem(this.USER_KEY);
-    return !!user;
+    return !!sessionStorage.getItem(this.USER_KEY);
   }
 
   /** =========================
@@ -100,10 +95,7 @@ export class AuthService {
     if (user?.AccessToken) return user.AccessToken;
 
     // Fallback: old key if you still store verifai_token
-    return (
-      localStorage.getItem(this.TOKEN_KEY) ||
-      sessionStorage.getItem(this.TOKEN_KEY)
-    );
+    return sessionStorage.getItem(this.TOKEN_KEY);
   }
 
   getRefreshToken(): string | null {
@@ -112,19 +104,14 @@ export class AuthService {
 
   /** Update tokens in same storage where user is stored */
   updateTokens(newAccessToken: string, newRefreshToken?: string) {
-    const inLocal = !!localStorage.getItem(this.USER_KEY);
-    const inSession = !!sessionStorage.getItem(this.USER_KEY);
-    const storage = inLocal ? localStorage : inSession ? sessionStorage : null;
-    if (!storage) return;
-
-    const user = JSON.parse(storage.getItem(this.USER_KEY) || '{}');
+    const user = JSON.parse(sessionStorage.getItem(this.USER_KEY) || '{}');
     user.AccessToken = newAccessToken;
     if (newRefreshToken) user.RefreshToken = newRefreshToken;
 
-    storage.setItem(this.USER_KEY, JSON.stringify(user));
+    sessionStorage.setItem(this.USER_KEY, JSON.stringify(user));
 
     // Keep TOKEN_KEY updated too (optional/backward compatible)
-    storage.setItem(this.TOKEN_KEY, newAccessToken);
+    sessionStorage.setItem(this.TOKEN_KEY, newAccessToken);
   }
 
   /** =========================
@@ -176,11 +163,8 @@ export class AuthService {
    * LOGOUT
    * ========================= */
   logout() {
-    localStorage.removeItem(this.USER_KEY);
-    localStorage.removeItem(this.TOKEN_KEY);
-    sessionStorage.removeItem(this.USER_KEY);
-    sessionStorage.removeItem(this.TOKEN_KEY);
-  
+    sessionStorage.clear();
+
     this.eventsService.stopPendingCountsWebSocket();
     this.router.navigate(['/login'], { replaceUrl: true });
   }

@@ -12,17 +12,17 @@ type EventsTab = "CLOSED" | "PENDING";
   templateUrl: "./events.component.html",
 })
 export class EventsComponent implements OnInit {
-  selectedFilter: EventsTab = "CLOSED";
+  selectedFilter: EventsTab = "PENDING";
 
   ngOnInit() {
-    const saved = localStorage.getItem('selectedEventsTab');
-    if (saved === 'CLOSED' || saved === 'PENDING') {
+    const saved = sessionStorage.getItem("selectedEventsTab");
+    if (saved === "CLOSED" || saved === "PENDING") {
       this.selectedFilter = saved as EventsTab;
     }
   }
 
   setFilter(filter: EventsTab): void {
     this.selectedFilter = filter;
-    localStorage.setItem('selectedEventsTab', filter);
+    sessionStorage.setItem("selectedEventsTab", filter);
   }
 }

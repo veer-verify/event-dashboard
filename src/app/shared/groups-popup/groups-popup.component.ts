@@ -102,7 +102,7 @@ export class GroupsPopupComponent implements OnChanges, OnInit {
 
   ngOnInit(): void {
     const raw =
-      localStorage.getItem("verifai_user") ||
+      sessionStorage.getItem("verifai_user") ||
       sessionStorage.getItem("verifai_user");
 
     if (raw) {

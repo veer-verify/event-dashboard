@@ -29,7 +29,7 @@ export class ImagePipe implements PipeTransform {
     try {
       const rawUser =
         sessionStorage.getItem("verifai_user") ||
-        localStorage.getItem("verifai_user");
+        sessionStorage.getItem("verifai_user");
 
       let token = "";
       if (rawUser) {
@@ -38,7 +38,7 @@ export class ImagePipe implements PipeTransform {
       }
 
       if (!token) {
-        token = localStorage.getItem("verifai_token") || "";
+        token = sessionStorage.getItem("verifai_token") || "";
       }
 
       const headers = new HttpHeaders({

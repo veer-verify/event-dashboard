@@ -65,7 +65,7 @@ export class GroupsComponent implements OnInit, OnDestroy {
 
     // 👇 Read whatever you stored when logging in
     const raw =
-      localStorage.getItem('verifai_user') ||
+      sessionStorage.getItem('verifai_user') ||
       sessionStorage.getItem('verifai_user');
 
     if (raw) {
@@ -77,7 +77,7 @@ export class GroupsComponent implements OnInit, OnDestroy {
     }
 
     // Restore selection from memory
-    const savedQueueId = localStorage.getItem('selectedQueueId');
+    const savedQueueId = sessionStorage.getItem('selectedQueueId');
     if (savedQueueId) {
       this.selectedQueueId = Number(savedQueueId);
     }
@@ -791,7 +791,7 @@ export class GroupsComponent implements OnInit, OnDestroy {
   /** Load second API and send data to popup */
   loadGroupDetails(queueId: number) {
     this.selectedQueueId = queueId;                 // 👈 remember selection
-    localStorage.setItem('selectedQueueId', String(queueId));
+    sessionStorage.setItem('selectedQueueId', String(queueId));
 
     // 🔹 Ensure we switch back to the default summary view when a new row is selected
     this.currentSection = 'default';

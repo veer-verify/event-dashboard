@@ -280,7 +280,7 @@ export class PendingEventsComponent implements OnInit, OnDestroy {
       } else {
         this.liveCamerasList = [];
         // Use cached global categories if available
-        const cached = localStorage.getItem("actionTagCategories");
+        const cached = sessionStorage.getItem("actionTagCategories");
         if (cached) {
           this.actionTagCategories = JSON.parse(cached);
         } else {
@@ -288,7 +288,7 @@ export class PendingEventsComponent implements OnInit, OnDestroy {
           this.eventsService.getActionTagCategories().subscribe(res => {
             if (res?.status === "success" || res?.statusCode === 200) {
               this.actionTagCategories = res.actionTagCategories || [];
-              localStorage.setItem("actionTagCategories", JSON.stringify(this.actionTagCategories));
+              sessionStorage.setItem("actionTagCategories", JSON.stringify(this.actionTagCategories));
               this.recomputeHeaderOptions();
             }
           });
@@ -1167,7 +1167,7 @@ export class PendingEventsComponent implements OnInit, OnDestroy {
     this.selectedEndDate = this.selectedDate;
 
     // Restore PENDING sub-filter from memory
-    const savedPendingFilter = localStorage.getItem('selectedPendingFilter');
+    const savedPendingFilter = sessionStorage.getItem('selectedPendingFilter');
     if (savedPendingFilter === "QUEUES") {
       this.selectedpendingFilter = "QUEUES";
       this.consolesChecked = false;
@@ -1195,7 +1195,7 @@ export class PendingEventsComponent implements OnInit, OnDestroy {
 
     // load logged-in user (for comments)
     const raw =
-      localStorage.getItem("verifai_user") ||
+      sessionStorage.getItem("verifai_user") ||
       sessionStorage.getItem("verifai_user");
     if (raw) {
       try {
@@ -1542,7 +1542,7 @@ export class PendingEventsComponent implements OnInit, OnDestroy {
     }
 
     // Save selection to memory
-    localStorage.setItem('selectedPendingFilter', this.selectedpendingFilter);
+    sessionStorage.setItem('selectedPendingFilter', this.selectedpendingFilter);
   }
 
   toggleMore(): void {
@@ -2356,7 +2356,7 @@ export class PendingEventsComponent implements OnInit, OnDestroy {
   ): void {
     const rawUser =
       sessionStorage.getItem("verifai_user") ||
-      localStorage.getItem("verifai_user");
+      sessionStorage.getItem("verifai_user");
 
     const user = rawUser ? JSON.parse(rawUser) : null;
     const token = user?.AccessToken;
@@ -2710,7 +2710,7 @@ export class PendingEventsComponent implements OnInit, OnDestroy {
   downloaddisplayimage(url: any, type: any) {
     const rawUser =
       sessionStorage.getItem("verifai_user") ||
-      localStorage.getItem("verifai_user");
+      sessionStorage.getItem("verifai_user");
 
     const user = rawUser ? JSON.parse(rawUser) : null;
     const token = user?.AccessToken;
@@ -2744,7 +2744,7 @@ export class PendingEventsComponent implements OnInit, OnDestroy {
 
   //   const rawUser =
   //     sessionStorage.getItem("verifai_user") ||
-  //     localStorage.getItem("verifai_user");
+  //     sessionStorage.getItem("verifai_user");
 
   //   const user = rawUser ? JSON.parse(rawUser) : null;
   //   const token = user?.AccessToken;
@@ -3854,7 +3854,7 @@ export class PendingEventsComponent implements OnInit, OnDestroy {
   }
 
   private loadGlobalActionTags(): void {
-    const cached = localStorage.getItem("actionTagCategories");
+    const cached = sessionStorage.getItem("actionTagCategories");
     if (cached) {
       try {
         this.actionTagCategories = JSON.parse(cached);
@@ -3868,7 +3868,7 @@ export class PendingEventsComponent implements OnInit, OnDestroy {
       if (res?.status === "success" || res?.statusCode === 200) {
         const cats = res.actionTagCategories || [];
         this.actionTagCategories = cats;
-        localStorage.setItem("actionTagCategories", JSON.stringify(cats));
+        sessionStorage.setItem("actionTagCategories", JSON.stringify(cats));
         if (this.gridApi) {
           this.gridApi.refreshCells({ columns: ['actionTag'] });
         }
