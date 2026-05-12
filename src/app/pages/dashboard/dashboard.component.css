@@ -1,54 +1,3 @@
-@font-face {
-  font-family: "Neometric Regular";
-  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Regular.woff")
-    format("woff");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Neometric Medium";
-  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Medium-(Regular).woff")
-    format("woff");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Neometric Bold";
-  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Regular.woff")
-    format("woff");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Neometric Alt Bold";
-  src: url("src/assets/fonts/neometric-2-webfont/Neometric-Alt-Bold-(Regular).woff")
-    format("woff");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Nasalization";
-  src: url("src/assets/fonts/neometric-2-webfont/NASALIZA.woff") format("woff");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "NasalizationLight";
-  font-style: normal;
-  /* font-weight: 400; */
-  src: url("src/assets/fonts/Nasalization-Rg.otf") format("opentype");
-}
-
 /* Paint the actual card container */
 .p-card.is-red {
   background: #e53935 !important;
@@ -86,7 +35,7 @@ h2 {
 }
 
 .my-bold-text {
-  font-family: "Neometric", sans-serif;
+  font-family: "Neometric Regular", sans-serif;
   font-weight: 700;
 }
 
@@ -279,7 +228,7 @@ h2 {
   font-size: 20px;
   font-weight: 100;
   line-height: 1;
-  font-family: "NasalizationLight", sans-serif;
+  font-family: "Neometric Medium", sans-serif;
   letter-spacing: normal;
   text-transform: uppercase;
   opacity: 1;
@@ -289,7 +238,7 @@ h2 {
   margin: 0;
   text-align: left;
   color: rgba(0, 0, 0, 0.7);
-  /* font-family: 'NasalizationLight', sans-serif; */
+  /* font-family: 'Neometric Medium', sans-serif; */
   font-size: 12px;
 }
 
@@ -320,7 +269,7 @@ h2 {
   transform: translate(-50%, -50%);
   font-weight: bold;
   font-size: 14px;
-  font-family: "NasalizationLight";
+  font-family: "Neometric Medium";
   color: #e53935;
 }
 
@@ -328,7 +277,7 @@ h2 {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  font-family: "NasalizationLight";
+  font-family: "Neometric Medium";
 }
 
 .icon-counts {
@@ -405,7 +354,7 @@ h2 {
 .escalated-card p {
   font-size: 14px;
   margin: 0;
-  font-family: "NasalizationLight";
+  font-family: "Neometric Medium";
 }
 
 .progress-ring {
