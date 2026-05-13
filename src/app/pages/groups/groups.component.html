@@ -320,7 +320,7 @@
             <label>Flow Steps</label>
             <div class="builder-step" *ngFor="let step of newFlow.steps; let i = index">
               <div class="step-number">Level {{ step.levelId }}</div>
-              <p-dropdown [options]="getAvailableQueues(step.qId)" [(ngModel)]="step.qId"
+              <p-dropdown [options]="getAvailableQueues(step.qId, step.levelId)" [(ngModel)]="step.qId"
                 [ngModelOptions]="{standalone: true}" placeholder="Select Queue" [filter]="true"
                 [style]="{width: '100%'}"></p-dropdown>
               <i class="pi pi-times-circle" *ngIf="newFlow.steps.length > 1" (click)="removeFlowStep(i)"></i>

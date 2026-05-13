@@ -551,7 +551,7 @@ export class GroupsComponent implements OnInit, OnDestroy {
     });
   }
 
-  getAvailableQueues(currentQId: any) {
+  getAvailableQueues(currentQId: any, stepLevelId?: number) {
     const assignedInOtherFlows = new Set<number>();
     this.groupedFlows.forEach(flow => {
       if (this.isUpdateMode && flow.flowId === this.selectedFlowId) return;
@@ -579,9 +579,18 @@ export class GroupsComponent implements OnInit, OnDestroy {
       // 2. Must not be already picked in this flow (except for this step)
       if (assignedInThisFlow.has(qVal)) return false;
 
-      // 3. Must match the current flow category
-      if (this.newFlow.category && q.category && q.category !== this.newFlow.category) {
+      // 3. Must match the step level
+      if (stepLevelId && q.levelId && Number(q.levelId) !== Number(stepLevelId)) {
         return false;
+      }
+
+      // 4. Must match the current flow category
+      if (this.newFlow.category && q.category) {
+        if (stepLevelId === 3 && q.category === 'Timed-Out') {
+          // Allow Timed-Out category queues for Level 3
+        } else if (q.category !== this.newFlow.category) {
+          return false;
+        }
       }
 
       return true;
