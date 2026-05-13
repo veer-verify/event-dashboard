@@ -1134,8 +1134,13 @@ export class GroupsComponent implements OnInit, OnDestroy {
   queueCategories = [
     { label: 'Console', value: 'Console' },
     { label: 'Manual', value: 'Manual' },
+    // { label: 'Timed-Out', value: 'Timed-Out' },
   ];
-
+  queueCategoriesAll = [
+    { label: 'Console', value: 'Console' },
+    { label: 'Manual', value: 'Manual' },
+    { label: 'Timed-Out', value: 'Timed-Out' },
+  ];
 
   // Load cameras based on selected site
   onSiteChange(siteId: number) {
