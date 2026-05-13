@@ -1,10 +1,10 @@
-<div class="login-container">
+<main class="login-container login-page">
   <div class="left-panel">
     <div class="graphics-overlay"></div>
   </div>
   <div class="right-panel">
     <p-card class="p-card" [style]="{ width: '390px' }">
-      <img src="assets/logo.png" alt="VerifAI LIVE Logo" class="logo" />
+      <img src="assets/logo.webp" alt="VerifAI LIVE Logo" class="login-logo" width="180" height="52" />
       <form (ngSubmit)="login()" class="p-fluid">
         <div class="p-card-header">Welcome to sign in</div>
 
@@ -30,6 +30,7 @@
     name="password"
     [feedback]="false"
     [toggleMask]="true"
+    inputId="password"
   ></p-password>
 </div>
         </div>
@@ -44,6 +45,7 @@
             label="Remember Password"
             [(ngModel)]="rememberMe"
             [binary]="true"
+            inputId="remember"
           >
           </p-checkbox>
         </div>
@@ -62,4 +64,4 @@
       </form>
     </p-card>
   </div>
-</div>
+</main>
